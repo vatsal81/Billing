@@ -221,24 +221,34 @@ const generateBillPdf = async (billOrBills, settings) => {
     let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     
     if (!executablePath && process.env.RENDER) {
-        // Try the exact version from your error log
-        const exactPath = '/opt/render/.cache/puppeteer/chrome/linux-147.0.7727.57/chrome-linux64/chrome';
-        if (fs.existsSync(exactPath)) {
-            executablePath = exactPath;
-        } else {
-            // Fallback: Try to find any chrome binary in the cache folder
-            try {
-                const cacheBase = '/opt/render/.cache/puppeteer/chrome';
-                if (fs.existsSync(cacheBase)) {
-                    const dirs = fs.readdirSync(cacheBase);
-                    const chromeDir = dirs.find(d => d.startsWith('linux-'));
-                    if (chromeDir) {
-                        executablePath = path.join(cacheBase, chromeDir, 'chrome-linux64', 'chrome');
+        console.log('--- DEBUG: Searching for Chrome on Render ---');
+        const searchPaths = [
+            '/opt/render/.cache/puppeteer',
+            '/home/render/.cache/puppeteer',
+            path.join(process.cwd(), '.cache/puppeteer')
+        ];
+
+        for (const base of searchPaths) {
+            if (fs.existsSync(base)) {
+                console.log(`Checking base path: ${base}`);
+                try {
+                    const files = fs.readdirSync(base, { recursive: true });
+                    const chrome = files.find(f => f.endsWith('/chrome') || f === 'chrome');
+                    if (chrome) {
+                        executablePath = path.join(base, chrome);
+                        console.log(`FOUND CHROME AT: ${executablePath}`);
+                        break;
                     }
+                } catch (err) {
+                    console.log(`Error reading ${base}:`, err.message);
                 }
-            } catch (e) {
-                console.error('Error auto-detecting chrome:', e);
             }
+        }
+        
+        if (!executablePath) {
+            console.log('CRITICAL: Chrome not found in any search path.');
+            // One last desperate try: common path for version 147
+            executablePath = '/opt/render/.cache/puppeteer/chrome/linux-147.0.7727.57/chrome-linux64/chrome';
         }
     }
 
