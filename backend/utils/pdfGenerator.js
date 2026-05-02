@@ -1,9 +1,10 @@
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
 
-const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+// Use environment variable for Chrome path if available, otherwise let puppeteer decide
+const CHROME_PATH = process.env.PUPPETEER_EXECUTABLE_PATH || null;
 
 const formatDate = (date) => 
     date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A';
@@ -369,11 +370,16 @@ const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
 
-    const browser = await puppeteer.launch({
-        executablePath: CHROME_PATH,
+    const launchOptions = {
         headless: 'shell',
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-    });
+    };
+    
+    if (CHROME_PATH) {
+        launchOptions.executablePath = CHROME_PATH;
+    }
+
+    const browser = await puppeteer.launch(launchOptions);
 
     try {
         const page = await browser.newPage();
@@ -401,11 +407,7 @@ const generateBillPdf = async (billOrBills, settings) => {
         if (pdfBuffers.length === 1) return pdfBuffers[0];
         
         // For multiple bills, we'll re-run with all HTML combined and page-breaks
-        const combinedBrowser = await puppeteer.launch({
-            executablePath: CHROME_PATH,
-            headless: 'shell',
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-        });
+        const combinedBrowser = await puppeteer.launch(launchOptions);
         const combinedPage = await combinedBrowser.newPage();
         
         let combinedHTML = '';
