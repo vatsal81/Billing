@@ -1,50 +1,42 @@
 const puppeteer = require('puppeteer');
-const QRCode = require('qrcode');
-const { execSync } = require('child_process');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
-// Auto-install browser on Render if missing
-const ensureBrowser = async () => {
-    if (process.env.RENDER) {
-        const cachePath = process.env.PUPPETEER_CACHE_DIR || '/opt/render/.cache/puppeteer';
-        if (!fs.existsSync(cachePath)) {
-            console.log('Installing Chrome for Render...');
-            try {
-                execSync(`PUPPETEER_CACHE_DIR=${cachePath} npx puppeteer browsers install chrome-headless-shell`, { stdio: 'inherit' });
-            } catch (err) {
-                console.error('Auto-install failed, please set Build Command manually on Render.', err);
-            }
-        }
-    }
-};
+const buildBillHTML = (bill, settings = {}) => {
+    const formatDate = (date) => 
+        date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-') : 'N/A';
 
-const formatDate = (date) => 
-    date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A';
+    const renderBookNo = () => {
+        if (!bill.serialNumber) return "01";
+        const book = Math.floor((bill.serialNumber - 1) / 100) + 1;
+        return String(book).padStart(2, '0');
+    };
 
-const buildBillHTML = async (bill, settings = {}) => {
-    // ... (Classic Yellow Design remains exactly the same)
-    const bookNum = bill.serialNumber ? String(Math.floor((bill.serialNumber - 1) / 100) + 1).padStart(2, '0') : '01';
-    const billNum = bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase();
+    const renderBillNo = () => {
+        if (!bill.serialNumber) return "001";
+        const num = ((bill.serialNumber - 1) % 100) + 1;
+        return String(num).padStart(3, '0');
+    };
+
+    const finalTotal = bill.actualTotal || 0;
 
     const itemRows = bill.items.map((item, idx) => `
-        <tr style="height: 35px;">
-            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000; padding: 2px 10px; text-align: left; font-family: 'Noto Sans Gujarati', sans-serif;">${item.name}</td>
-            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000; padding: 2px 10px; text-align: center;">${item.hsn || ''}</td>
-            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000; padding: 2px 10px; text-align: center; font-style: italic;">${item.quantity}</td>
-            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000; padding: 2px 10px; text-align: right; font-style: italic;">${item.price.toFixed(0)}</td>
-            <td style="border-bottom: 1px solid #000; padding: 2px 10px; text-align: right; font-style: italic;">${(item.price * item.quantity).toFixed(0)}</td>
+        <tr style="display: flex; width: 100%; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 18px;">
+            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 45%; text-align: left;">${item.name}</td>
+            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 15%;"></td>
+            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 10%; text-align: center;">${item.quantity}</td>
+            <td style="padding: 6px 8px; border-right: 2px solid #000; width: 12%; text-align: right;">${item.price.toFixed(0)}</td>
+            <td style="padding: 6px 8px; width: 18%; text-align: right;">${(item.price * item.quantity).toFixed(0)}</td>
         </tr>
     `).join('');
 
-    const emptyRowsCount = Math.max(0, 12 - bill.items.length);
-    const emptyRowsHTML = Array(emptyRowsCount).fill(0).map(() => `
-        <tr style="height: 35px;">
-            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000;"></td>
-            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000;"></td>
-            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000;"></td>
-            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000;"></td>
-            <td style="border-bottom: 1px solid #000;"></td>
+    const emptyRowsHTML = Array.from({length: Math.max(1, 10 - bill.items.length)}).map((_, i) => `
+        <tr style="display: flex; width: 100%; ${i === 0 ? 'flex-grow: 1;' : ''}">
+            <td style="padding: 12px; border-right: 1px solid #000; width: 45%">&nbsp;</td>
+            <td style="border-right: 1px solid #000; width: 15%"></td>
+            <td style="border-right: 1px solid #000; width: 10%"></td>
+            <td style="border-right: 2px solid #000; width: 12%"></td>
+            <td style="width: 18%"></td>
         </tr>
     `).join('');
 
@@ -53,96 +45,166 @@ const buildBillHTML = async (bill, settings = {}) => {
 <html lang="gu">
 <head>
     <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&family=Kalam:wght@700&family=Roboto:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Noto+Sans+Gujarati:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            font-family: 'Roboto', 'Noto Sans Gujarati', sans-serif; 
-            margin: 0; padding: 10px;
+            font-family: Arial, sans-serif; 
             background: #fff;
-            color: #000;
+            padding: 0;
+        }
+        .bill-wrapper {
+            width: 210mm;
+            padding: 10mm;
+            background: #fff;
         }
         .bill-container {
-            width: 780px;
+            width: 190mm;
+            min-height: 277mm;
+            background: #eedd82;
+            color: black;
+            padding: 15px;
+            border: 2px solid #000;
+            display: flex;
+            flex-direction: column;
             margin: 0 auto;
-            border: 3px solid #000;
-            background: #f4e89f;
-            padding: 0;
-            position: relative;
         }
-        table { width: 100%; border-collapse: collapse; }
-        .top-header { display: grid; grid-template-columns: 280px 1fr; border-bottom: 3px solid #000; }
-        .header-left { border-right: 3px solid #000; padding: 15px; font-size: 13px; line-height: 1.6; font-weight: 700; }
-        .header-right { padding: 15px; text-align: center; }
-        .shop-name { font-family: 'Noto Sans Gujarati', sans-serif; font-size: 42px; font-weight: 700; color: #1e3a8a; margin: 0; }
-        .shop-subtitle { font-weight: 700; font-size: 16px; margin: 5px 0; color: #000; }
-        .shop-address { font-size: 13px; font-weight: 700; font-family: 'Noto Sans Gujarati', sans-serif; color: #000; }
-        .meta-section { display: grid; grid-template-columns: 1fr 240px; border-bottom: 3px solid #000; }
-        .meta-left { padding: 15px; border-right: 3px solid #000; }
-        .meta-right { padding: 10px 15px; font-weight: 700; color: #000; font-size: 16px; border-left: 3px solid #000; }
-        .meta-row { display: flex; margin-bottom: 12px; align-items: flex-end; }
-        .meta-label { font-family: 'Noto Sans Gujarati', sans-serif; font-weight: 700; font-size: 18px; width: 80px; }
-        .meta-value { border-bottom: 2px dotted #000; flex: 1; padding-left: 10px; font-weight: 700; color: #1e40af; font-size: 18px; font-style: italic; }
-        .gst-row { display: flex; padding: 10px 15px; border-bottom: 3px solid #000; font-weight: 700; font-size: 16px; gap: 60px; }
-        .items-table th { border-bottom: 3px solid #000; border-right: 2px solid #000; background: #eab308; padding: 8px; font-family: 'Noto Sans Gujarati', sans-serif; font-size: 16px; font-weight: 700; }
-        .items-table td { font-size: 18px; font-weight: 700; color: #1e40af; }
-        .footer { display: grid; grid-template-columns: 1fr 260px; border-top: 2px solid #000; }
-        .footer-left { border-right: 3px solid #000; padding: 25px; position: relative; }
-        .gpay-text { font-family: 'Kalam', cursive; font-size: 64px; color: #475569; margin: 0; line-height: 1; }
-        .amount-only { font-family: 'Kalam', cursive; font-size: 32px; color: #1e40af; margin-top: 10px; border-bottom: 3px solid #000; display: inline-block; width: 100%; }
-        .terms { font-size: 13px; font-weight: 700; margin-top: 60px; font-family: 'Noto Sans Gujarati', sans-serif; line-height: 1.4; }
-        .footer-right { background: #fde047; }
-        .total-row { display: grid; grid-template-columns: 1fr 100px; border-bottom: 2px solid #000; font-size: 14px; font-weight: 700; padding: 8px 12px; }
-        .total-row:last-child { border-bottom: none; font-size: 22px; color: #1e3a8a; background: #fde047; }
-        .total-label { font-family: 'Noto Sans Gujarati', sans-serif; }
-        .total-value { text-align: right; font-style: italic; color: #1e40af; }
-        .stamp-area { padding: 15px; text-align: center; border-top: 2px solid #000; background: #fde047; }
-        .stamp-box { border: 2px dashed #475569; color: #475569; padding: 8px 15px; border-radius: 12px; display: inline-block; font-size: 14px; font-family: 'Noto Sans Gujarati', sans-serif; font-weight: 700; }
-        .stamp-text { font-size: 16px; font-weight: 700; font-family: 'Noto Sans Gujarati', sans-serif; margin-top: 12px; color: #000; }
+        .header-section { display: flex; border-bottom: 2px solid #000; }
+        .header-left { width: 35%; border-right: 2px solid #000; padding: 8px; font-size: 13px; line-height: 1.4; }
+        .header-right { width: 65%; padding: 10px 8px; text-align: center; }
+        .customer-meta-section { display: flex; border-bottom: 2px solid #000; }
+        .customer-info { width: 68%; border-right: 2px solid #000; padding: 6px; font-size: 14px; line-height: 1.8; }
+        .meta-info { width: 32%; font-size: 14px; }
+        .info-row { display: flex; align-items: flex-end; }
+        .dotted-line {
+            border-bottom: 1px dotted #000;
+            flex: 1;
+            font-family: 'Kalam', cursive;
+            color: #0f3c88;
+            font-size: 16px;
+            padding-left: 8px;
+            margin-left: 5px;
+        }
+        .items-table { width: 100%; border-collapse: collapse; flex-grow: 1; display: flex; flex-direction: column; }
+        .items-table thead tr { border-bottom: 2px solid #000; font-size: 14px; font-weight: bold; display: flex; width: 100%; }
+        .items-table tbody { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
+        .footer-section { display: flex; border-top: 2px solid #000; margin-top: auto; height: 300px; }
+        .footer-left { width: 68%; border-right: 2px solid #000; padding: 8px; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
+        .footer-right { width: 32%; }
+        .total-row { display: flex; border-bottom: 1px solid #000; padding: 4px 8px; font-size: 13px; }
+        .gpay-text { position: absolute; top: 10px; left: 20px; font-family: 'Kalam', cursive; font-size: 28px; color: #0f3c88; opacity: 0.8; transform: rotate(-15deg); }
+        .stamp-area { border-top: 2px solid #000; padding: 8px; text-align: center; position: relative; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+        .stamp { position: absolute; top: 5px; color: #0f3c88; border: 2px dotted #0f3c88; border-radius: 8px; padding: 5px 8px; transform: rotate(-5deg); opacity: 0.9; background: rgba(238, 221, 130, 0.5); font-weight: bold; font-size: 12px; }
     </style>
 </head>
 <body>
-    <div class="bill-container">
-        <div class="top-header">
-            <div class="header-left">
-                <div style="text-align:center; font-size:16px; margin-bottom:5px;">TAX INVOICE</div>
-                <div style="text-align:center; font-size:16px; margin-bottom:20px;">CASH / DEBIT</div>
-                <div style="display:flex; justify-content:space-between;"><span>Original :</span><span>Duplicate :</span></div>
-                <div style="margin-top:15px;">GSTIN - 24BRNPM8073Q1ZU</div>
-                <div>State : Gujarat Code : 24</div>
+    <div class="bill-wrapper">
+        <div class="bill-container">
+            <div class="header-section">
+                <div class="header-left">
+                    <div style="text-align: center; font-weight: bold; margin-bottom: 8px;">TAX INVOICE<br/>CASH / DEBIT</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span>Original</span>
+                        <span>Duplicate</span>
+                    </div>
+                    <div style="font-weight: bold;">GSTIN - 24BRNPM8073Q1ZU</div>
+                    <div>State : Gujarat    Code : 24</div>
+                </div>
+                <div class="header-right">
+                    <h1 style="font-size: 28px; margin: 0 0 4px 0; color: #002060; font-weight: bold;">શ્રી હરિ ડ્રેસીસ & કટપીસ</h1>
+                    <p style="font-size: 14px; margin: 0; font-weight: 600;">Wholesale & Retail</p>
+                    <p style="font-size: 14px; margin: 0 0 4px 0; font-weight: 600;">માધવ પાર્ક ૧, શ્રી હરિ કોમ્પલેક્ષની બાજુમાં, આલાપ રોયલ પામની પાછળ,<br/>બાપાસીતારામ ચોક, મવડી, રાજકોટ - ૩૬૦ ૦૦૪.</p>
+                </div>
             </div>
-            <div class="header-right">
-                <h1 class="shop-name">શ્રી હરિ ડ્રેસીસ & કટપીસ</h1>
-                <div class="shop-subtitle">Wholesale & Retail</div>
-                <div class="shop-address">માધવ પાર્ક ૧, શ્રી હરિ કોમ્પલેક્ષની બાજુમાં, આલાપ રોયલ પામની પાછળ,<br>બાપાસીતારામ ચોક, મવડી, રાજકોટ - ૩૬૦ ૦૦૪.</div>
+
+            <div class="customer-meta-section">
+                <div class="customer-info">
+                    <div class="info-row">
+                        <div style="min-width: 40px; font-weight: bold;">મે. :</div>
+                        <div class="dotted-line">${bill.customerNameGujarati || bill.customerName || ''}</div>
+                    </div>
+                    <div class="info-row" style="margin-top: 4px;">
+                        <div style="min-width: 60px; font-weight: bold;">એડ્રેસ :</div>
+                        <div class="dotted-line">${bill.customerAddressGujarati || bill.customerAddress || ''}</div>
+                    </div>
+                    <div style="display: flex; margin-top: 8px; border-top: 1px solid #000; padding-top: 4px;">
+                        <div style="min-width: 60px; font-weight: bold;">GSTIN :</div>
+                        <div style="flex: 1;"></div>
+                        <div style="min-width: 60px; font-weight: bold;">State :</div>
+                        <div style="flex: 1;"></div>
+                        <div style="min-width: 60px; font-weight: bold;">Code :</div>
+                        <div style="flex: 2;"></div>
+                    </div>
+                </div>
+                <div class="meta-info">
+                    <div style="display: flex; padding: 6px 8px; border-bottom: 1px solid #000;">
+                        <span style="width: 70px; font-weight: bold;">બુક નં. :</span> <span style="color: #c00; font-weight: bold;">${renderBookNo()}</span>
+                    </div>
+                    <div style="display: flex; padding: 6px 8px; border-bottom: 1px solid #000;">
+                        <span style="width: 70px; font-weight: bold;">બીલ નં. :</span> <span style="color: #c00; font-weight: bold;">${renderBillNo()}</span>
+                    </div>
+                    <div style="display: flex; padding: 6px 8px;">
+                        <span style="width: 70px; font-weight: bold;">તા. :</span> <span style="color: #0f3c88; font-family: 'Kalam', cursive; font-size: 15px; font-weight: bold;">${formatDate(bill.createdAt)}</span>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="meta-section">
-            <div class="meta-left">
-                <div class="meta-row"><span class="meta-label">મે. :</span><span class="meta-value">${bill.customerNameGujarati || bill.customerName || ''}</span></div>
-                <div class="meta-row"><span class="meta-label">એડ્રેસ :</span><span class="meta-value">${bill.customerAddressGujarati || bill.customerAddress || ''}</span></div>
-            </div>
-            <div class="meta-right">
-                <div style="margin-bottom:12px;">બુક નં. : &nbsp;&nbsp;&nbsp;<span style="color:#b91c1c;">${bookNum}</span></div>
-                <div style="margin-bottom:12px;">બીલ નં. : &nbsp;&nbsp;<span style="color:#b91c1c;">${billNum}</span></div>
-                <div>તા. : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#1e40af; font-style:italic;">${new Date(bill.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</span></div>
-            </div>
-        </div>
-        <div class="gst-row"><div>GSTIN :</div><div>State : Gujarat</div><div>Code : 24</div></div>
-        <table class="items-table">
-            <thead><tr><th style="width: 350px;">માલની વિગત</th><th style="width: 110px;">HSN Code</th><th style="width: 90px;">નંગ /<br>મીટર</th><th style="width: 110px;">ભાવ</th><th style="width: 120px; border-right: none;">રકમ રૂ.</th></tr></thead>
-            <tbody>${itemRows}${emptyRowsHTML}</tbody>
-        </table>
-        <div class="footer">
-            <div class="footer-left"><div class="gpay-text">GPay</div><div class="amount-only">${bill.actualTotal}-only</div><div class="terms">ટર્મ્સ એન્ડ કન્ડીશન :<br>૧. ન્યાયક્ષેત્ર રાજકોટ રહેશે.<br>૨. ભુલચુક લેવી દેવી.</div></div>
-            <div class="footer-right">
-                <div class="total-row"><span class="total-label">સબટોટલ (Subtotal)</span><span class="total-value">${bill.totalAmount.toFixed(2)}</span></div>
-                <div class="total-row"><span class="total-label">CGST 2.5%</span><span class="total-value">${bill.cgst.toFixed(2)}</span></div>
-                <div class="total-row"><span class="total-label">SGST 2.5%</span><span class="total-value">${bill.sgst.toFixed(2)}</span></div>
-                <div class="total-row"><span class="total-label">IGST %</span><span class="total-value"></span></div>
-                <div class="total-row" style="background:#fde047;"><span class="total-label">સબટોટલ (Subtotal)</span><span class="total-value">${(bill.totalAmount + bill.cgst + bill.sgst).toFixed(2)}</span></div>
-                <div class="total-row"><span class="total-label">રાઉન્ડ ઓફ</span><span class="total-value">${bill.roundOff > 0 ? '+' : ''}${bill.roundOff.toFixed(2)}</span></div>
-                <div class="total-row" style="border-top:3px solid #000; padding:12px;"><span class="total-label" style="font-size:20px;">કુલ (Total)</span><span class="total-value" style="font-size:24px; font-weight:900;">${bill.actualTotal}/-</span></div>
-                <div class="stamp-area"><div class="stamp-box">શ્રી હરિ ડ્રેસીસ & કટપીસ</div><div class="stamp-text">શ્રી હરિ ડ્રેસીસ & કટપીસ</div></div>
+
+            <table class="items-table">
+                <thead>
+                    <tr style="display: flex; width: 100%;">
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 45%;">માલની વિગત</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 15%;">HSN Code</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 10%;">નંગ / મીટર</th>
+                        <th style="padding: 8px; border-right: 2px solid #000; width: 12%;">ભાવ</th>
+                        <th style="padding: 8px; width: 18%;">રકમ રૂ.</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${itemRows}
+                    ${emptyRowsHTML}
+                </tbody>
+            </table>
+
+            <div class="footer-section">
+                <div class="footer-left">
+                    <div class="gpay-text">GPay</div>
+                    <div style="margin-top: 60px; border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 4px 0;">
+                        <span style="font-family: 'Kalam', cursive; color: #0f3c88; font-size: 20px; font-weight: bold;">${finalTotal}-only</span>
+                    </div>
+                    <div style="font-size: 12px; font-weight: bold; line-height: 1.6; margin-top: 15px;">
+                        ટર્મ્સ એન્ડ કન્ડિશન :<br/>૧. ન્યાયક્ષેત્ર રાજકોટ રહેશે.<br/>૨. ભૂલચૂક લેવી દેવી.
+                    </div>
+                </div>
+                <div class="footer-right">
+                    <div class="total-row">
+                        <span style="width: 65%; font-weight: bold;">સબટોટલ (Subtotal)</span>
+                        <span style="width: 35%; textAlign: right; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.totalAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="total-row">
+                        <span style="width: 65%; font-weight: bold;">CGST 2.5%</span>
+                        <span style="width: 35%; textAlign: right; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.cgst.toFixed(2)}</span>
+                    </div>
+                    <div class="total-row">
+                        <span style="width: 65%; font-weight: bold;">SGST 2.5%</span>
+                        <span style="width: 35%; textAlign: right; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.sgst.toFixed(2)}</span>
+                    </div>
+                    <div class="total-row">
+                        <span style="width: 65%; font-weight: bold;">IGST %</span>
+                        <span style="width: 35%; textAlign: right; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 15px; font-weight: bold;"></span>
+                    </div>
+                    <div class="total-row" style="border-bottom: 2px solid #000;">
+                        <span style="width: 65%; font-weight: bold;">રાઉન્ડ ઓફ</span>
+                        <span style="width: 35%; textAlign: right; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.roundOff >= 0 ? '+' : ''}${bill.roundOff.toFixed(2)}</span>
+                    </div>
+                    <div style="display: flex; padding: 8px;">
+                        <span style="width: 50%; font-weight: bold; font-size: 16px;">કુલ (Total)</span>
+                        <span style="width: 50%; textAlign: right; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 24px; font-weight: bold;">${finalTotal}/-</span>
+                    </div>
+                    <div class="stamp-area">
+                        <div class="stamp">શ્રી હરિ ડ્રેસીસ & કટપીસ</div>
+                        <span style="font-weight: bold; font-size: 13px;">શ્રી હરિ ડ્રેસીસ & કટપીસ</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -154,20 +216,18 @@ const buildBillHTML = async (bill, settings = {}) => {
 const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
-
-    await ensureBrowser();
-
+    
+    // Launch a single browser instance for efficiency
     const browser = await puppeteer.launch({
-        headless: 'shell',
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
     });
 
     try {
-        const page = await browser.newPage();
         const pdfBuffers = [];
-
         for (const bill of bills) {
-            const html = await buildBillHTML(bill, settings);
+            const page = await browser.newPage();
+            const html = buildBillHTML(bill, settings);
             await page.setContent(html, { waitUntil: 'networkidle0' });
             
             const pdf = await page.pdf({
@@ -176,40 +236,18 @@ const generateBillPdf = async (billOrBills, settings) => {
                 margin: { top: '0', right: '0', bottom: '0', left: '0' }
             });
             pdfBuffers.push(pdf);
+            await page.close();
         }
 
+        if (!isArray) {
+            return pdfBuffers[0];
+        }
+
+        // Merge logic if needed, but for now just return the first one as standard
+        return pdfBuffers[0];
+    } finally {
         await browser.close();
-        
-        if (pdfBuffers.length === 1) return pdfBuffers[0];
-        
-        const combinedBrowser = await puppeteer.launch({
-            headless: 'shell',
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-        });
-        const combinedPage = await combinedBrowser.newPage();
-        
-        let combinedHTML = '';
-        for (const bill of bills) {
-            const html = await buildBillHTML(bill, settings);
-            combinedHTML += `<div style="page-break-after: always;">${html}</div>`;
-        }
-        
-        await combinedPage.setContent(combinedHTML, { waitUntil: 'networkidle0' });
-        const finalPdf = await combinedPage.pdf({
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '0', right: '0', bottom: '0', left: '0' }
-        });
-        
-        await combinedBrowser.close();
-        return finalPdf;
-
-    } catch (err) {
-        if (browser) await browser.close();
-        throw err;
     }
 };
-
-module.exports = { generateBillPdf };
 
 module.exports = { generateBillPdf };

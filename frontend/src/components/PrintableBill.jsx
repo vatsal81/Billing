@@ -173,10 +173,6 @@ export default function PrintableBill({ bill }) {
                   <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('igst')}</span>
                   <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}></span>
                 </div>
-                <div style={{display: 'flex', borderBottom: '1px solid #000', padding: '4px 8px'}}>
-                  <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('subtotal')}</span>
-                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{bill.subTotal ? (bill.subTotal + bill.cgst + bill.sgst).toFixed(2) : (finalTotal - (bill.roundOff || 0)).toFixed(2)}</span>
-                </div>
                 <div style={{display: 'flex', borderBottom: '2px solid #000', padding: '4px 8px'}}>
                   <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('roundOff')}</span>
                   <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{(bill.roundOff > 0 ? '+' : '')}{(bill.roundOff || 0).toFixed(2)}</span>
