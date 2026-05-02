@@ -27,6 +27,10 @@ async function download() {
         console.log('--- Installation Complete ---');
         console.log('Executable Path:', result.executablePath);
         
+        // List files in cache to verify structure
+        const allFiles = fs.readdirSync(cacheDir, { recursive: true });
+        console.log('Files in cache:', JSON.stringify(allFiles.slice(0, 20))); // Show first 20 files
+        
         // Save the path to an environment file or just rely on it being in cache
         // On Render, we might want to set PUPPETEER_EXECUTABLE_PATH
     } catch (err) {

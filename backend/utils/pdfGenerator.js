@@ -235,18 +235,44 @@ const generateBillPdf = async (billOrBills, settings) => {
 
     // Auto-detect local chrome if not set
     if (!launchOptions.executablePath) {
-        const localChrome = path.join(process.cwd(), '.cache', 'puppeteer', 'chrome', 'linux-124.0.6367.201', 'chrome-linux64', 'chrome');
-        if (fs.existsSync(localChrome)) {
-            launchOptions.executablePath = localChrome;
+        const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
+        if (fs.existsSync(cacheDir)) {
+            const findChrome = (dir) => {
+                const files = fs.readdirSync(dir);
+                for (const file of files) {
+                    const fullPath = path.join(dir, file);
+                    if (fs.statSync(fullPath).isDirectory()) {
+                        const found = findChrome(fullPath);
+                        if (found) return found;
+                    } else if (file === 'chrome' || file === 'chrome.exe') {
+                        return fullPath;
+                    }
+                }
+                return null;
+            };
+            const foundPath = findChrome(cacheDir);
+            if (foundPath) {
+                console.log('AUTO-DETECTED CHROME AT:', foundPath);
+                launchOptions.executablePath = foundPath;
+            }
         }
     }
 
     console.log('Launching browser with options:', JSON.stringify({ ...launchOptions, executablePath: launchOptions.executablePath || 'default' }));
-    const browser = await puppeteer.launch(launchOptions);
+    
+    let browser;
+    try {
+        browser = await puppeteer.launch(launchOptions);
+        console.log('Browser launched successfully');
+    } catch (launchError) {
+        console.error('FAILED TO LAUNCH BROWSER:', launchError.message);
+        throw new Error(`Browser launch failed: ${launchError.message}`);
+    }
 
     try {
         const pdfBuffers = [];
         for (const bill of bills) {
+            console.log(`Generating PDF for bill serial: ${bill.serialNumber}`);
             const page = await browser.newPage();
             const html = buildBillHTML(bill, settings);
             await page.setContent(html, { waitUntil: 'networkidle0' });
@@ -264,10 +290,12 @@ const generateBillPdf = async (billOrBills, settings) => {
             return pdfBuffers[0];
         }
 
-        // Merge logic if needed, but for now just return the first one as standard
         return pdfBuffers[0];
+    } catch (genError) {
+        console.error('PDF GENERATION ERROR:', genError.message);
+        throw genError;
     } finally {
-        await browser.close();
+        if (browser) await browser.close();
     }
 };
 
