@@ -7,7 +7,11 @@ const loadFontAsBase64 = (fontName) => {
     try {
         const fontPath = path.join(__dirname, fontName);
         if (fs.existsSync(fontPath)) {
-            return fs.readFileSync(fontPath).toString('base64');
+            const base64 = fs.readFileSync(fontPath).toString('base64');
+            console.log(`Successfully loaded font: ${fontName} (${base64.length} bytes)`);
+            return base64;
+        } else {
+            console.error(`Font file NOT FOUND: ${fontPath}`);
         }
     } catch (e) {
         console.error(`Error loading font ${fontName}:`, e.message);
@@ -16,7 +20,7 @@ const loadFontAsBase64 = (fontName) => {
 };
 
 const kalamBase64 = loadFontAsBase64('Kalam-Regular.ttf');
-const gujaratiBase64 = loadFontAsBase64('Lohit-Gujarati.ttf');
+const gujaratiBase64 = loadFontAsBase64('NotoSansGujarati-Regular.ttf');
 
 const buildBillHTML = (bill, settings = {}) => {
     const formatDate = (date) => 
@@ -275,7 +279,8 @@ const generateBillPdf = async (billOrBills, settings) => {
             '--disable-dev-shm-usage',
             '--disable-gpu',
             '--no-zygote',
-            '--single-process'
+            '--single-process',
+            '--font-render-hinting=none' // Help with font rendering on Linux
         ],
         defaultViewport: chromium ? chromium.defaultViewport : null,
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
@@ -350,10 +355,15 @@ const generateBillPdf = async (billOrBills, settings) => {
             console.log(`Generating PDF for bill serial: ${bill.serialNumber}`);
             const page = await browser.newPage();
             const html = buildBillHTML(bill, settings);
+            
+            // Set content and wait for fonts
             await page.setContent(html, { 
                 waitUntil: 'load',
                 timeout: 60000 
             });
+
+            // CRITICAL: Wait for fonts to be ready in the browser
+            await page.evaluateHandle('document.fonts.ready');
             
             const pdf = await page.pdf({
                 format: 'A4',
