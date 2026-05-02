@@ -5,305 +5,210 @@ const formatDate = (date) =>
     date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A';
 
 const buildBillHTML = async (bill, settings = {}) => {
-    // Generate UPI QR Code Data
-    let qrDataUrl = '';
-    try {
-        const upiId = settings.upiId || "9924387087@okbizaxis";
-        const shopName = settings.shopName || "Shree Hari Dresses";
-        const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(shopName)}&am=${bill.actualTotal}&cu=INR`;
-        qrDataUrl = await QRCode.toDataURL(upiUrl);
-    } catch (err) {
-        console.error("QR Generation error:", err);
-    }
-
-    const itemRows = bill.items.map((item, idx) => `
-        <tr>
-            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: center; color: #64748b;">${idx + 1}</td>
-            <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 500;">${item.name}</td>
-            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: center; color: #64748b;">${item.hsn || '6211'}</td>
-            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: center; font-weight: 600;">${item.quantity}</td>
-            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: right; color: #64748b;">₹${item.price.toFixed(2)}</td>
-            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: right; font-weight: 700; background: #fdfae6;">₹${(item.price * item.quantity).toFixed(2)}</td>
-        </tr>
-    `).join('');
-
-    const emptyRowsCount = Math.max(0, 10 - bill.items.length);
-    const emptyRowsHTML = Array(emptyRowsCount).fill(0).map(() => `
-        <tr style="height: 35px;">
-            <td style="border: 1px solid #f1f5f9;"></td>
-            <td style="border: 1px solid #f1f5f9;"></td>
-            <td style="border: 1px solid #f1f5f9;"></td>
-            <td style="border: 1px solid #f1f5f9;"></td>
-            <td style="border: 1px solid #f1f5f9;"></td>
-            <td style="border: 1px solid #f1f5f9; background: #fdfae6;"></td>
-        </tr>
-    `).join('');
-
     const bookNum = bill.serialNumber ? String(Math.floor((bill.serialNumber - 1) / 100) + 1).padStart(2, '0') : '01';
     const billNum = bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase();
+
+    const itemRows = bill.items.map((item, idx) => `
+        <tr style="height: 30px;">
+            <td style="border-right: 1px solid #000; padding: 2px 10px; text-align: left; font-family: 'Noto Sans Gujarati', sans-serif;">${item.name}</td>
+            <td style="border-right: 1px solid #000; padding: 2px 10px; text-align: center;">${item.hsn || ''}</td>
+            <td style="border-right: 1px solid #000; padding: 2px 10px; text-align: center;">${item.quantity}</td>
+            <td style="border-right: 1px solid #000; padding: 2px 10px; text-align: right;">${item.price.toFixed(0)}</td>
+            <td style="padding: 2px 10px; text-align: right;">${(item.price * item.quantity).toFixed(0)}</td>
+        </tr>
+    `).join('');
+
+    const emptyRowsCount = Math.max(0, 15 - bill.items.length);
+    const emptyRowsHTML = Array(emptyRowsCount).fill(0).map(() => `
+        <tr style="height: 30px;">
+            <td style="border-right: 1px solid #000;"></td>
+            <td style="border-right: 1px solid #000;"></td>
+            <td style="border-right: 1px solid #000;"></td>
+            <td style="border-right: 1px solid #000;"></td>
+            <td></td>
+        </tr>
+    `).join('');
 
     return `
 <!DOCTYPE html>
 <html lang="gu">
 <head>
     <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+Gujarati:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&family=Kalam:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #854d0e; /* Golden/Yellow theme */
-            --accent: #ca8a04;
-            --text-dark: #422006;
-            --text-muted: #713f12;
-            --bg-light: #fefce8;
-            --border: #fef08a;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            font-family: 'Outfit', 'Noto Sans Gujarati', sans-serif; 
-            padding: 40px;
-            color: var(--text-dark);
+            font-family: 'Roboto', 'Noto Sans Gujarati', sans-serif; 
+            margin: 0; padding: 20px;
             background: #fff;
-            line-height: 1.5;
+            color: #000;
         }
         .bill-container {
-            max-width: 800px;
+            width: 750px;
             margin: 0 auto;
-            border: 2px solid var(--primary);
-            padding: 24px;
+            border: 2px solid #000;
+            background: #f4e89f; /* Exact yellow from screenshot */
+            padding: 0;
             position: relative;
-            background: #fff;
-            box-shadow: 0 0 40px rgba(0,0,0,0.05);
         }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            border-bottom: 3px solid var(--primary);
-            padding-bottom: 20px;
-            margin-bottom: 24px;
+        table { width: 100%; border-collapse: collapse; }
+        
+        .top-header {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            border-bottom: 2px solid #000;
         }
-        .shop-info { flex: 2; }
-        .tax-invoice-badge {
-            background: var(--primary);
-            color: white;
-            padding: 6px 16px;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: 4px;
-            display: inline-block;
-            margin-bottom: 12px;
-            border-radius: 4px;
+        .header-left {
+            border-right: 2px solid #000;
+            padding: 10px;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        .header-right {
+            padding: 10px;
+            text-align: center;
         }
         .shop-name {
-            font-size: 32px;
-            font-weight: 800;
-            color: var(--primary);
-            line-height: 1;
-            margin-bottom: 4px;
+            font-family: 'Noto Sans Gujarati', sans-serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin: 0;
         }
-        .shop-subtitle {
-            font-size: 14px;
-            color: var(--accent);
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .shop-address {
-            font-size: 11px;
-            color: var(--text-muted);
-            max-width: 300px;
-        }
-        .bill-meta {
-            flex: 1;
-            text-align: right;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .meta-item {
-            font-size: 12px;
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-        .meta-label { font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 10px; }
-        .meta-value { font-weight: 700; color: var(--primary); }
+        .shop-subtitle { font-weight: 700; font-size: 14px; margin: 5px 0; }
+        .shop-address { font-size: 12px; font-weight: 700; font-family: 'Noto Sans Gujarati', sans-serif; }
 
-        .party-details {
+        .meta-section {
             display: grid;
-            grid-template-columns: 1.5fr 1fr;
-            gap: 20px;
-            margin-bottom: 24px;
+            grid-template-columns: 1fr 180px;
+            border-bottom: 2px solid #000;
         }
-        .party-card {
-            background: var(--bg-light);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 16px;
+        .meta-left {
+            padding: 10px;
+            border-right: 2px solid #000;
         }
-        .card-title {
-            font-size: 9px;
-            font-weight: 800;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 4px;
-        }
-        .party-name {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 4px;
-        }
-        .party-info { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+        .meta-right { padding: 5px 10px; font-weight: 700; color: #b91c1c; font-size: 14px; }
+        
+        .meta-row { display: flex; margin-bottom: 8px; align-items: flex-end; }
+        .meta-label { font-family: 'Noto Sans Gujarati', sans-serif; font-weight: 700; font-size: 14px; width: 60px; }
+        .meta-value { border-bottom: 1px dotted #000; flex: 1; padding-left: 10px; font-weight: 700; color: #1e40af; }
 
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 24px;
-            font-size: 12px;
-        }
+        .gst-row { display: flex; padding: 10px; border-bottom: 2px solid #000; font-weight: 700; font-size: 14px; gap: 40px; }
+
         .items-table th {
-            background: var(--bg-light);
-            padding: 12px;
-            text-align: left;
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 10px;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
+            border-bottom: 2px solid #000;
+            border-right: 1px solid #000;
+            background: #eab308;
+            padding: 5px;
+            font-family: 'Noto Sans Gujarati', sans-serif;
+            font-size: 14px;
         }
-        .items-table td { border: 1px solid var(--border); }
+        .items-table td { font-size: 14px; font-weight: 700; color: #1e40af; }
 
         .footer {
             display: grid;
-            grid-template-columns: 1.5fr 1fr;
-            gap: 40px;
+            grid-template-columns: 1fr 250px;
+            border-top: 2px solid #000;
         }
-        .qr-section {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            background: var(--bg-light);
-            padding: 16px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
+        .footer-left {
+            border-right: 2px solid #000;
+            padding: 20px;
+            position: relative;
         }
-        .qr-code { width: 80px; height: 80px; border: 1px solid #fff; border-radius: 8px; }
-        .payment-info h4 { font-size: 14px; color: var(--primary); margin-bottom: 4px; }
-        .payment-info p { font-size: 10px; color: var(--text-muted); }
+        .gpay-text {
+            font-family: 'Kalam', cursive;
+            font-size: 48px;
+            color: #475569;
+            margin: 0;
+        }
+        .amount-only {
+            font-family: 'Kalam', cursive;
+            font-size: 24px;
+            color: #1e40af;
+            margin-top: -10px;
+            border-bottom: 2px solid #000;
+            display: inline-block;
+            width: 100%;
+        }
+        .terms { font-size: 11px; font-weight: 700; margin-top: 50px; font-family: 'Noto Sans Gujarati', sans-serif; }
 
-        .totals-section {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
+        .footer-right { background: #fde047; }
         .total-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-        }
-        .total-row.grand-total {
-            background: var(--primary);
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 10px;
-            font-weight: 800;
-            font-size: 18px;
-        }
-        .signature-area {
-            margin-top: 40px;
-            text-align: right;
-            padding-right: 20px;
-        }
-        .signature-line {
-            width: 180px;
-            border-top: 1px solid var(--primary);
-            margin-left: auto;
-            margin-top: 60px;
-            padding-top: 8px;
-            font-size: 10px;
+            display: grid;
+            grid-template-columns: 1fr 80px;
+            border-bottom: 1px solid #000;
+            font-size: 12px;
             font-weight: 700;
-            color: var(--primary);
+            padding: 5px 10px;
         }
-        .watermark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 120px;
-            font-weight: 900;
-            color: rgba(133, 77, 14, 0.03);
-            white-space: nowrap;
-            z-index: -1;
-            pointer-events: none;
+        .total-row:last-child { border-bottom: none; font-size: 16px; color: #b91c1c; }
+        .total-label { font-family: 'Noto Sans Gujarati', sans-serif; }
+        .total-value { text-align: right; font-style: italic; color: #1e40af; }
+
+        .stamp-area {
+            padding: 10px;
+            text-align: center;
         }
+        .stamp-box {
+            border: 2px dashed #64748b;
+            color: #64748b;
+            padding: 5px;
+            border-radius: 10px;
+            display: inline-block;
+            font-size: 12px;
+            font-family: 'Noto Sans Gujarati', sans-serif;
+        }
+        .stamp-text { font-size: 14px; font-weight: 700; font-family: 'Noto Sans Gujarati', sans-serif; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div class="watermark">SHREE HARI</div>
-    
     <div class="bill-container">
-        <div class="header">
-            <div class="shop-info">
-                <div class="tax-invoice-badge">TAX INVOICE</div>
-                <h1 class="shop-name">${settings.shopName || 'SHREE HARI DRESSES'}</h1>
-                <div class="shop-subtitle">Wholesale & Retail Market</div>
-                <div class="shop-address">${settings.shopAddress || 'MAVDI, RAJKOT - 360 004'}</div>
-                <div class="party-info" style="margin-top: 8px; font-weight: 700;">GSTIN: ${settings.gstin || '24BRNPM8073Q1ZU'}</div>
+        <div class="top-header">
+            <div class="header-left">
+                <div style="text-align:center; font-weight:700; font-size:13px; margin-bottom:5px;">TAX INVOICE</div>
+                <div style="text-align:center; font-weight:700; font-size:13px; margin-bottom:15px;">CASH / DEBIT</div>
+                <div>Original : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Duplicate :</div>
+                <div style="font-weight:700; margin-top:10px;">GSTIN - 24BRNPM8073Q1ZU</div>
+                <div style="font-weight:700;">State : Gujarat Code : 24</div>
             </div>
-            <div class="bill-meta">
-                <div class="meta-item">
-                    <span class="meta-label">Bill Date:</span>
-                    <span class="meta-value">${formatDate(bill.createdAt)}</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Book No:</span>
-                    <span class="meta-value">${bookNum}</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Bill No:</span>
-                    <span class="meta-value" style="font-size: 16px;">#${billNum}</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">Status:</span>
-                    <span class="meta-value" style="color: ${bill.status === 'void' ? '#ef4444' : '#10b981'}">${bill.status?.toUpperCase() || 'PAID'}</span>
-                </div>
+            <div class="header-right">
+                <h1 class="shop-name">શ્રી હરિ ડ્રેસીસ & કટપીસ</h1>
+                <div class="shop-subtitle">Wholesale & Retail</div>
+                <div class="shop-address">માધવ પાર્ક ૧, શ્રી હરિ કોમ્પલેક્ષની બાજુમાં, આલાપ રોયલ પામની પાછળ,<br>બાપાસીતારામ ચોક, મવડી, રાજકોટ - ૩૬૦ ૦૦૪.</div>
             </div>
         </div>
 
-        <div class="party-details">
-            <div class="party-card">
-                <div class="card-title">Billed To (Customer)</div>
-                <div class="party-name">${bill.customerNameGujarati || bill.customerName || 'Cash Customer'}</div>
-                ${bill.customerNameGujarati && bill.customerName ? `<div class="party-info">(${bill.customerName})</div>` : ''}
-                <div class="party-info">${bill.customerAddressGujarati || bill.customerAddress || 'Walk-in Customer'}</div>
-                <div class="party-info">Phone: ${bill.customerPhone || 'N/A'}</div>
-            </div>
-            <div class="party-card">
-                <div class="card-title">Payment Info</div>
-                <div class="meta-item" style="justify-content: flex-start; margin-top: 8px;">
-                    <span class="meta-label">Method:</span>
-                    <span class="meta-value" style="text-transform: uppercase;">${bill.paymentMode || 'Cash'}</span>
+        <div class="meta-section">
+            <div class="meta-left">
+                <div class="meta-row">
+                    <span class="meta-label">મે. :</span>
+                    <span class="meta-value">${bill.customerNameGujarati || bill.customerName || ''}</span>
                 </div>
-                <div class="meta-item" style="justify-content: flex-start; margin-top: 8px;">
-                    <span class="meta-label">Place of Supply:</span>
-                    <span class="meta-value">Gujarat (24)</span>
+                <div class="meta-row">
+                    <span class="meta-label">એડ્રેસ :</span>
+                    <span class="meta-value">${bill.customerAddressGujarati || bill.customerAddress || ''}</span>
                 </div>
             </div>
+            <div class="meta-right">
+                <div style="margin-bottom:10px;">બુક નં. : &nbsp;&nbsp;&nbsp;<span style="color:#b91c1c;">${bookNum}</span></div>
+                <div style="margin-bottom:10px;">બીલ નં. : &nbsp;&nbsp;<span style="color:#b91c1c;">${billNum}</span></div>
+                <div>તા. : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#1e40af; font-style:italic;">${new Date(bill.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</span></div>
+            </div>
+        </div>
+
+        <div class="gst-row">
+            <div>GSTIN :</div>
+            <div>State : Gujarat</div>
+            <div>Code : 24</div>
         </div>
 
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width: 40px; text-align: center;">SR</th>
-                    <th>Product Description</th>
-                    <th style="width: 80px; text-align: center;">HSN</th>
-                    <th style="width: 80px; text-align: center;">Qty</th>
-                    <th style="width: 100px; text-align: right;">Rate</th>
-                    <th style="width: 120px; text-align: right;">Total Amount</th>
+                    <th style="width: 320px; border-right: 2px solid #000;">માલની વિગત</th>
+                    <th style="width: 100px; border-right: 2px solid #000;">HSN Code</th>
+                    <th style="width: 80px; border-right: 2px solid #000;">નંગ /<br>મીટર</th>
+                    <th style="width: 100px; border-right: 2px solid #000;">ભાવ</th>
+                    <th style="width: 100px;">રકમ રૂ.</th>
                 </tr>
             </thead>
             <tbody>
@@ -313,47 +218,49 @@ const buildBillHTML = async (bill, settings = {}) => {
         </table>
 
         <div class="footer">
-            <div class="qr-section">
-                <img src="${qrDataUrl}" class="qr-code" />
-                <div class="payment-info">
-                    <h4>Scan to Pay</h4>
-                    <p>Easily pay via GPay, PhonePe, or any UPI app.</p>
-                    <p style="margin-top: 4px; font-weight: 700; color: var(--text-dark);">${settings.upiId || '9924387087@okbizaxis'}</p>
+            <div class="footer-left">
+                <div class="gpay-text">GPay</div>
+                <div class="amount-only">${bill.actualTotal}-only</div>
+                <div class="terms">
+                    ટર્મ્સ એન્ડ કન્ડીશન :<br>
+                    ૧. ન્યાયક્ષેત્ર રાજકોટ રહેશે.<br>
+                    ૨. ભુલચુક લેવી દેવી.
                 </div>
             </div>
-            
-            <div class="totals-section">
+            <div class="footer-right">
                 <div class="total-row">
-                    <span class="meta-label">Taxable Value</span>
-                    <span class="meta-value">₹${bill.totalAmount.toFixed(2)}</span>
+                    <span class="total-label">સબટોટલ (Subtotal)</span>
+                    <span class="total-value">${bill.totalAmount.toFixed(2)}</span>
                 </div>
                 <div class="total-row">
-                    <span class="meta-label">CGST (2.5%)</span>
-                    <span class="meta-value">₹${bill.cgst.toFixed(2)}</span>
+                    <span class="total-label">CGST 2.5%</span>
+                    <span class="total-value">${bill.cgst.toFixed(2)}</span>
                 </div>
                 <div class="total-row">
-                    <span class="meta-label">SGST (2.5%)</span>
-                    <span class="meta-value">₹${bill.sgst.toFixed(2)}</span>
+                    <span class="total-label">SGST 2.5%</span>
+                    <span class="total-value">${bill.sgst.toFixed(2)}</span>
                 </div>
-                ${bill.roundOff ? `
                 <div class="total-row">
-                    <span class="meta-label">Round Off</span>
-                    <span class="meta-value">₹${bill.roundOff.toFixed(2)}</span>
-                </div>` : ''}
-                <div class="total-row grand-total">
-                    <span>TOTAL</span>
-                    <span>₹${bill.actualTotal.toLocaleString('en-IN')}</span>
+                    <span class="total-label">IGST %</span>
+                    <span class="total-value"></span>
+                </div>
+                <div class="total-row">
+                    <span class="total-label">સબટોટલ (Subtotal)</span>
+                    <span class="total-value">${(bill.totalAmount + bill.cgst + bill.sgst).toFixed(2)}</span>
+                </div>
+                <div class="total-row">
+                    <span class="total-label">રાઉન્ડ ઓફ</span>
+                    <span class="total-value">${bill.roundOff > 0 ? '+' : ''}${bill.roundOff.toFixed(2)}</span>
+                </div>
+                <div class="total-row" style="border-top:2px solid #000;">
+                    <span class="total-label">કુલ (Total)</span>
+                    <span class="total-value" style="font-size:20px;">${bill.actualTotal}/-</span>
+                </div>
+                <div class="stamp-area">
+                    <div class="stamp-box">શ્રી હરિ ડ્રેસીસ & કટપીસ</div>
+                    <div class="stamp-text">શ્રી હરિ ડ્રેસીસ & કટપીસ</div>
                 </div>
             </div>
-        </div>
-
-        <div class="signature-area">
-            ${settings.signature ? `<img src="${settings.signature}" style="height: 60px; margin-bottom: -15px; opacity: 0.8;" />` : ''}
-            <div class="signature-line">Authorized Signatory</div>
-        </div>
-        
-        <div style="margin-top: 32px; font-size: 9px; color: var(--text-muted); text-align: center; border-top: 1px dashed var(--border); padding-top: 12px;">
-            Thank you for shopping at ${settings.shopName || 'Shree Hari Dresses'}. Visit again!
         </div>
     </div>
 </body>
