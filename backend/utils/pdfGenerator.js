@@ -217,49 +217,24 @@ const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
     
-    // Launch a single browser instance for efficiency
-    let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-    
-    if (!executablePath && process.env.RENDER) {
-        console.log('--- SYSTEM DIAGNOSTICS ---');
-        console.log('Current Directory:', process.cwd());
-        
-        // Search in both root and backend subfolders
-        const searchDirs = [
-            path.join(process.cwd(), 'chrome_browser'),
-            path.join(process.cwd(), 'backend', 'chrome_browser'),
-            path.join(__dirname, 'chrome_browser'),
-            path.join(__dirname, '..', 'chrome_browser')
-        ];
+    // Launch configuration for Render/Linux and local environments
+    const launchOptions = {
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process', // Standard for containerized environments
+            '--disable-gpu'
+        ],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
+        headless: 'new'
+    };
 
-        for (const localPath of searchDirs) {
-            console.log('Searching in:', localPath);
-            if (fs.existsSync(localPath)) {
-                try {
-                    const files = fs.readdirSync(localPath, { recursive: true });
-                    console.log(`Found ${files.length} files in ${localPath}`);
-                    const chrome = files.find(f => f.endsWith('/chrome') || f === 'chrome');
-                    if (chrome) {
-                        executablePath = path.join(localPath, chrome);
-                        console.log(`SUCCESS: FOUND CHROME AT: ${executablePath}`);
-                        break;
-                    }
-                } catch (err) {
-                    console.log('Error reading folder:', err.message);
-                }
-            }
-        }
-        
-        if (!executablePath) {
-            console.log('FALLBACK: Using default cache path');
-            executablePath = '/opt/render/.cache/puppeteer/chrome/linux-147.0.7727.57/chrome-linux64/chrome';
-        }
-    }
-
-    const browser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        executablePath: executablePath || null
-    });
+    console.log('Launching browser with options:', JSON.stringify({ ...launchOptions, executablePath: launchOptions.executablePath || 'default' }));
+    const browser = await puppeteer.launch(launchOptions);
 
     try {
         const pdfBuffers = [];
