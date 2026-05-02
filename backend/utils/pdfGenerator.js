@@ -217,46 +217,44 @@ const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
     
-    // Launch configuration for Render/Linux and local environments
+    const puppeteerCore = require('puppeteer-core');
+    let chromium;
+    try {
+        chromium = require('@sparticuz/chromium');
+    } catch (e) {
+        console.log('@sparticuz/chromium not found, using standard puppeteer-core');
+    }
+
     const launchOptions = {
-        args: [
+        args: chromium ? chromium.args : [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
+            '--disable-gpu',
             '--no-zygote',
-            '--single-process', // Standard for containerized environments
-            '--disable-gpu'
+            '--single-process'
         ],
+        defaultViewport: chromium ? chromium.defaultViewport : null,
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
-        headless: 'new'
+        headless: chromium ? chromium.headless : 'new'
     };
 
     console.log('--- PDF SYSTEM DIAGNOSTICS ---');
     console.log('Current Working Directory:', process.cwd());
-    console.log('User ID:', process.getuid ? process.getuid() : 'N/A');
     
-    // Check if .cache exists and list its content depth 2
-    const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
-    if (fs.existsSync(cacheDir)) {
-        console.log('Cache directory exists:', cacheDir);
-        try {
-            const files = fs.readdirSync(cacheDir, { recursive: true });
-            console.log(`Total files in cache: ${files.length}`);
-            if (files.length > 0) {
-                console.log('First few files:', JSON.stringify(files.slice(0, 10)));
-            }
-        } catch (e) {
-            console.log('Error listing cache:', e.message);
-        }
-    } else {
-        console.log('CRITICAL: Cache directory DOES NOT exist at', cacheDir);
-    }
-
     // Auto-detect local chrome if not set
     if (!launchOptions.executablePath) {
-        if (fs.existsSync(cacheDir)) {
+        if (chromium) {
+            try {
+                launchOptions.executablePath = await chromium.executablePath();
+                console.log('USING SPARTICUZ CHROMIUM PATH:', launchOptions.executablePath);
+            } catch (e) {
+                console.log('Sparticuz failed to get path:', e.message);
+            }
+        }
+
+        if (!launchOptions.executablePath) {
+            const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
             const findChrome = (dir) => {
                 try {
                     const files = fs.readdirSync(dir);
@@ -276,15 +274,7 @@ const generateBillPdf = async (billOrBills, settings) => {
             if (foundPath) {
                 console.log('SUCCESS: AUTO-DETECTED CHROME AT:', foundPath);
                 launchOptions.executablePath = foundPath;
-                // Ensure executable permissions
-                try {
-                    fs.chmodSync(foundPath, '755');
-                    console.log('Set executable permissions on chrome binary');
-                } catch (e) {
-                    console.log('Failed to set permissions:', e.message);
-                }
-            } else {
-                console.log('FAILED: Chrome binary not found in cache');
+                try { fs.chmodSync(foundPath, '755'); } catch (e) {}
             }
         }
     }
@@ -293,7 +283,7 @@ const generateBillPdf = async (billOrBills, settings) => {
     
     let browser;
     try {
-        browser = await puppeteer.launch(launchOptions);
+        browser = await puppeteerCore.launch(launchOptions);
         console.log('Browser launched successfully');
     } catch (launchError) {
         console.error('--- BROWSER LAUNCH CRITICAL FAILURE ---');

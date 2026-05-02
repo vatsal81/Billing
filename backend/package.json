@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@sparticuz/chromium": "^148.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -26,6 +27,7 @@
     "num-words": "^1.2.3",
     "pdfkit": "^0.18.0",
     "puppeteer": "^24.42.0",
+    "puppeteer-core": "^24.42.0",
     "qrcode": "^1.5.4"
   }
 }
