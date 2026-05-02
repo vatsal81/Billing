@@ -220,9 +220,26 @@ const generateBillPdf = async (billOrBills, settings) => {
     // Launch a single browser instance for efficiency
     let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     
-    // Auto-detect on Render if not explicitly set
     if (!executablePath && process.env.RENDER) {
-        executablePath = '/opt/render/.cache/puppeteer/chrome/linux-131.0.6778.204/chrome-linux64/chrome';
+        // Try the exact version from your error log
+        const exactPath = '/opt/render/.cache/puppeteer/chrome/linux-147.0.7727.57/chrome-linux64/chrome';
+        if (fs.existsSync(exactPath)) {
+            executablePath = exactPath;
+        } else {
+            // Fallback: Try to find any chrome binary in the cache folder
+            try {
+                const cacheBase = '/opt/render/.cache/puppeteer/chrome';
+                if (fs.existsSync(cacheBase)) {
+                    const dirs = fs.readdirSync(cacheBase);
+                    const chromeDir = dirs.find(d => d.startsWith('linux-'));
+                    if (chromeDir) {
+                        executablePath = path.join(cacheBase, chromeDir, 'chrome-linux64', 'chrome');
+                    }
+                }
+            } catch (e) {
+                console.error('Error auto-detecting chrome:', e);
+            }
+        }
     }
 
     const browser = await puppeteer.launch({
