@@ -110,26 +110,26 @@ const buildBillHTML = (bill, settings = {}) => {
         .dotted-line {
             border-bottom: 1px dotted #000;
             flex: 1;
-            font-family: 'Kalam', cursive;
+            font-family: 'Kalam', 'Gujarati', cursive;
             color: #0f3c88;
             font-size: 16px;
             padding-left: 8px;
             margin-left: 5px;
         }
         .items-table { width: 100%; border-collapse: collapse; flex-grow: 1; display: flex; flex-direction: column; }
-        .items-table thead tr { border-bottom: 2px solid #000; font-size: 14px; font-weight: bold; display: flex; width: 100%; }
+        .items-table thead tr { border-bottom: 2px solid #000; font-size: 14px; font-weight: bold; display: flex; width: 100%; font-family: 'Gujarati', sans-serif; }
         .items-table tbody { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
         .footer-section { display: flex; border-top: 2px solid #000; margin-top: auto; height: 300px; }
         .footer-left { width: 68%; border-right: 2px solid #000; padding: 8px; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
         .footer-right { width: 32%; }
-        .total-row { display: flex; border-bottom: 1px solid #000; padding: 4px 8px; font-size: 13px; }
+        .total-row { display: flex; border-bottom: 1px solid #000; padding: 4px 8px; font-size: 13px; font-family: 'Gujarati', sans-serif; }
         .gpay-text { position: absolute; top: 10px; left: 20px; font-family: 'Kalam', cursive; font-size: 28px; color: #0f3c88; opacity: 0.8; transform: rotate(-15deg); }
         .stamp-area { border-top: 2px solid #000; padding: 8px; text-align: center; position: relative; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
         .stamp { position: absolute; top: 5px; color: #0f3c88; border: 2px dotted #0f3c88; border-radius: 8px; padding: 5px 8px; transform: rotate(-5deg); opacity: 0.9; background: rgba(238, 221, 130, 0.5); font-weight: bold; font-size: 12px; font-family: 'Gujarati', sans-serif; }
         
         /* Font helper classes */
         .gujarati-text { font-family: 'Gujarati', sans-serif; }
-        .kalam-text { font-family: 'Kalam', cursive; }
+        .kalam-text { font-family: 'Kalam', 'Gujarati', cursive; }
     </style>
 </head>
 <body>
@@ -195,7 +195,15 @@ const buildBillHTML = (bill, settings = {}) => {
                     </tr>
                 </thead>
                 <tbody>
-                    ${itemRows}
+                    ${bill.items.map((item, idx) => `
+                        <tr style="display: flex; width: 100%; font-family: 'Kalam', 'Gujarati', cursive; color: #0f3c88; font-size: 18px;">
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 45%; text-align: left;">${item.name}</td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 15%;"></td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 10%; text-align: center;">${item.quantity}</td>
+                            <td style="padding: 6px 8px; border-right: 2px solid #000; width: 12%; text-align: right;">${item.price.toFixed(0)}</td>
+                            <td style="padding: 6px 8px; width: 18%; text-align: right;">${(item.price * item.quantity).toFixed(0)}</td>
+                        </tr>
+                    `).join('')}
                     ${emptyRowsHTML}
                 </tbody>
             </table>
@@ -231,7 +239,7 @@ const buildBillHTML = (bill, settings = {}) => {
                         <span style="width: 65%; font-weight: bold;">રાઉન્ડ ઓફ</span>
                         <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.roundOff >= 0 ? '+' : ''}${bill.roundOff.toFixed(2)}</span>
                     </div>
-                    <div style="display: flex; padding: 8px;">
+                    <div style="display: flex; padding: 8px; font-family: 'Gujarati', sans-serif;">
                         <span style="width: 50%; font-weight: bold; font-size: 16px;">કુલ (Total)</span>
                         <span class="kalam-text" style="width: 50%; text-align: right; color: #0f3c88; font-size: 24px; font-weight: bold;">${finalTotal}/-</span>
                     </div>
