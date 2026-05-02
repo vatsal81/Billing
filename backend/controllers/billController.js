@@ -354,7 +354,7 @@ exports.getBillPdf = asyncHandler(async (req, res) => {
 
     res.set({
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename=bill_${bill.serialNumber}.pdf`,
+        'Content-Disposition': `attachment; filename=bill_${bill.serialNumber}.pdf`,
         'Content-Length': pdfBuffer.length
     });
     res.send(pdfBuffer);
