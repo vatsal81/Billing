@@ -221,33 +221,24 @@ const generateBillPdf = async (billOrBills, settings) => {
     let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     
     if (!executablePath && process.env.RENDER) {
-        console.log('--- DEBUG: Searching for Chrome on Render ---');
-        const searchPaths = [
-            '/opt/render/.cache/puppeteer',
-            '/home/render/.cache/puppeteer',
-            path.join(process.cwd(), '.cache/puppeteer')
-        ];
-
-        for (const base of searchPaths) {
-            if (fs.existsSync(base)) {
-                console.log(`Checking base path: ${base}`);
-                try {
-                    const files = fs.readdirSync(base, { recursive: true });
-                    const chrome = files.find(f => f.endsWith('/chrome') || f === 'chrome');
-                    if (chrome) {
-                        executablePath = path.join(base, chrome);
-                        console.log(`FOUND CHROME AT: ${executablePath}`);
-                        break;
-                    }
-                } catch (err) {
-                    console.log(`Error reading ${base}:`, err.message);
+        console.log('--- SEARCHING LOCAL PROJECT FOLDER ---');
+        const localPath = path.join(process.cwd(), 'chrome_browser');
+        
+        if (fs.existsSync(localPath)) {
+            try {
+                const files = fs.readdirSync(localPath, { recursive: true });
+                const chrome = files.find(f => f.endsWith('/chrome') || f === 'chrome');
+                if (chrome) {
+                    executablePath = path.join(localPath, chrome);
+                    console.log(`FOUND LOCAL CHROME AT: ${executablePath}`);
                 }
+            } catch (err) {
+                console.log('Error reading local chrome folder:', err.message);
             }
         }
         
         if (!executablePath) {
-            console.log('CRITICAL: Chrome not found in any search path.');
-            // One last desperate try: common path for version 147
+            // Fallback to the previous logic if local fails
             executablePath = '/opt/render/.cache/puppeteer/chrome/linux-147.0.7727.57/chrome-linux64/chrome';
         }
     }
