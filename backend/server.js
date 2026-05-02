@@ -38,11 +38,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
-// Base Route
-app.get('/', (req, res) => {
-    res.send('API is running...');
-});
-
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/items', require('./routes/productRoutes'));
@@ -54,6 +49,21 @@ app.use('/api/purchase', protect, require('./routes/purchaseRoutes'));
 app.use('/api/suppliers', protect, require('./routes/supplierRoutes'));
 app.use('/api/analytics', protect, require('./routes/analyticsRoutes'));
 app.use('/api/ledger', protect, require('./routes/ledgerRoutes'));
+
+// Serve Frontend in Production
+if (process.env.NODE_ENV === 'production') {
+    const frontendDistPath = path.join(__dirname, '../frontend/dist');
+    app.use(express.static(frontendDistPath));
+
+    app.get('*', (req, res) => {
+        res.sendFile(path.resolve(frontendDistPath, 'index.html'));
+    });
+} else {
+    // Base Route for dev
+    app.get('/', (req, res) => {
+        res.send('API is running...');
+    });
+}
 
 // Error Handling
 app.use(notFound);
