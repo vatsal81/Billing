@@ -15,8 +15,13 @@ connectDB();
 const app = express();
 
 // Security Middleware
-app.use(helmet());
-app.use(cors());
+app.use(helmet({
+    crossOriginResourcePolicy: false,
+}));
+app.use(cors({
+    origin: true, // Allow all origins for now, or specify frontend URL
+    credentials: true
+}));
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -32,6 +37,11 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Static Folders
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+
+// Base Route
+app.get('/', (req, res) => {
+    res.send('API is running...');
+});
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
