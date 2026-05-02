@@ -221,16 +221,24 @@ const generateBillPdf = async (billOrBills, settings) => {
     let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     
     if (!executablePath && process.env.RENDER) {
-        console.log('--- SEARCHING LOCAL PROJECT FOLDER ---');
+        console.log('--- SYSTEM DIAGNOSTICS ---');
+        console.log('Current Directory:', process.cwd());
+        try {
+            const rootFiles = fs.readdirSync(process.cwd());
+            console.log('Root Folder Contents:', rootFiles.join(', '));
+        } catch (e) {}
+
         const localPath = path.join(process.cwd(), 'chrome_browser');
+        console.log('Searching in:', localPath);
         
         if (fs.existsSync(localPath)) {
             try {
                 const files = fs.readdirSync(localPath, { recursive: true });
+                console.log('Files in chrome_browser:', files.length);
                 const chrome = files.find(f => f.endsWith('/chrome') || f === 'chrome');
                 if (chrome) {
                     executablePath = path.join(localPath, chrome);
-                    console.log(`FOUND LOCAL CHROME AT: ${executablePath}`);
+                    console.log(`SUCCESS: FOUND CHROME AT: ${executablePath}`);
                 }
             } catch (err) {
                 console.log('Error reading local chrome folder:', err.message);
@@ -238,7 +246,7 @@ const generateBillPdf = async (billOrBills, settings) => {
         }
         
         if (!executablePath) {
-            // Fallback to the previous logic if local fails
+            console.log('FALLBACK: Using default cache path');
             executablePath = '/opt/render/.cache/puppeteer/chrome/linux-147.0.7727.57/chrome-linux64/chrome';
         }
     }
