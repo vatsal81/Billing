@@ -2,6 +2,22 @@ const puppeteer = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
+// Load fonts as Base64 to ensure they are available in Puppeteer (especially on Render)
+const loadFontAsBase64 = (fontName) => {
+    try {
+        const fontPath = path.join(__dirname, fontName);
+        if (fs.existsSync(fontPath)) {
+            return fs.readFileSync(fontPath).toString('base64');
+        }
+    } catch (e) {
+        console.error(`Error loading font ${fontName}:`, e.message);
+    }
+    return '';
+};
+
+const kalamBase64 = loadFontAsBase64('Kalam-Regular.ttf');
+const gujaratiBase64 = loadFontAsBase64('Lohit-Gujarati.ttf');
+
 const buildBillHTML = (bill, settings = {}) => {
     const formatDate = (date) => 
         date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-') : 'N/A';
@@ -21,22 +37,22 @@ const buildBillHTML = (bill, settings = {}) => {
     const finalTotal = bill.actualTotal || 0;
 
     const itemRows = bill.items.map((item, idx) => `
-        <tr class="item-row">
-            <td class="col-desc">${item.name}</td>
-            <td class="col-hsn"></td>
-            <td class="col-qty">${item.quantity}</td>
-            <td class="col-rate">${item.price.toFixed(0)}</td>
-            <td class="col-amount">${(item.price * item.quantity).toFixed(0)}</td>
+        <tr style="display: flex; width: 100%; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 18px;">
+            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 45%; text-align: left;">${item.name}</td>
+            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 15%;"></td>
+            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 10%; text-align: center;">${item.quantity}</td>
+            <td style="padding: 6px 8px; border-right: 2px solid #000; width: 12%; text-align: right;">${item.price.toFixed(0)}</td>
+            <td style="padding: 6px 8px; width: 18%; text-align: right;">${(item.price * item.quantity).toFixed(0)}</td>
         </tr>
     `).join('');
 
-    const emptyRowsHTML = Array.from({length: Math.max(1, 12 - bill.items.length)}).map((_, i) => `
-        <tr class="empty-row">
-            <td class="col-desc">&nbsp;</td>
-            <td class="col-hsn"></td>
-            <td class="col-qty"></td>
-            <td class="col-rate"></td>
-            <td class="col-amount"></td>
+    const emptyRowsHTML = Array.from({length: Math.max(1, 10 - bill.items.length)}).map((_, i) => `
+        <tr style="display: flex; width: 100%; ${i === 0 ? 'flex-grow: 1;' : ''}">
+            <td style="padding: 12px; border-right: 1px solid #000; width: 45%">&nbsp;</td>
+            <td style="border-right: 1px solid #000; width: 15%"></td>
+            <td style="border-right: 1px solid #000; width: 10%"></td>
+            <td style="border-right: 2px solid #000; width: 12%"></td>
+            <td style="width: 18%"></td>
         </tr>
     `).join('');
 
@@ -45,11 +61,22 @@ const buildBillHTML = (bill, settings = {}) => {
 <html lang="gu">
 <head>
     <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Noto+Sans+Gujarati:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'Kalam';
+            src: url(data:font/ttf;charset=utf-8;base64,${kalamBase64}) format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Gujarati';
+            src: url(data:font/ttf;charset=utf-8;base64,${gujaratiBase64}) format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            font-family: 'Noto Sans Gujarati', sans-serif; 
+            font-family: Arial, sans-serif; 
             background: #fff;
             padding: 0;
         }
@@ -61,322 +88,106 @@ const buildBillHTML = (bill, settings = {}) => {
         .bill-container {
             width: 190mm;
             min-height: 277mm;
-            background: #fdf5e6;
+            background: #eedd82;
             color: black;
-            padding: 0;
+            padding: 15px;
             border: 2px solid #000;
             display: flex;
             flex-direction: column;
-            position: relative;
             margin: 0 auto;
         }
-        
-        /* Header Section */
-        .header-section { 
-            display: flex; 
-            border-bottom: 2px solid #000; 
-        }
-        .header-left { 
-            width: 32%; 
-            border-right: 2px solid #000; 
-            padding: 10px; 
-            font-size: 13px; 
-            line-height: 1.4;
-            display: flex;
-            flex-direction: column;
-        }
-        .tax-invoice-title {
-            text-align: center; 
-            font-weight: bold; 
-            margin-bottom: 8px;
-            font-size: 15px;
-        }
-        .header-right { 
-            width: 68%; 
-            padding: 15px 10px; 
-            text-align: center; 
-        }
-        .shop-name {
-            font-size: 32px; 
-            margin: 0 0 5px 0; 
-            color: #002060; 
-            font-weight: bold;
-        }
-        .shop-subtitle {
-            font-size: 16px; 
-            margin: 0; 
-            font-weight: bold;
-            color: #000;
-        }
-        .shop-address {
-            font-size: 12px; 
-            margin: 5px 0 0 0; 
-            font-weight: 600;
-            line-height: 1.5;
-        }
-
-        /* Meta Section (Bill No, Date) */
-        .meta-section {
-            display: flex;
-            border-bottom: 2px solid #000;
-        }
-        .customer-area {
-            width: 68%;
-            border-right: 2px solid #000;
-            padding: 10px;
-        }
-        .bill-info-area {
-            width: 32%;
-            display: flex;
-            flex-direction: column;
-        }
-        .bill-info-row {
-            display: flex;
-            border-bottom: 1px solid #000;
-            padding: 8px 10px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .bill-info-row:last-child {
-            border-bottom: none;
-        }
-        .bill-info-label {
-            width: 70px;
-        }
-        .bill-info-value {
-            flex: 1;
-        }
-        .red-text { color: #d00; }
-        .blue-handwriting {
-            font-family: 'Kalam', cursive;
-            color: #0f3c88;
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .customer-row {
-            display: flex;
-            align-items: flex-end;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-        .customer-label {
-            min-width: 45px;
-        }
+        .header-section { display: flex; border-bottom: 2px solid #000; }
+        .header-left { width: 35%; border-right: 2px solid #000; padding: 8px; font-size: 13px; line-height: 1.4; }
+        .header-right { width: 65%; padding: 10px 8px; text-align: center; }
+        .customer-meta-section { display: flex; border-bottom: 2px solid #000; }
+        .customer-info { width: 68%; border-right: 2px solid #000; padding: 6px; font-size: 14px; line-height: 1.8; }
+        .meta-info { width: 32%; font-size: 14px; }
+        .info-row { display: flex; align-items: flex-end; }
         .dotted-line {
-            flex: 1;
             border-bottom: 1px dotted #000;
-            padding-left: 10px;
-            min-height: 25px;
-        }
-        .gst-meta-row {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 15px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-
-        /* Items Table */
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
-            flex-grow: 1;
-        }
-        .items-table th {
-            border-bottom: 2px solid #000;
-            border-right: 1px solid #000;
-            padding: 8px;
-            font-size: 14px;
-            background: rgba(0,0,0,0.02);
-        }
-        .items-table th:last-child {
-            border-right: none;
-        }
-        .item-row td {
-            border-right: 1px solid #000;
-            padding: 8px;
-            font-family: 'Kalam', cursive;
-            color: #0f3c88;
-            font-size: 18px;
-            height: 38px;
-        }
-        .item-row td:last-child {
-            border-right: none;
-        }
-        .empty-row td {
-            border-right: 1px solid #000;
-            height: 38px;
-        }
-        .empty-row td:last-child {
-            border-right: none;
-        }
-        
-        /* Column Widths */
-        .col-desc { width: 45%; text-align: left; }
-        .col-hsn { width: 15%; text-align: center; }
-        .col-qty { width: 10%; text-align: center; }
-        .col-rate { width: 12%; text-align: right; border-right: 2px solid #000 !important; }
-        .col-amount { width: 18%; text-align: right; }
-
-        /* Footer Section */
-        .footer-section {
-            display: flex;
-            border-top: 2px solid #000;
-            min-height: 280px;
-        }
-        .footer-left {
-            width: 68%;
-            border-right: 2px solid #000;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            position: relative;
-        }
-        .gpay-mark {
-            position: absolute;
-            top: 20px;
-            left: 30px;
-            font-family: 'Kalam', cursive;
-            font-size: 42px;
-            color: #0f3c88;
-            transform: rotate(-10deg);
-            opacity: 0.8;
-        }
-        .amount-words-area {
-            margin-top: 80px;
-            border-top: 1px solid #000;
-            border-bottom: 1px solid #000;
-            padding: 10px 0;
-        }
-        .terms-area {
-            font-size: 12px;
-            font-weight: bold;
-            line-height: 1.6;
-        }
-        
-        .footer-right {
-            width: 32%;
-            display: flex;
-            flex-direction: column;
-        }
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 10px;
-            border-bottom: 1px solid #000;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .total-row.grand-total {
-            border-bottom: 2px solid #000;
-            padding: 10px;
-            align-items: center;
-        }
-        .total-label { flex: 1; }
-        .total-value { 
-            width: 90px; 
-            text-align: right; 
-            font-family: 'Kalam', cursive;
-            color: #0f3c88;
-            font-size: 18px;
-        }
-        .grand-total .total-value {
-            font-size: 28px;
-        }
-        
-        .signature-area {
             flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            padding-bottom: 15px;
-            position: relative;
-        }
-        .stamp {
-            position: absolute;
-            top: 15px;
-            border: 2px dashed #0f3c88;
+            font-family: 'Kalam', cursive;
             color: #0f3c88;
-            padding: 5px 10px;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 13px;
-            transform: rotate(-5deg);
-            background: rgba(253, 245, 230, 0.7);
+            font-size: 16px;
+            padding-left: 8px;
+            margin-left: 5px;
         }
-        .sig-text {
-            font-weight: bold;
-            font-size: 14px;
-        }
+        .items-table { width: 100%; border-collapse: collapse; flex-grow: 1; display: flex; flex-direction: column; }
+        .items-table thead tr { border-bottom: 2px solid #000; font-size: 14px; font-weight: bold; display: flex; width: 100%; }
+        .items-table tbody { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
+        .footer-section { display: flex; border-top: 2px solid #000; margin-top: auto; height: 300px; }
+        .footer-left { width: 68%; border-right: 2px solid #000; padding: 8px; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
+        .footer-right { width: 32%; }
+        .total-row { display: flex; border-bottom: 1px solid #000; padding: 4px 8px; font-size: 13px; }
+        .gpay-text { position: absolute; top: 10px; left: 20px; font-family: 'Kalam', cursive; font-size: 28px; color: #0f3c88; opacity: 0.8; transform: rotate(-15deg); }
+        .stamp-area { border-top: 2px solid #000; padding: 8px; text-align: center; position: relative; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+        .stamp { position: absolute; top: 5px; color: #0f3c88; border: 2px dotted #0f3c88; border-radius: 8px; padding: 5px 8px; transform: rotate(-5deg); opacity: 0.9; background: rgba(238, 221, 130, 0.5); font-weight: bold; font-size: 12px; font-family: 'Gujarati', sans-serif; }
+        
+        /* Font helper classes */
+        .gujarati-text { font-family: 'Gujarati', sans-serif; }
+        .kalam-text { font-family: 'Kalam', cursive; }
     </style>
 </head>
 <body>
     <div class="bill-wrapper">
         <div class="bill-container">
-            <!-- Header -->
             <div class="header-section">
                 <div class="header-left">
-                    <div class="tax-invoice-title">TAX INVOICE<br/>CASH / DEBIT</div>
-                    <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px;">
+                    <div style="text-align: center; font-weight: bold; margin-bottom: 8px;">TAX INVOICE<br/>CASH / DEBIT</div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                         <span>Original</span>
                         <span>Duplicate</span>
                     </div>
-                    <div style="font-weight: bold;">GSTIN - 24BRNPM8073Q1ZU</div>
-                    <div style="font-weight: bold;">State : Gujarat &nbsp;&nbsp; Code : 24</div>
+                    <div style="font-weight: bold;">GSTIN - ${settings.gstin || '24BRNPM8073Q1ZU'}</div>
+                    <div>${settings.stateInfo || 'State : Gujarat    Code : 24'}</div>
                 </div>
                 <div class="header-right">
-                    <h1 class="shop-name">શ્રી હરિ ડ્રેસીસ & કટપીસ</h1>
-                    <p class="shop-subtitle">Wholesale & Retail</p>
-                    <p class="shop-address">માધવ પાર્ક ૧, શ્રી હરિ કોમ્પલેક્ષની બાજુમાં, આલાપ રોયલ પામની પાછળ,<br/>બાપાસીતારામ ચોક, મવડી, રાજકોટ - ૩૬૦ ૦૦૪.</p>
+                    <h1 class="gujarati-text" style="font-size: 28px; margin: 0 0 4px 0; color: #002060; font-weight: bold;">${settings.shopName || 'શ્રી હરિ ડ્રેસીસ & કટપીસ'}</h1>
+                    <p style="font-size: 14px; margin: 0; font-weight: 600;">${settings.shopSubTitle || 'Wholesale & Retail'}</p>
+                    <p class="gujarati-text" style="font-size: 14px; margin: 0 0 4px 0; font-weight: 600; white-space: pre-wrap;">${settings.shopAddress || 'માધવ પાર્ક ૧, શ્રી હરિ કોમ્પલેક્ષની બાજુમાં, આલાપ રોયલ પામની પાછળ,\nબાપાસીતારામ ચોક, મવડી, રાજકોટ - ૩૬૦ ૦૦૪.'}</p>
                 </div>
             </div>
 
-            <!-- Customer & Bill Info -->
-            <div class="meta-section">
-                <div class="customer-area">
-                    <div class="customer-row">
-                        <div class="customer-label">મે. :</div>
-                        <div class="dotted-line blue-handwriting">${bill.customerNameGujarati || bill.customerName || ''}</div>
+            <div class="customer-meta-section">
+                <div class="customer-info">
+                    <div class="info-row">
+                        <div style="min-width: 40px; font-weight: bold;">મે. :</div>
+                        <div class="dotted-line kalam-text">${bill.customerNameGujarati || bill.customerName || ''}</div>
                     </div>
-                    <div class="customer-row">
-                        <div class="customer-label">એડ્રેસ :</div>
-                        <div class="dotted-line blue-handwriting">${bill.customerAddressGujarati || bill.customerAddress || ''}</div>
+                    <div class="info-row" style="margin-top: 4px;">
+                        <div style="min-width: 60px; font-weight: bold;">એડ્રેસ :</div>
+                        <div class="dotted-line kalam-text">${bill.customerAddressGujarati || bill.customerAddress || ''}</div>
                     </div>
-                    <div class="gst-meta-row">
-                        <span>GSTIN :</span>
-                        <span>State :</span>
-                        <span>Code :</span>
-                        <span style="width: 50px;"></span>
+                    <div style="display: flex; margin-top: 8px; border-top: 1px solid #000; padding-top: 4px;">
+                        <div style="min-width: 60px; font-weight: bold;">GSTIN :</div>
+                        <div style="flex: 1;"></div>
+                        <div style="min-width: 60px; font-weight: bold;">State :</div>
+                        <div style="flex: 1;"></div>
+                        <div style="min-width: 60px; font-weight: bold;">Code :</div>
+                        <div style="flex: 2;"></div>
                     </div>
                 </div>
-                <div class="bill-info-area">
-                    <div class="bill-info-row">
-                        <span class="bill-info-label">બુક નં. :</span>
-                        <span class="bill-info-value red-text">${renderBookNo()}</span>
+                <div class="meta-info">
+                    <div style="display: flex; padding: 6px 8px; border-bottom: 1px solid #000;">
+                        <span style="width: 70px; font-weight: bold;">બુક નં. :</span> <span style="color: #c00; font-weight: bold;">${renderBookNo()}</span>
                     </div>
-                    <div class="bill-info-row">
-                        <span class="bill-info-label">બીલ નં. :</span>
-                        <span class="bill-info-value red-text">${renderBillNo()}</span>
+                    <div style="display: flex; padding: 6px 8px; border-bottom: 1px solid #000;">
+                        <span style="width: 70px; font-weight: bold;">બીલ નં. :</span> <span style="color: #c00; font-weight: bold;">${renderBillNo()}</span>
                     </div>
-                    <div class="bill-info-row">
-                        <span class="bill-info-label">તા. :</span>
-                        <span class="bill-info-value blue-handwriting">${formatDate(bill.createdAt)}</span>
+                    <div style="display: flex; padding: 6px 8px;">
+                        <span style="width: 70px; font-weight: bold;">તા. :</span> <span class="kalam-text" style="color: #0f3c88; font-size: 15px; font-weight: bold;">${formatDate(bill.createdAt)}</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Items Table -->
             <table class="items-table">
                 <thead>
-                    <tr>
-                        <th class="col-desc">માલની વિગત</th>
-                        <th class="col-hsn">HSN Code</th>
-                        <th class="col-qty">નંગ / મીટર</th>
-                        <th class="col-rate">ભાવ</th>
-                        <th class="col-amount">રકમ રૂ.</th>
+                    <tr style="display: flex; width: 100%;">
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 45%;">માલની વિગત</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 15%;">HSN Code</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 10%;">નંગ / મીટર</th>
+                        <th style="padding: 8px; border-right: 2px solid #000; width: 12%;">ભાવ</th>
+                        <th style="padding: 8px; width: 18%;">રકમ રૂ.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -385,47 +196,44 @@ const buildBillHTML = (bill, settings = {}) => {
                 </tbody>
             </table>
 
-            <!-- Footer -->
             <div class="footer-section">
                 <div class="footer-left">
-                    <div class="gpay-mark">GPay</div>
-                    <div class="amount-words-area">
-                        <span class="blue-handwriting">${finalTotal}-only</span>
+                    <div class="gpay-text">GPay</div>
+                    <div style="margin-top: 60px; border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 4px 0;">
+                        <span class="kalam-text" style="color: #0f3c88; font-size: 20px; font-weight: bold;">${finalTotal}-only</span>
                     </div>
-                    <div class="terms-area">
-                        ટર્મ્સ એન્ડ કન્ડિશન :<br/>
-                        ૧. ન્યાયક્ષેત્ર રાજકોટ રહેશે.<br/>
-                        ૨. ભૂલચૂક લેવી દેવી.
+                    <div class="gujarati-text" style="font-size: 12px; font-weight: bold; line-height: 1.6; margin-top: 15px;">
+                        ટર્મ્સ એન્ડ કન્ડિશન :<br/>${settings.terms1 || '૧. ન્યાયક્ષેત્ર રાજકોટ રહેશે.'}<br/>${settings.terms2 || '૨. ભૂલચૂક લેવી દેવી.'}
                     </div>
                 </div>
                 <div class="footer-right">
                     <div class="total-row">
-                        <span class="total-label">સબટોટલ (Subtotal)</span>
-                        <span class="total-value">${bill.totalAmount.toFixed(2)}</span>
+                        <span style="width: 65%; font-weight: bold;">સબટોટલ (Subtotal)</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.totalAmount.toFixed(2)}</span>
                     </div>
                     <div class="total-row">
-                        <span class="total-label">CGST 2.5%</span>
-                        <span class="total-value">${bill.cgst.toFixed(2)}</span>
+                        <span style="width: 65%; font-weight: bold;">CGST 2.5%</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.cgst.toFixed(2)}</span>
                     </div>
                     <div class="total-row">
-                        <span class="total-label">SGST 2.5%</span>
-                        <span class="total-value">${bill.sgst.toFixed(2)}</span>
+                        <span style="width: 65%; font-weight: bold;">SGST 2.5%</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.sgst.toFixed(2)}</span>
                     </div>
                     <div class="total-row">
-                        <span class="total-label">IGST %</span>
-                        <span class="total-value"></span>
+                        <span style="width: 65%; font-weight: bold;">IGST %</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;"></span>
                     </div>
-                    <div class="total-row">
-                        <span class="total-label">રાઉન્ડ ઓફ</span>
-                        <span class="total-value">${bill.roundOff >= 0 ? '+' : ''}${bill.roundOff.toFixed(2)}</span>
+                    <div class="total-row" style="border-bottom: 2px solid #000;">
+                        <span style="width: 65%; font-weight: bold;">રાઉન્ડ ઓફ</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.roundOff >= 0 ? '+' : ''}${bill.roundOff.toFixed(2)}</span>
                     </div>
-                    <div class="total-row grand-total">
-                        <span class="total-label" style="font-size: 18px;">કુલ (Total)</span>
-                        <span class="total-value">${finalTotal}/-</span>
+                    <div style="display: flex; padding: 8px;">
+                        <span style="width: 50%; font-weight: bold; font-size: 16px;">કુલ (Total)</span>
+                        <span class="kalam-text" style="width: 50%; text-align: right; color: #0f3c88; font-size: 24px; font-weight: bold;">${finalTotal}/-</span>
                     </div>
-                    <div class="signature-area">
-                        <div class="stamp">શ્રી હરિ ડ્રેસીસ & કટપીસ</div>
-                        <div class="sig-text">શ્રી હરિ ડ્રેસીસ & કટપીસ</div>
+                    <div class="stamp-area">
+                        <div class="stamp">${settings.stampName || 'શ્રી હરિ ડ્રેસીસ & કટપીસ'}</div>
+                        <span class="gujarati-text" style="font-weight: bold; font-size: 13px;">${settings.shopName || 'શ્રી હરિ ડ્રેસીસ & કટપીસ'}</span>
                     </div>
                 </div>
             </div>
@@ -440,12 +248,24 @@ const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
     
-    const puppeteerCore = require('puppeteer-core');
+    let puppeteer;
     let chromium;
+    const isWindows = process.platform === 'win32';
+
+    // Try to load puppeteer (full) first on Windows, otherwise puppeteer-core
     try {
-        chromium = require('@sparticuz/chromium');
+        if (isWindows) {
+            puppeteer = require('puppeteer');
+        } else {
+            puppeteer = require('puppeteer-core');
+            try {
+                chromium = require('@sparticuz/chromium');
+            } catch (e) {
+                console.log('@sparticuz/chromium not found');
+            }
+        }
     } catch (e) {
-        console.log('@sparticuz/chromium not found, using standard puppeteer-core');
+        puppeteer = require('puppeteer-core');
     }
 
     const launchOptions = {
@@ -463,23 +283,24 @@ const generateBillPdf = async (billOrBills, settings) => {
     };
 
     console.log('--- PDF SYSTEM DIAGNOSTICS ---');
-    console.log('Current Working Directory:', process.cwd());
+    console.log('Platform:', process.platform);
     
-    // Auto-detect local chrome if not set
+    // Auto-detect browser path if not provided
     if (!launchOptions.executablePath) {
         if (chromium) {
             try {
                 launchOptions.executablePath = await chromium.executablePath();
-                console.log('USING SPARTICUZ CHROMIUM PATH:', launchOptions.executablePath);
             } catch (e) {
                 console.log('Sparticuz failed to get path:', e.message);
             }
         }
 
+        // If still no path, try local cache detection
         if (!launchOptions.executablePath) {
             const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
             const findChrome = (dir) => {
                 try {
+                    if (!fs.existsSync(dir)) return null;
                     const files = fs.readdirSync(dir);
                     for (const file of files) {
                         const fullPath = path.join(dir, file);
@@ -493,37 +314,34 @@ const generateBillPdf = async (billOrBills, settings) => {
                 } catch (e) {}
                 return null;
             };
-            const foundPath = findChrome(cacheDir);
-            if (foundPath) {
-                console.log('SUCCESS: AUTO-DETECTED CHROME AT:', foundPath);
-                launchOptions.executablePath = foundPath;
-                try { fs.chmodSync(foundPath, '755'); } catch (e) {}
+            launchOptions.executablePath = findChrome(cacheDir);
+        }
+
+        // Final fallbacks for Windows
+        if (!launchOptions.executablePath && isWindows) {
+            const commonPaths = [
+                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe')
+            ];
+            for (const p of commonPaths) {
+                if (fs.existsSync(p)) {
+                    launchOptions.executablePath = p;
+                    break;
+                }
             }
         }
     }
 
-    console.log('Final Launch Options:', JSON.stringify({ ...launchOptions, executablePath: launchOptions.executablePath || 'DEFAULT' }));
+    console.log('Using Browser Path:', launchOptions.executablePath || 'BUNDLED');
     
     let browser;
-    let retries = 3;
-    while (retries > 0) {
-        try {
-            browser = await puppeteerCore.launch(launchOptions);
-            console.log('Browser launched successfully');
-            break;
-        } catch (launchError) {
-            console.error(`Launch attempt failed (${retries} retries left):`, launchError.message);
-            if (launchError.message.includes('ETXTBSY') && retries > 1) {
-                console.log('File busy, waiting 2 seconds before retry...');
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                retries--;
-                continue;
-            }
-            console.error('--- BROWSER LAUNCH CRITICAL FAILURE ---');
-            console.error('Message:', launchError.message);
-            console.error('Stack:', launchError.stack);
-            throw new Error(`Browser launch failed: ${launchError.message}`);
-        }
+    try {
+        browser = await puppeteer.launch(launchOptions);
+        console.log('Browser launched successfully');
+    } catch (launchError) {
+        console.error('BROWSER LAUNCH FAILURE:', launchError.message);
+        throw new Error(`Failed to launch browser for PDF generation. ${isWindows ? 'Please ensure Chrome is installed.' : 'Check environment configuration.'}`);
     }
 
     try {
@@ -557,3 +375,4 @@ const generateBillPdf = async (billOrBills, settings) => {
 };
 
 module.exports = { generateBillPdf };
+
