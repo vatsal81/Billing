@@ -49,7 +49,8 @@ export default function History() {
     }
 
     // Generate the URL for the PDF bill
-    const backendBaseUrl = import.meta.env.VITE_API_BASE_URL.replace('/api', '') || `https://${window.location.hostname}`;
+    const backendBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 
+      (window.location.hostname === 'localhost' ? 'http://localhost:5000' : `https://${window.location.hostname}`);
     const pdfLink = `${backendBaseUrl}/api/bills/${b._id}/pdf`;
     
     const text = `નમસ્તે ${b.customerName || 'ગ્રાહક મિત્ર'},\n\nશ્રી હરિ ડ્રેસીસ & કટપીસમાં પધારવા બદલ આભાર! 🛍️\n\nબિલ વિગતો:\n📅 તારીખ: ${new Date(b.createdAt).toLocaleDateString('en-IN')}\n🧾 બિલ નં: ${b.serialNumber ? String(((b.serialNumber - 1) % 100) + 1).padStart(3, '0') : b._id.substring(b._id.length - 4).toUpperCase()}\n💰 કુલ રકમ: ₹${b.actualTotal.toLocaleString('en-IN')}\n\nતમારું બિલ જોવા અથવા ડાઉનલોડ કરવા માટે નીચેની લિંક પર ક્લિક કરો:\n${pdfLink}\n\nફરી પધારજો! આપનો દિવસ શુભ રહે. 😊\n\n------------------\n\nHello ${b.customerName || 'Valued Customer'},\n\nThank you for shopping at Shree Hari! 🛍️\n\nYour PDF Bill: ${pdfLink}\n\nHave a great day!`;
