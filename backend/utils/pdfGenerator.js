@@ -233,39 +233,72 @@ const generateBillPdf = async (billOrBills, settings) => {
         headless: 'new'
     };
 
+    console.log('--- PDF SYSTEM DIAGNOSTICS ---');
+    console.log('Current Working Directory:', process.cwd());
+    console.log('User ID:', process.getuid ? process.getuid() : 'N/A');
+    
+    // Check if .cache exists and list its content depth 2
+    const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
+    if (fs.existsSync(cacheDir)) {
+        console.log('Cache directory exists:', cacheDir);
+        try {
+            const files = fs.readdirSync(cacheDir, { recursive: true });
+            console.log(`Total files in cache: ${files.length}`);
+            if (files.length > 0) {
+                console.log('First few files:', JSON.stringify(files.slice(0, 10)));
+            }
+        } catch (e) {
+            console.log('Error listing cache:', e.message);
+        }
+    } else {
+        console.log('CRITICAL: Cache directory DOES NOT exist at', cacheDir);
+    }
+
     // Auto-detect local chrome if not set
     if (!launchOptions.executablePath) {
-        const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
         if (fs.existsSync(cacheDir)) {
             const findChrome = (dir) => {
-                const files = fs.readdirSync(dir);
-                for (const file of files) {
-                    const fullPath = path.join(dir, file);
-                    if (fs.statSync(fullPath).isDirectory()) {
-                        const found = findChrome(fullPath);
-                        if (found) return found;
-                    } else if (file === 'chrome' || file === 'chrome.exe') {
-                        return fullPath;
+                try {
+                    const files = fs.readdirSync(dir);
+                    for (const file of files) {
+                        const fullPath = path.join(dir, file);
+                        if (fs.statSync(fullPath).isDirectory()) {
+                            const found = findChrome(fullPath);
+                            if (found) return found;
+                        } else if (file === 'chrome' || file === 'chrome.exe') {
+                            return fullPath;
+                        }
                     }
-                }
+                } catch (e) {}
                 return null;
             };
             const foundPath = findChrome(cacheDir);
             if (foundPath) {
-                console.log('AUTO-DETECTED CHROME AT:', foundPath);
+                console.log('SUCCESS: AUTO-DETECTED CHROME AT:', foundPath);
                 launchOptions.executablePath = foundPath;
+                // Ensure executable permissions
+                try {
+                    fs.chmodSync(foundPath, '755');
+                    console.log('Set executable permissions on chrome binary');
+                } catch (e) {
+                    console.log('Failed to set permissions:', e.message);
+                }
+            } else {
+                console.log('FAILED: Chrome binary not found in cache');
             }
         }
     }
 
-    console.log('Launching browser with options:', JSON.stringify({ ...launchOptions, executablePath: launchOptions.executablePath || 'default' }));
+    console.log('Final Launch Options:', JSON.stringify({ ...launchOptions, executablePath: launchOptions.executablePath || 'DEFAULT' }));
     
     let browser;
     try {
         browser = await puppeteer.launch(launchOptions);
         console.log('Browser launched successfully');
     } catch (launchError) {
-        console.error('FAILED TO LAUNCH BROWSER:', launchError.message);
+        console.error('--- BROWSER LAUNCH CRITICAL FAILURE ---');
+        console.error('Message:', launchError.message);
+        console.error('Stack:', launchError.stack);
         throw new Error(`Browser launch failed: ${launchError.message}`);
     }
 
