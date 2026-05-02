@@ -19,7 +19,12 @@ app.use(helmet({
     crossOriginResourcePolicy: false,
 }));
 app.use(cors({
-    origin: true, // Allow all origins for now, or specify frontend URL
+    origin: [
+        'https://billing-jet-ten.vercel.app',
+        'https://billing-1-ri5i.onrender.com',
+        'http://localhost:5173', // For local development
+        'http://localhost:3000'
+    ],
     credentials: true
 }));
 
