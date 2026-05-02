@@ -217,10 +217,23 @@ const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
     
-    // Launch a single browser instance for efficiency
+    let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || null;
+    
+    // Smart detection for Render environment
+    if (!executablePath && process.env.RENDER) {
+        const renderPath = path.join(process.env.PUPPETEER_CACHE_DIR || '/opt/render/project/src/.cache/puppeteer', 'chrome');
+        if (fs.existsSync(renderPath)) {
+            // Find the chrome binary inside the versioned folder
+            const versions = fs.readdirSync(renderPath);
+            if (versions.length > 0) {
+                executablePath = path.join(renderPath, versions[0], 'chrome-linux64', 'chrome');
+            }
+        }
+    }
+
     const browser = await puppeteer.launch({
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        executablePath: executablePath
     });
 
     try {
@@ -239,12 +252,7 @@ const generateBillPdf = async (billOrBills, settings) => {
             await page.close();
         }
 
-        if (!isArray) {
-            return pdfBuffers[0];
-        }
-
-        // Merge logic if needed, but for now just return the first one as standard
-        return pdfBuffers[0];
+        return isArray ? pdfBuffers : pdfBuffers[0];
     } finally {
         await browser.close();
     }
