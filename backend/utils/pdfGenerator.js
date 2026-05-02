@@ -223,25 +223,30 @@ const generateBillPdf = async (billOrBills, settings) => {
     if (!executablePath && process.env.RENDER) {
         console.log('--- SYSTEM DIAGNOSTICS ---');
         console.log('Current Directory:', process.cwd());
-        try {
-            const rootFiles = fs.readdirSync(process.cwd());
-            console.log('Root Folder Contents:', rootFiles.join(', '));
-        } catch (e) {}
-
-        const localPath = path.join(process.cwd(), 'chrome_browser');
-        console.log('Searching in:', localPath);
         
-        if (fs.existsSync(localPath)) {
-            try {
-                const files = fs.readdirSync(localPath, { recursive: true });
-                console.log('Files in chrome_browser:', files.length);
-                const chrome = files.find(f => f.endsWith('/chrome') || f === 'chrome');
-                if (chrome) {
-                    executablePath = path.join(localPath, chrome);
-                    console.log(`SUCCESS: FOUND CHROME AT: ${executablePath}`);
+        // Search in both root and backend subfolders
+        const searchDirs = [
+            path.join(process.cwd(), 'chrome_browser'),
+            path.join(process.cwd(), 'backend', 'chrome_browser'),
+            path.join(__dirname, 'chrome_browser'),
+            path.join(__dirname, '..', 'chrome_browser')
+        ];
+
+        for (const localPath of searchDirs) {
+            console.log('Searching in:', localPath);
+            if (fs.existsSync(localPath)) {
+                try {
+                    const files = fs.readdirSync(localPath, { recursive: true });
+                    console.log(`Found ${files.length} files in ${localPath}`);
+                    const chrome = files.find(f => f.endsWith('/chrome') || f === 'chrome');
+                    if (chrome) {
+                        executablePath = path.join(localPath, chrome);
+                        console.log(`SUCCESS: FOUND CHROME AT: ${executablePath}`);
+                        break;
+                    }
+                } catch (err) {
+                    console.log('Error reading folder:', err.message);
                 }
-            } catch (err) {
-                console.log('Error reading local chrome folder:', err.message);
             }
         }
         
