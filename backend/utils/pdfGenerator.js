@@ -9,23 +9,23 @@ const buildBillHTML = async (bill, settings = {}) => {
     const billNum = bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase();
 
     const itemRows = bill.items.map((item, idx) => `
-        <tr style="height: 30px;">
-            <td style="border-right: 1px solid #000; padding: 2px 10px; text-align: left; font-family: 'Noto Sans Gujarati', sans-serif;">${item.name}</td>
-            <td style="border-right: 1px solid #000; padding: 2px 10px; text-align: center;">${item.hsn || ''}</td>
-            <td style="border-right: 1px solid #000; padding: 2px 10px; text-align: center;">${item.quantity}</td>
-            <td style="border-right: 1px solid #000; padding: 2px 10px; text-align: right;">${item.price.toFixed(0)}</td>
-            <td style="padding: 2px 10px; text-align: right;">${(item.price * item.quantity).toFixed(0)}</td>
+        <tr style="height: 35px;">
+            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000; padding: 2px 10px; text-align: left; font-family: 'Noto Sans Gujarati', sans-serif;">${item.name}</td>
+            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000; padding: 2px 10px; text-align: center;">${item.hsn || ''}</td>
+            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000; padding: 2px 10px; text-align: center; font-style: italic;">${item.quantity}</td>
+            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000; padding: 2px 10px; text-align: right; font-style: italic;">${item.price.toFixed(0)}</td>
+            <td style="border-bottom: 1px solid #000; padding: 2px 10px; text-align: right; font-style: italic;">${(item.price * item.quantity).toFixed(0)}</td>
         </tr>
     `).join('');
 
-    const emptyRowsCount = Math.max(0, 15 - bill.items.length);
+    const emptyRowsCount = Math.max(0, 12 - bill.items.length);
     const emptyRowsHTML = Array(emptyRowsCount).fill(0).map(() => `
-        <tr style="height: 30px;">
-            <td style="border-right: 1px solid #000;"></td>
-            <td style="border-right: 1px solid #000;"></td>
-            <td style="border-right: 1px solid #000;"></td>
-            <td style="border-right: 1px solid #000;"></td>
-            <td></td>
+        <tr style="height: 35px;">
+            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000;"></td>
+            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000;"></td>
+            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000;"></td>
+            <td style="border-right: 2px solid #000; border-bottom: 1px solid #000;"></td>
+            <td style="border-bottom: 1px solid #000;"></td>
         </tr>
     `).join('');
 
@@ -34,19 +34,19 @@ const buildBillHTML = async (bill, settings = {}) => {
 <html lang="gu">
 <head>
     <meta charset="UTF-8">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&family=Kalam:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&family=Kalam:wght@700&family=Roboto:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <style>
         body { 
             font-family: 'Roboto', 'Noto Sans Gujarati', sans-serif; 
-            margin: 0; padding: 20px;
+            margin: 0; padding: 10px;
             background: #fff;
             color: #000;
         }
         .bill-container {
-            width: 750px;
+            width: 780px;
             margin: 0 auto;
-            border: 2px solid #000;
-            background: #f4e89f; /* Exact yellow from screenshot */
+            border: 3px solid #000;
+            background: #f4e89f; /* The specific yellow from the photo */
             padding: 0;
             position: relative;
         }
@@ -54,121 +54,136 @@ const buildBillHTML = async (bill, settings = {}) => {
         
         .top-header {
             display: grid;
-            grid-template-columns: 250px 1fr;
-            border-bottom: 2px solid #000;
+            grid-template-columns: 280px 1fr;
+            border-bottom: 3px solid #000;
         }
         .header-left {
-            border-right: 2px solid #000;
-            padding: 10px;
-            font-size: 11px;
-            line-height: 1.4;
+            border-right: 3px solid #000;
+            padding: 15px;
+            font-size: 13px;
+            line-height: 1.6;
+            font-weight: 700;
         }
         .header-right {
-            padding: 10px;
+            padding: 15px;
             text-align: center;
         }
         .shop-name {
             font-family: 'Noto Sans Gujarati', sans-serif;
-            font-size: 34px;
+            font-size: 42px;
             font-weight: 700;
             color: #1e3a8a;
             margin: 0;
         }
-        .shop-subtitle { font-weight: 700; font-size: 14px; margin: 5px 0; }
-        .shop-address { font-size: 12px; font-weight: 700; font-family: 'Noto Sans Gujarati', sans-serif; }
+        .shop-subtitle { font-weight: 700; font-size: 16px; margin: 5px 0; color: #000; }
+        .shop-address { font-size: 13px; font-weight: 700; font-family: 'Noto Sans Gujarati', sans-serif; color: #000; }
 
         .meta-section {
             display: grid;
-            grid-template-columns: 1fr 180px;
-            border-bottom: 2px solid #000;
+            grid-template-columns: 1fr 240px;
+            border-bottom: 3px solid #000;
         }
         .meta-left {
-            padding: 10px;
-            border-right: 2px solid #000;
+            padding: 15px;
+            border-right: 3px solid #000;
         }
-        .meta-right { padding: 5px 10px; font-weight: 700; color: #b91c1c; font-size: 14px; }
+        .meta-right { 
+            padding: 10px 15px; 
+            font-weight: 700; 
+            color: #000; 
+            font-size: 16px; 
+            border-left: 3px solid #000;
+        }
         
-        .meta-row { display: flex; margin-bottom: 8px; align-items: flex-end; }
-        .meta-label { font-family: 'Noto Sans Gujarati', sans-serif; font-weight: 700; font-size: 14px; width: 60px; }
-        .meta-value { border-bottom: 1px dotted #000; flex: 1; padding-left: 10px; font-weight: 700; color: #1e40af; }
+        .meta-row { display: flex; margin-bottom: 12px; align-items: flex-end; }
+        .meta-label { font-family: 'Noto Sans Gujarati', sans-serif; font-weight: 700; font-size: 18px; width: 80px; }
+        .meta-value { border-bottom: 2px dotted #000; flex: 1; padding-left: 10px; font-weight: 700; color: #1e40af; font-size: 18px; font-style: italic; }
 
-        .gst-row { display: flex; padding: 10px; border-bottom: 2px solid #000; font-weight: 700; font-size: 14px; gap: 40px; }
+        .gst-row { display: flex; padding: 10px 15px; border-bottom: 3px solid #000; font-weight: 700; font-size: 16px; gap: 60px; }
 
         .items-table th {
-            border-bottom: 2px solid #000;
-            border-right: 1px solid #000;
-            background: #eab308;
-            padding: 5px;
+            border-bottom: 3px solid #000;
+            border-right: 2px solid #000;
+            background: #eab308; /* Darker yellow header */
+            padding: 8px;
             font-family: 'Noto Sans Gujarati', sans-serif;
-            font-size: 14px;
+            font-size: 16px;
+            font-weight: 700;
         }
-        .items-table td { font-size: 14px; font-weight: 700; color: #1e40af; }
+        .items-table td { font-size: 18px; font-weight: 700; color: #1e40af; }
 
         .footer {
             display: grid;
-            grid-template-columns: 1fr 250px;
+            grid-template-columns: 1fr 260px;
             border-top: 2px solid #000;
         }
         .footer-left {
-            border-right: 2px solid #000;
-            padding: 20px;
+            border-right: 3px solid #000;
+            padding: 25px;
             position: relative;
         }
         .gpay-text {
             font-family: 'Kalam', cursive;
-            font-size: 48px;
+            font-size: 64px;
             color: #475569;
             margin: 0;
+            line-height: 1;
         }
         .amount-only {
             font-family: 'Kalam', cursive;
-            font-size: 24px;
+            font-size: 32px;
             color: #1e40af;
-            margin-top: -10px;
-            border-bottom: 2px solid #000;
+            margin-top: 10px;
+            border-bottom: 3px solid #000;
             display: inline-block;
             width: 100%;
         }
-        .terms { font-size: 11px; font-weight: 700; margin-top: 50px; font-family: 'Noto Sans Gujarati', sans-serif; }
+        .terms { font-size: 13px; font-weight: 700; margin-top: 60px; font-family: 'Noto Sans Gujarati', sans-serif; line-height: 1.4; }
 
         .footer-right { background: #fde047; }
         .total-row {
             display: grid;
-            grid-template-columns: 1fr 80px;
-            border-bottom: 1px solid #000;
-            font-size: 12px;
+            grid-template-columns: 1fr 100px;
+            border-bottom: 2px solid #000;
+            font-size: 14px;
             font-weight: 700;
-            padding: 5px 10px;
+            padding: 8px 12px;
         }
-        .total-row:last-child { border-bottom: none; font-size: 16px; color: #b91c1c; }
+        .total-row:last-child { border-bottom: none; font-size: 22px; color: #1e3a8a; background: #fde047; }
         .total-label { font-family: 'Noto Sans Gujarati', sans-serif; }
         .total-value { text-align: right; font-style: italic; color: #1e40af; }
 
         .stamp-area {
-            padding: 10px;
+            padding: 15px;
             text-align: center;
+            border-top: 2px solid #000;
+            background: #fde047;
         }
         .stamp-box {
-            border: 2px dashed #64748b;
-            color: #64748b;
-            padding: 5px;
-            border-radius: 10px;
+            border: 2px dashed #475569;
+            color: #475569;
+            padding: 8px 15px;
+            border-radius: 12px;
             display: inline-block;
-            font-size: 12px;
+            font-size: 14px;
             font-family: 'Noto Sans Gujarati', sans-serif;
+            font-weight: 700;
         }
-        .stamp-text { font-size: 14px; font-weight: 700; font-family: 'Noto Sans Gujarati', sans-serif; margin-top: 10px; }
+        .stamp-text { font-size: 16px; font-weight: 700; font-family: 'Noto Sans Gujarati', sans-serif; margin-top: 12px; color: #000; }
     </style>
 </head>
 <body>
     <div class="bill-container">
         <div class="top-header">
             <div class="header-left">
-                <div style="text-align:center; font-weight:700; font-size:13px; margin-bottom:5px;">TAX INVOICE</div>
-                <div style="text-align:center; font-weight:700; font-size:13px; margin-bottom:15px;">CASH / DEBIT</div>
-                <div>Original : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Duplicate :</div>
-                <div style="font-weight:700; margin-top:10px;">GSTIN - 24BRNPM8073Q1ZU</div>
-                <div style="font-weight:700;">State : Gujarat Code : 24</div>
+                <div style="text-align:center; font-size:16px; margin-bottom:5px;">TAX INVOICE</div>
+                <div style="text-align:center; font-size:16px; margin-bottom:20px;">CASH / DEBIT</div>
+                <div style="display:flex; justify-content:space-between;">
+                    <span>Original :</span>
+                    <span>Duplicate :</span>
+                </div>
+                <div style="margin-top:15px;">GSTIN - 24BRNPM8073Q1ZU</div>
+                <div>State : Gujarat Code : 24</div>
             </div>
             <div class="header-right">
                 <h1 class="shop-name">શ્રી હરિ ડ્રેસીસ & કટપીસ</h1>
@@ -189,8 +204,8 @@ const buildBillHTML = async (bill, settings = {}) => {
                 </div>
             </div>
             <div class="meta-right">
-                <div style="margin-bottom:10px;">બુક નં. : &nbsp;&nbsp;&nbsp;<span style="color:#b91c1c;">${bookNum}</span></div>
-                <div style="margin-bottom:10px;">બીલ નં. : &nbsp;&nbsp;<span style="color:#b91c1c;">${billNum}</span></div>
+                <div style="margin-bottom:12px;">બુક નં. : &nbsp;&nbsp;&nbsp;<span style="color:#b91c1c;">${bookNum}</span></div>
+                <div style="margin-bottom:12px;">બીલ નં. : &nbsp;&nbsp;<span style="color:#b91c1c;">${billNum}</span></div>
                 <div>તા. : &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#1e40af; font-style:italic;">${new Date(bill.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</span></div>
             </div>
         </div>
@@ -204,11 +219,11 @@ const buildBillHTML = async (bill, settings = {}) => {
         <table class="items-table">
             <thead>
                 <tr>
-                    <th style="width: 320px; border-right: 2px solid #000;">માલની વિગત</th>
-                    <th style="width: 100px; border-right: 2px solid #000;">HSN Code</th>
-                    <th style="width: 80px; border-right: 2px solid #000;">નંગ /<br>મીટર</th>
-                    <th style="width: 100px; border-right: 2px solid #000;">ભાવ</th>
-                    <th style="width: 100px;">રકમ રૂ.</th>
+                    <th style="width: 350px;">માલની વિગત</th>
+                    <th style="width: 110px;">HSN Code</th>
+                    <th style="width: 90px;">નંગ /<br>મીટર</th>
+                    <th style="width: 110px;">ભાવ</th>
+                    <th style="width: 120px; border-right: none;">રકમ રૂ.</th>
                 </tr>
             </thead>
             <tbody>
@@ -244,7 +259,7 @@ const buildBillHTML = async (bill, settings = {}) => {
                     <span class="total-label">IGST %</span>
                     <span class="total-value"></span>
                 </div>
-                <div class="total-row">
+                <div class="total-row" style="background:#fde047;">
                     <span class="total-label">સબટોટલ (Subtotal)</span>
                     <span class="total-value">${(bill.totalAmount + bill.cgst + bill.sgst).toFixed(2)}</span>
                 </div>
@@ -252,9 +267,9 @@ const buildBillHTML = async (bill, settings = {}) => {
                     <span class="total-label">રાઉન્ડ ઓફ</span>
                     <span class="total-value">${bill.roundOff > 0 ? '+' : ''}${bill.roundOff.toFixed(2)}</span>
                 </div>
-                <div class="total-row" style="border-top:2px solid #000;">
-                    <span class="total-label">કુલ (Total)</span>
-                    <span class="total-value" style="font-size:20px;">${bill.actualTotal}/-</span>
+                <div class="total-row" style="border-top:3px solid #000; padding:12px;">
+                    <span class="total-label" style="font-size:20px;">કુલ (Total)</span>
+                    <span class="total-value" style="font-size:24px; font-weight:900;">${bill.actualTotal}/-</span>
                 </div>
                 <div class="stamp-area">
                     <div class="stamp-box">શ્રી હરિ ડ્રેસીસ & કટપીસ</div>
