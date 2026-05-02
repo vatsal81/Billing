@@ -1,0 +1,432 @@
+/* Premium Classic Invoice Design */
+.bill-view-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.95);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow-y: auto;
+    backdrop-filter: blur(8px);
+}
+
+.bill-view-container {
+    width: 100%;
+    max-width: 1000px;
+    animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.bill-view-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 16px 24px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+}
+
+/* Sagar Textiles Paper Style - Premium Edition */
+.sagar-bill-paper {
+    background: white;
+    color: #1e293b;
+    padding: 40px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    min-height: 1120px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 12px;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+}
+
+
+.bill-top-header {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr 1.5fr;
+    border-bottom: 3px solid #1e3a8a;
+    padding-bottom: 20px;
+    margin-bottom: 15px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.sagar-logo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo-s {
+    font-size: 72px;
+    font-weight: 900;
+    color: #1e3a8a;
+    line-height: 1;
+    text-shadow: 2px 2px 0px #cbd5e1;
+}
+
+.company-name {
+    font-size: 42px;
+    font-weight: 900;
+    margin: 0;
+    color: #1e3a8a;
+    letter-spacing: -1px;
+    line-height: 1;
+}
+
+.company-subtitle {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #3b82f6;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+}
+
+.bill-header-motto {
+    text-align: center;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 20px;
+    color: #64748b;
+    font-family: 'Georgia', serif;
+}
+
+.bill-header-contact {
+    text-align: right;
+    line-height: 1.6;
+}
+
+.gstin {
+    font-weight: 800;
+    font-size: 16px;
+    color: #0f172a;
+    margin-bottom: 4px !important;
+}
+
+.address-line {
+    color: #475569;
+    font-size: 11px;
+}
+
+.msme {
+    font-weight: 600;
+    color: #1e3a8a;
+    margin-top: 4px !important;
+}
+
+/* Meta Data Table */
+.bill-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid #1e293b;
+    margin-bottom: 15px;
+    background: #fff;
+    position: relative;
+    z-index: 1;
+}
+
+.meta-left { border-right: 1px solid #1e293b; }
+
+.meta-row {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+}
+
+.meta-row:last-child { border-bottom: none; }
+
+.meta-row-group {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.meta-row.half { flex: 1; border-bottom: none; }
+.meta-row.half:first-child { border-right: 1px solid #e2e8f0; }
+
+.label {
+    font-weight: 700;
+    width: 110px;
+    color: #64748b;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.value {
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.value.highlight {
+    font-weight: 800;
+    color: #1e3a8a;
+    font-size: 14px;
+}
+
+/* Party Details - Professional Styling */
+.bill-party-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid #1e293b;
+    margin-bottom: 15px;
+    position: relative;
+    z-index: 1;
+}
+
+.billed-to { border-right: 1px solid #1e293b; }
+
+.party-header {
+    background: #1e3a8a;
+    color: white;
+    text-align: center;
+    padding: 6px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    font-size: 11px;
+}
+
+.party-content {
+    padding: 15px;
+    background: #f8fafc;
+}
+
+.party-name {
+    font-weight: 800;
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #1e3a8a;
+    text-transform: uppercase;
+}
+
+.party-add {
+    margin-bottom: 12px;
+    line-height: 1.6;
+    color: #475569;
+    font-weight: 500;
+}
+
+.party-meta-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 4px;
+    font-size: 10px;
+    color: #64748b;
+}
+
+.party-meta-row span:last-child {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* Items Table - Classic & Clean */
+.sagar-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #1e293b;
+    margin-bottom: 15px;
+    position: relative;
+    z-index: 1;
+}
+
+.sagar-items-table th {
+    background: #f1f5f9;
+    border: 1px solid #1e293b;
+    padding: 12px 8px;
+    font-weight: 800;
+    color: #0f172a;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.sagar-items-table td {
+    border-right: 1px solid #e2e8f0;
+    padding: 10px 12px;
+    height: 35px;
+    color: #334155;
+    font-weight: 500;
+}
+
+.sagar-items-table tr:nth-child(even) {
+    background: #fcfdfe;
+}
+
+.sagar-items-table td:last-child { border-right: none; }
+
+.sagar-items-table .total-row td {
+    border-top: 2px solid #1e3a8a;
+    border-right: 1px solid #e2e8f0;
+    background: #f8fafc;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: #1e3a8a;
+    font-weight: 800;
+}
+
+.sagar-items-table .total-row td:last-child {
+    border-right: none;
+}
+
+/* Bottom Grid - Totals & QR */
+.bill-bottom-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    border: 1px solid #1e293b;
+    margin-bottom: 15px;
+    position: relative;
+    z-index: 1;
+}
+
+.bottom-left { border-right: 1px solid #1e293b; }
+
+.remarks-section {
+    padding: 15px;
+    border-bottom: 1px solid #e2e8f0;
+    min-height: 80px;
+}
+
+.bank-details-box { padding: 15px; background: #f8fafc; }
+.bank-header {
+    color: #1e3a8a;
+    font-weight: 800;
+    margin-bottom: 8px;
+    font-size: 12px;
+    border-bottom: 2px solid #1e3a8a;
+    display: inline-block;
+}
+
+.bottom-right { display: grid; grid-template-columns: 130px 1fr; }
+
+.qr-section {
+    border-right: 1px solid #e2e8f0;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qr-box {
+    width: 100px;
+    height: 100px;
+    background: #fff;
+    padding: 5px;
+    border: 1px solid #e2e8f0;
+    background-image: radial-gradient(#1e3a8a 1px, transparent 1px);
+    background-size: 4px 4px;
+}
+
+.tax-totals-box { background: #fff; }
+
+.tax-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 15px;
+    border-bottom: 1px solid #f1f5f9;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.grand-total-row {
+    background: #1e3a8a;
+    padding: 20px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+
+.grand-total-row .amount {
+    font-size: 24px;
+    font-weight: 900;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Amount Words - Premium Box */
+.amount-words {
+    padding: 12px 20px;
+    border: 1px solid #1e293b;
+    margin-bottom: 15px;
+    display: flex;
+    gap: 15px;
+    background: #f8fafc;
+    font-size: 13px;
+}
+
+.amount-words .words {
+    font-weight: 800;
+    color: #1e3a8a;
+    text-transform: uppercase;
+}
+
+/* Tax Summary Table - Modern Look */
+.tax-summary-table table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #1e293b;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.tax-summary-table th { background: #f1f5f9; color: #1e3a8a; font-weight: 800; padding: 10px; }
+.tax-summary-table td { padding: 10px; border: 1px solid #e2e8f0; font-weight: 600; }
+
+/* Terms & Conditions - Clean typography */
+.terms-section {
+    font-size: 10px;
+    color: #64748b;
+    line-height: 1.8;
+}
+
+.terms-title {
+    font-weight: 800;
+    color: #1e3a8a;
+    margin-bottom: 8px;
+    font-size: 11px;
+}
+
+.signature-section {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.signature-box {
+    text-align: center;
+    width: 200px;
+    border-top: 2px solid #1e3a8a;
+    padding-top: 10px;
+}
+
+.signature-box p {
+    font-weight: 800;
+    color: #1e3a8a;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+.center { text-align: center; }
+.right { text-align: right; }
+.bold { font-weight: 800; }
+
+@media print {
+    .no-print { display: none !important; }
+    .bill-view-overlay { position: static; background: white; padding: 0; }
+    .sagar-bill-paper { box-shadow: none; padding: 0; border: none; }
+    body { background: white; }
+}

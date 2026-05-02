@@ -1,24 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { fetchProducts, createProduct, deleteProduct, updateProduct } from '../utils/api';
-import { Trash2, Plus, RefreshCw } from 'lucide-react';
+import { fetchProducts, createProduct, deleteProduct, updateProduct, transliterateText } from '../utils/api';
+import { Trash2, Plus, RefreshCw, Search, Download } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import GujaratiInput from '../components/GujaratiInput';
+import Modal from '../components/Modal';
+
 
 export default function Inventory() {
   const { t } = useLanguage();
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
+  const [nameEnglish, setNameEnglish] = useState('');
+  const [hsnCode, setHsnCode] = useState('');
   const [price, setPrice] = useState('');
   const [stock, setStock] = useState(100);
   const [threshold, setThreshold] = useState(5);
   const [error, setError] = useState(null);
+  const [editingPrice, setEditingPrice] = useState(null);
+  const [newPrice, setNewPrice] = useState('');
+  const [unpricedItems, setUnpricedItems] = useState([]);
+  
+  // Restock Modal States
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [restockAmount, setRestockAmount] = useState('50');
+
 
   const loadProducts = async () => {
     try {
       setLoading(true);
       const data = await fetchProducts();
       setProducts(data);
+      setFilteredProducts(data);
+      
+      // Check for unpriced items
+      const unpriced = data.filter(p => !p.price || p.price === 0);
+      setUnpricedItems(unpriced);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -30,13 +50,68 @@ export default function Inventory() {
     loadProducts();
   }, []);
 
+  const handleExportCSV = () => {
+    if (products.length === 0) return;
+    
+    const headers = ['Name (Gujarati)', 'Name (English)', 'HSN Code', 'Selling Price', 'Stock Amount', 'Low Stock Threshold'];
+    const rows = products.map(p => [
+      `"${p.name}"`,
+      `"${p.nameEnglish || ''}"`,
+      `"${p.hsnCode || ''}"`,
+      p.price || 0,
+      p.stockAmount || 0,
+      p.lowStockThreshold || 5
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `inventory_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  useEffect(() => {
+    const results = products.filter(p => 
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.hsnCode && p.hsnCode.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+    setFilteredProducts(results);
+  }, [searchTerm, products]);
+
+  // Auto-transliterate English name to Gujarati name
+  useEffect(() => {
+    const translateName = async () => {
+      if (nameEnglish) {
+        const trans = await transliterateText(nameEnglish);
+        setName(trans);
+      }
+    };
+    const timeout = setTimeout(translateName, 800);
+    return () => clearTimeout(timeout);
+  }, [nameEnglish]);
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name || !price) return;
     try {
       setLoading(true);
-      await createProduct({ name, price: Number(price), stockAmount: Number(stock), lowStockThreshold: Number(threshold) });
+      await createProduct({ 
+        name, 
+        nameEnglish,
+        hsnCode,
+        price: Number(price), 
+        stockAmount: Number(stock), 
+        lowStockThreshold: Number(threshold) 
+      });
       setName('');
+      setNameEnglish('');
+      setHsnCode('');
       setPrice('');
       setStock(100);
       setThreshold(5);
@@ -58,13 +133,37 @@ export default function Inventory() {
     }
   };
   
-  const handleRestock = async (id, currentStock) => {
-    const amount = prompt("Enter amount to add to stock:", "50");
-    if (!amount || isNaN(amount)) return;
+  const handleRestock = (product) => {
+    setSelectedProduct(product);
+    setIsRestockModalOpen(true);
+    setRestockAmount('50');
+  };
+
+  const handleConfirmRestock = async () => {
+    if (!restockAmount || isNaN(restockAmount) || !selectedProduct) return;
     
     try {
       setLoading(true);
-      await updateProduct(id, { stockAmount: Number(currentStock) + Number(amount) });
+      await updateProduct(selectedProduct._id, { 
+        stockAmount: Number(selectedProduct.stockAmount) + Number(restockAmount) 
+      });
+      setIsRestockModalOpen(false);
+      setSelectedProduct(null);
+      await loadProducts();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      setLoading(false);
+    }
+  };
+
+
+  const handleUpdatePrice = async (id) => {
+    if (!newPrice || isNaN(newPrice)) return;
+    try {
+      setLoading(true);
+      await updateProduct(id, { price: Number(newPrice) });
+      setEditingPrice(null);
+      setNewPrice('');
       await loadProducts();
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -79,10 +178,16 @@ export default function Inventory() {
           <h2>{t('invTitle')}</h2>
           <p style={{color: 'var(--text-secondary)'}}>{t('invSubtitle')}</p>
         </div>
-        <button className="btn btn-secondary" onClick={loadProducts}>
-          <RefreshCw size={18} /> {t('refresh')}
-        </button>
+        <div style={{display: 'flex', gap: '12px'}}>
+          <button className="btn btn-secondary" onClick={handleExportCSV} disabled={products.length === 0}>
+            <Download size={18} /> Export CSV
+          </button>
+          <button className="btn btn-secondary" onClick={loadProducts}>
+            <RefreshCw size={18} /> {t('refresh')}
+          </button>
+        </div>
       </header>
+
 
       {error && (
         <div style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '16px', borderRadius: '12px', marginBottom: '24px'}}>
@@ -97,13 +202,37 @@ export default function Inventory() {
           <h3 style={{marginBottom: '20px'}}>{t('addNewItem')}</h3>
           <form onSubmit={handleCreate}>
             <div className="input-group">
-              <label className="input-label">{t('itemName')}</label>
+              <label className="input-label">Item Name (English) <span style={{color: 'var(--danger)'}}>*</span></label>
+              <input 
+                type="text" 
+                className="input-field" 
+                placeholder="e.g. Kurti"
+                value={nameEnglish}
+                onChange={(e) => setNameEnglish(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-group">
+              <label className="input-label">Item Name (Gujarati) <span style={{color: 'var(--danger)'}}>*</span></label>
               <GujaratiInput 
                 className="input-field" 
                 placeholder="e.g. કુર્તી"
                 value={name}
                 onChange={(val) => setName(val)}
+                onOriginal={(orig) => {
+                  if (!nameEnglish) setNameEnglish(orig);
+                }}
                 required
+              />
+            </div>
+            <div className="input-group">
+              <label className="input-label">HSN Code</label>
+              <input 
+                type="text" 
+                className="input-field" 
+                placeholder="e.g. 6211"
+                value={hsnCode}
+                onChange={(e) => setHsnCode(e.target.value)}
               />
             </div>
             <div className="input-group">
@@ -149,18 +278,31 @@ export default function Inventory() {
 
         {/* Product List */}
         <div className="glass-panel" style={{padding: '24px'}}>
-          <h3 style={{marginBottom: '20px'}}>{t('currentStock')} ({products.length})</h3>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '20px'}}>
+            <h3 style={{margin: 0}}>{t('currentStock')} ({filteredProducts.length})</h3>
+            <div className="input-group" style={{marginBottom: 0, flex: 1, maxWidth: '300px', position: 'relative'}}>
+              <Search size={16} style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)'}} />
+              <input 
+                type="text" 
+                className="input-field" 
+                placeholder="Search by name or HSN..." 
+                style={{paddingLeft: '40px', paddingRight: '12px'}}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
           
           {loading && products.length === 0 ? (
             <div className="animate-pulse" style={{color: 'var(--text-secondary)'}}>{t('loadingInv')}</div>
           ) : (
             <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-              {products.length === 0 ? (
+              {filteredProducts.length === 0 ? (
                 <p style={{color: 'var(--text-secondary)', textAlign: 'center', padding: '40px 0'}}>
-                  {t('noProducts')}
+                  {searchTerm ? "No products match your search." : t('noProducts')}
                 </p>
               ) : (
-                products.map(p => (
+                filteredProducts.map(p => (
                   <div key={p._id} style={{
                     display: 'flex', 
                     justifyContent: 'space-between', 
@@ -171,8 +313,26 @@ export default function Inventory() {
                     border: '1px solid var(--border-color)'
                   }}>
                     <div style={{flex: 1}}>
-                      <h4 style={{fontSize: '1.1rem'}}>{p.name}</h4>
-                      <p style={{color: 'var(--success)', fontWeight: '600'}}>₹{p.price.toFixed(2)}</p>
+                      <h4 style={{fontSize: '1.1rem'}}>{p.name} {p.nameEnglish && <span style={{fontSize: '0.9rem', color: 'var(--text-secondary)'}}>({p.nameEnglish})</span>}</h4>
+                      <p style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>HSN: {p.hsnCode || 'N/A'}</p>
+                      {editingPrice === p._id ? (
+                        <div style={{display: 'flex', gap: '8px', marginTop: '4px'}}>
+                          <input 
+                            type="number" 
+                            className="input-field" 
+                            style={{width: '80px', padding: '4px 8px'}}
+                            value={newPrice}
+                            onChange={(e) => setNewPrice(e.target.value)}
+                            autoFocus
+                          />
+                          <button className="btn btn-primary" style={{padding: '4px 8px'}} onClick={() => handleUpdatePrice(p._id)}>Set</button>
+                          <button className="btn btn-secondary" style={{padding: '4px 8px'}} onClick={() => setEditingPrice(null)}>X</button>
+                        </div>
+                      ) : (
+                        <p style={{color: 'var(--success)', fontWeight: '600', cursor: 'pointer'}} onClick={() => { setEditingPrice(p._id); setNewPrice(p.price); }}>
+                          ₹{(p.price || 0).toFixed(2)} <span style={{fontSize: '0.7rem', color: 'var(--text-secondary)'}}>(Click to edit)</span>
+                        </p>
+                      )}
                     </div>
                     <div style={{textAlign: 'right', paddingRight: '20px'}}>
                       <div style={{fontSize: '0.9rem', color: 'var(--text-secondary)'}}>In Stock</div>
@@ -184,7 +344,7 @@ export default function Inventory() {
                       <button 
                         className="btn btn-secondary" 
                         style={{padding: '8px', borderRadius: '8px', fontSize: '0.8rem'}}
-                        onClick={() => handleRestock(p._id, p.stockAmount || 0)}
+                        onClick={() => handleRestock(p)}
                         title="Restock"
                       >
                         Restock
@@ -204,8 +364,100 @@ export default function Inventory() {
             </div>
           )}
         </div>
-
       </div>
+
+      {/* Unpriced Items Alert */}
+      {unpricedItems.length > 0 && (
+        <div className="modal-overlay" style={{ zIndex: 3000 }}>
+            <div className="modal-content alert-modal" style={{ maxWidth: '500px', textAlign: 'center', padding: '40px', border: '2px solid #ef4444', animation: 'shake 0.5s ease-in-out', background: 'white' }}>
+                <div style={{ marginBottom: '20px' }}>
+                    <div style={{ width: '80px', height: '80px', background: '#fee2e2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: '#ef4444' }}>
+                        <Search size={40} />
+                    </div>
+                </div>
+                <h2 style={{ color: '#1e3a8a', marginBottom: '10px' }}>Missing Selling Prices!</h2>
+                <p style={{ color: '#64748b', marginBottom: '20px' }}>
+                    There are <strong>{unpricedItems.length}</strong> products in your inventory with no selling price. Please set their prices before creating sales bills.
+                </p>
+                <div style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '20px', background: '#f8fafc', padding: '10px', borderRadius: '8px', textAlign: 'left' }}>
+                    {unpricedItems.map((item, idx) => (
+                        <div key={idx} style={{ padding: '8px', borderBottom: idx === unpricedItems.length - 1 ? 'none' : '1px solid #e2e8f0', fontSize: '0.9rem' }}>
+                            <span style={{ fontWeight: 'bold' }}>{item.name}</span>
+                            <span style={{ color: '#94a3b8', marginLeft: '10px' }}>({item.hsnCode})</span>
+                        </div>
+                    ))}
+                </div>
+                <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                    <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setUnpricedItems([])}>I will set them now</button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      <style>{`
+          @keyframes shake {
+              0%, 100% { transform: translateX(0); }
+              25% { transform: translateX(-10px); }
+              75% { transform: translateX(10px); }
+          }
+          .alert-modal {
+              box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.25);
+          }
+          .premium-input {
+            width: 100%;
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 12px 16px;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #f8fafc;
+          }
+          .premium-input:focus {
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+            outline: none;
+          }
+      `}</style>
+
+      {/* Premium Restock Modal */}
+      <Modal 
+        isOpen={isRestockModalOpen} 
+        onClose={() => setIsRestockModalOpen(false)}
+        title="Restock Item"
+        footer={
+          <>
+            <button className="btn btn-secondary" onClick={() => setIsRestockModalOpen(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleConfirmRestock}>Update Stock</button>
+          </>
+        }
+      >
+        <div style={{ textAlign: 'center', padding: '10px 0' }}>
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 4px 0', color: 'var(--text-primary)', fontSize: '1.2rem' }}>{selectedProduct?.name}</h4>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Current Stock: <span style={{ fontWeight: 800, color: '#3b82f6' }}>{selectedProduct?.stockAmount}</span></p>
+          </div>
+          
+          <div className="input-group" style={{ marginBottom: 0 }}>
+            <label style={{ display: 'block', textAlign: 'left', marginBottom: '8px', fontSize: '0.85rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount to Add</label>
+            <input 
+              type="number" 
+              className="premium-input" 
+              style={{ fontSize: '1.5rem', textAlign: 'center', fontWeight: 800, padding: '15px' }}
+              value={restockAmount}
+              onChange={(e) => setRestockAmount(e.target.value)}
+              autoFocus
+            />
+          </div>
+          
+          <div style={{ marginTop: '20px', padding: '15px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '16px', border: '1px dashed rgba(59, 130, 246, 0.3)' }}>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#3b82f6', fontWeight: 600 }}>
+              New total stock: <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>{(Number(selectedProduct?.stockAmount) || 0) + (Number(restockAmount) || 0)}</span>
+            </p>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
+

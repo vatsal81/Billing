@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
-import { LayoutDashboard, PackageSearch, BookOpen, ShoppingCart, Globe, Wallet, LogOut } from 'lucide-react';
+import { LayoutDashboard, PackageSearch, BookOpen, ShoppingCart, Globe, Wallet, LogOut, FileText, Zap, TrendingUp, Building, User, Menu, X } from 'lucide-react';
 import Dashboard from './pages/Dashboard';
+import Analytics from './pages/Analytics';
 import Inventory from './pages/Inventory';
+import PurchaseBills from './pages/PurchaseBills';
 import History from './pages/History';
 import ManualPos from './pages/ManualPos';
 import Settings from './pages/Settings';
 import Expenses from './pages/Expenses';
+import Suppliers from './pages/Suppliers';
+import Customers from './pages/Customers';
 import Login from './pages/Login';
+import { fetchAnalyticsStats } from './utils/api';
 import { useLanguage } from './utils/LanguageContext';
 import { useAuth } from './utils/AuthContext';
 import './index.css';
@@ -15,22 +20,42 @@ import './index.css';
 function App() {
   const { language, toggleLanguage, t } = useLanguage();
   const { user, logoutUser, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
+  const isAdmin = user?.role === 'admin';
+  const [lowStockCount, setLowStockCount] = useState(0);
+
+  useEffect(() => {
+    if (user && isAdmin) {
+      const getLowStock = async () => {
+        try {
+          const stats = await fetchAnalyticsStats('7d');
+          setLowStockCount(stats.lowStockProducts || 0);
+        } catch (e) { console.error(e); }
+      };
+      getLowStock();
+      // Refresh every 5 minutes
+      const interval = setInterval(getLowStock, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [user, isAdmin]);
+
   if (loading) return null;
 
   if (!user) {
     return <Login />;
   }
 
-  const isAdmin = user.role === 'admin';
-
   return (
     <BrowserRouter>
       <div className="app-container">
         {/* Mobile Header */}
         <header className="mobile-header no-print">
-          <div className="brand">
-            <h2 className="text-gradient" style={{fontSize: '20px'}}>{t('appTitle')}</h2>
+          <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+            <Menu size={24} onClick={() => setSidebarOpen(true)} style={{cursor: 'pointer', color: 'var(--text-primary)'}} />
+            <div className="brand">
+              <h2 className="text-gradient" style={{fontSize: '20px', margin: 0}}>{t('appTitle')}</h2>
+            </div>
           </div>
           <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
             <button 
@@ -44,38 +69,62 @@ function App() {
           </div>
         </header>
 
+        {/* Sidebar Backdrop for Mobile */}
+        {sidebarOpen && <div className="sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
+
         {/* Sidebar Navigation - Localized */}
-        <aside className="sidebar no-print">
+        <aside className={`sidebar no-print ${sidebarOpen ? 'open' : ''}`}>
+          {/* Mobile Close Button */}
+          <div className="mobile-close-btn" onClick={() => setSidebarOpen(false)}>
+            <X size={24} />
+          </div>
           <div className="brand" style={{marginBottom: '10px'}}>
             <h1 className="text-gradient" style={{fontSize: '32px'}}>{t('appTitle')}</h1>
             <p style={{color: 'var(--text-secondary)', fontSize: '1rem', marginTop: '4px'}}>{t('appSubtitle')}</p>
           </div>
           
           <nav style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-            <NavLink to="/manual" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
-              <ShoppingCart size={20} />
-              {t('navManual')}
-            </NavLink>
-            <NavLink to="/auto" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
-              <LayoutDashboard size={20} />
-              {t('navAuto')}
-            </NavLink>
+             <NavLink to="/analytics" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+               <LayoutDashboard size={20} />
+               Dashboard
+             </NavLink>
+             <NavLink to="/auto" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+               <Zap size={20} />
+               Smart Bill
+             </NavLink>
+             <NavLink to="/manual" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+               <ShoppingCart size={20} />
+               Manual POS
+             </NavLink>
             
             {isAdmin && (
               <>
-                <NavLink to="/ledger" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                <NavLink to="/ledger" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                   <BookOpen size={20} />
-                  {t('navLedger')}
+                  Sales Ledger
                 </NavLink>
-                <NavLink to="/inventory" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                <NavLink to="/inventory" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                   <PackageSearch size={20} />
-                  {t('navInventory')}
+                  Inventory
+                  {lowStockCount > 0 && <span className="nav-badge danger animate-pulse">{lowStockCount}</span>}
                 </NavLink>
-                <NavLink to="/expenses" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                <NavLink to="/purchase" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                  <FileText size={20} />
+                  Purchase Bills
+                </NavLink>
+                <NavLink to="/customer-udhaar" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                  <User size={20} />
+                  Customer Udhaar
+                </NavLink>
+                <NavLink to="/expenses" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                   <Wallet size={20} />
                   Expenses
                 </NavLink>
-                <NavLink to="/settings" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                <NavLink to="/suppliers" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                  <Building size={20} />
+                  Suppliers
+                </NavLink>
+                <NavLink to="/settings" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                   <Globe size={20} />
                   Settings
                 </NavLink>
@@ -128,12 +177,16 @@ function App() {
         {/* Main Content Area */}
         <main className="main-content">
           <Routes>
-             <Route path="/" element={<ManualPos />} />
-             <Route path="/manual" element={<ManualPos />} />
-             <Route path="/auto" element={<Dashboard />} />
+              <Route path="/" element={<Analytics />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/manual" element={<ManualPos />} />
+              <Route path="/auto" element={<Dashboard />} />
              {isAdmin && <Route path="/ledger" element={<History />} />}
              {isAdmin && <Route path="/inventory" element={<Inventory />} />}
+             {isAdmin && <Route path="/purchase" element={<PurchaseBills />} />}
              {isAdmin && <Route path="/expenses" element={<Expenses />} />}
+             {isAdmin && <Route path="/suppliers" element={<Suppliers />} />}
+             {isAdmin && <Route path="/customer-udhaar" element={<Customers />} />}
              {isAdmin && <Route path="/settings" element={<Settings />} />}
              <Route path="*" element={<ManualPos />} />
           </Routes>
@@ -158,6 +211,10 @@ function App() {
               <NavLink to="/inventory" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                 <PackageSearch size={20} />
                 <span>Items</span>
+              </NavLink>
+              <NavLink to="/purchase" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
+                <FileText size={20} />
+                <span>Purchase</span>
               </NavLink>
             </>
           )}

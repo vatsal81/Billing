@@ -8,7 +8,9 @@ const settingsSchema = mongoose.Schema({
     stateInfo: { type: String, default: 'State : Gujarat    Code : 24' },
     terms1: { type: String, default: '૧. ન્યાયક્ષેત્ર રાજકોટ રહેશે.' },
     terms2: { type: String, default: '૨. ભુલચૂક લેવી દેવી.' },
-    stampName: { type: String, default: 'શ્રી હરિ ડ્રેસીસ & કટપીસ' }
+    stampName: { type: String, default: 'શ્રી હરિ ડ્રેસીસ & કટપીસ' },
+    logo: { type: String, default: '' },
+    signature: { type: String, default: '' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Settings', settingsSchema);

@@ -114,7 +114,10 @@ export default function History() {
       : bill._id.substring(bill._id.length - 4).toUpperCase();
       
     let match = true;
-    if (searchTerm && !billNo.includes(searchTerm) && !(bill.customerName || '').toLowerCase().includes(searchTerm.toLowerCase())) {
+    if (searchTerm && 
+        !billNo.includes(searchTerm) && 
+        !(bill.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !(bill.customerPhone || '').includes(searchTerm)) {
         match = false;
     }
     const bDate = new Date(bill.createdAt);
@@ -234,8 +237,8 @@ export default function History() {
       <div className="grid-responsive charts-grid" style={{marginBottom: '40px'}}>
         <div className="glass-panel" style={{padding: '24px', height: '350px'}}>
           <h3 style={{marginBottom: '20px'}}>Revenue Timeline</h3>
-          <ResponsiveContainer width="100%" height="90%" minWidth={0} minHeight={200}>
-            <LineChart data={trendData}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
+            <LineChart data={trendData} margin={{ top: 10, right: 10, left: 40, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
               <XAxis dataKey="name" stroke="var(--text-secondary)" />
               <YAxis stroke="var(--text-secondary)" />
@@ -301,7 +304,7 @@ export default function History() {
         {loading ? (
           <div className="animate-pulse" style={{color: 'var(--text-secondary)'}}>Loading ledger data...</div>
         ) : (
-          <div style={{overflowX: 'auto'}}>
+          <div className="table-container">
             <table style={{width: '100%', borderCollapse: 'collapse', textAlign: 'left'}}>
               <thead>
                 <tr style={{borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)'}}>

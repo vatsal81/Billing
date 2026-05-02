@@ -15,13 +15,21 @@ const getSettings = async (req, res) => {
 const updateSettings = async (req, res) => {
     try {
         let settings = await Settings.findOne();
+        let updateData = { ...req.body };
+
+        if (req.files) {
+            if (req.files['logo']) updateData.logo = req.files['logo'][0].path;
+            if (req.files['signature']) updateData.signature = req.files['signature'][0].path;
+        }
+
         if (!settings) {
-            settings = await Settings.create(req.body);
+            settings = await Settings.create(updateData);
         } else {
-            Object.assign(settings, req.body);
+            Object.assign(settings, updateData);
             await settings.save();
         }
         res.json(settings);
+
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -1,12 +1,16 @@
-const PDFDocument = require('pdfkit');
+const puppeteer = require('puppeteer-core');
+const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
-const QRCode = require('qrcode');
 
+const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 
-const drawBillOnPage = async (doc, bill, settings, gujaratiFont) => {
+const formatDate = (date) => 
+    date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A';
+
+const buildBillHTML = async (bill, settings = {}) => {
     // Generate UPI QR Code Data
-    let qrDataUrl = null;
+    let qrDataUrl = '';
     try {
         const upiId = settings.upiId || "9924387087@okbizaxis";
         const shopName = settings.shopName || "Shree Hari Dresses";
@@ -16,253 +20,414 @@ const drawBillOnPage = async (doc, bill, settings, gujaratiFont) => {
         console.error("QR Generation error:", err);
     }
 
-    const startX = 30;
-    const startY = 30;
-    const width = 535;
-    const height = 780;
+    const itemRows = bill.items.map((item, idx) => `
+        <tr>
+            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: center; color: #64748b;">${idx + 1}</td>
+            <td style="border: 1px solid #e2e8f0; padding: 10px; font-weight: 500;">${item.name}</td>
+            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: center; color: #64748b;">${item.hsn || '6211'}</td>
+            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: center; font-weight: 600;">${item.quantity}</td>
+            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: right; color: #64748b;">₹${item.price.toFixed(2)}</td>
+            <td style="border: 1px solid #e2e8f0; padding: 10px; text-align: right; font-weight: 700; background: #f8fafc;">₹${(item.price * item.quantity).toFixed(2)}</td>
+        </tr>
+    `).join('');
 
-    // Background color
-    doc.rect(0, 0, doc.page.width, doc.page.height).fill('#fff9e6');
-    
-    // BLUE LINE COLOR
-    const lineColor = '#0f3c88'; 
-    doc.strokeColor(lineColor);
-    doc.fillColor('black');
+    const emptyRowsCount = Math.max(0, 10 - bill.items.length);
+    const emptyRowsHTML = Array(emptyRowsCount).fill(0).map(() => `
+        <tr style="height: 35px;">
+            <td style="border: 1px solid #f1f5f9;"></td>
+            <td style="border: 1px solid #f1f5f9;"></td>
+            <td style="border: 1px solid #f1f5f9;"></td>
+            <td style="border: 1px solid #f1f5f9;"></td>
+            <td style="border: 1px solid #f1f5f9;"></td>
+            <td style="border: 1px solid #f1f5f9; background: #f8fafc;"></td>
+        </tr>
+    `).join('');
 
-    // Main Outer Border
-    doc.lineWidth(1).rect(startX, startY, width, height).stroke();
+    const bookNum = bill.serialNumber ? String(Math.floor((bill.serialNumber - 1) / 100) + 1).padStart(2, '0') : '01';
+    const billNum = bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase();
 
-    // 1. HEADER SECTION
-    doc.rect(startX, startY, 160, 80).stroke();
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('black').text('TAX INVOICE', startX + 5, startY + 8, { width: 150, align: 'center' });
-    doc.text('CASH / DEBIT', startX + 5, startY + 20, { width: 150, align: 'center' });
-    
-    doc.font('Helvetica').fontSize(8).fillColor('black');
-    doc.text('Original :', startX + 8, startY + 38);
-    doc.text('Duplicate :', startX + 90, startY + 38);
-    
-    doc.fontSize(9).font('Helvetica-Bold');
-    doc.text(`GSTIN - ${settings.gstin || '24BRNPM8073Q1ZU'}`, startX + 8, startY + 52);
-    doc.font('Helvetica').fontSize(8);
-    doc.text(settings.stateInfo || 'State : Gujarat    Code : 24', startX + 8, startY + 65);
-
-    // Right Box (Shop Name)
-    doc.rect(startX + 160, startY, width - 160, 80).stroke();
-    
-    // MANUAL SHOP NAME PLACEMENT
-    const shopX = startX + 160 + (width - 160) / 2;
-    doc.fillColor('#0f3c88').fontSize(26);
-    
-    // Split: "શ્રી હરિ ડ્રેસીસ" & "કટપીસ"
-    doc.font(gujaratiFont).text('શ્રી હરિ ડ્રેસીસ', startX + 170, startY + 10, { width: 165, align: 'right' });
-    doc.font('Helvetica-Bold').fontSize(22).text('&', startX + 342, startY + 14); // Slightly smaller and lower for better alignment
-    doc.font(gujaratiFont).fontSize(26).text('કટપીસ', startX + 365, startY + 10, { width: 140, align: 'left' });
-    
-    doc.fillColor('black').font('Helvetica-Bold').fontSize(9);
-    doc.text('Wholesale & Retail', startX + 165, startY + 42, { width: 360, align: 'center' });
-    
-    doc.font(gujaratiFont).fontSize(9);
-    doc.text(settings.shopAddress || 'માધવ પાર્ક ૧, શ્રી હરિ કોમ્પલેક્ષની બાજુમાં, આલાપ રોયલ પામની પાછળ, બાપાસીતારામ ચોક, મવડી, રાજકોટ - ૩૬૦ ૦૦૪.', startX + 165, startY + 52, { width: 360, align: 'center' });
-
-    // 2. CUSTOMER DETAILS SECTION
-    doc.rect(startX, startY + 80, 340, 80).stroke(); 
-    doc.rect(startX + 340, startY + 80, width - 340, 80).stroke();
-
-    // Customer Info
-    doc.fontSize(11).font(gujaratiFont).fillColor('black');
-    doc.text('મે. :', startX + 10, startY + 90);
-    
-    const displayName = bill.customerNameGujarati || (bill.customerName || '');
-    doc.fillColor('#0f3c88').text(displayName, startX + 45, startY + 90);
-    
-    if (bill.customerNameGujarati && bill.customerName) {
-        doc.fontSize(9).font('Helvetica').fillColor('black');
-        // FIXED OFFSET TO PREVENT OVERLAP
-        doc.text(`(${bill.customerName})`, startX + 210, startY + 92);
-    }
-    
-    doc.strokeColor(lineColor).moveTo(startX + 40, startY + 104).lineTo(startX + 330, startY + 104).dash(1, { space: 2 }).stroke().undash();
-
-    doc.fontSize(11).font(gujaratiFont).fillColor('black').text('એડ્રેસ :', startX + 10, startY + 115);
-    const displayAddress = bill.customerAddressGujarati || bill.customerAddress || '';
-    doc.fillColor('#0f3c88').text(displayAddress, startX + 55, startY + 115);
-    doc.strokeColor(lineColor).moveTo(startX + 50, startY + 129).lineTo(startX + 330, startY + 129).dash(1, { space: 2 }).stroke().undash();
-
-    doc.fontSize(9).font('Helvetica').fillColor('black').text(`GSTIN : ${bill.customerGstin || ''}`, startX + 10, startY + 145);
-    doc.text('State : Gujarat', startX + 160, startY + 145);
-    doc.text('Code : 24', startX + 260, startY + 145);
-
-    // Bill Info (Right)
-    doc.fontSize(11).font(gujaratiFont);
-    doc.text('બુક નં. :', startX + 350, startY + 90);
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#c00').text(String(Math.floor((bill.serialNumber - 1) / 100) + 1).padStart(2, '0'), startX + 420, startY + 89);
-    
-    doc.fillColor('black').font(gujaratiFont).text('બીલ નં. :', startX + 350, startY + 110);
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#c00').text(String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0'), startX + 420, startY + 109);
-    
-    doc.fillColor('black').font(gujaratiFont).text('તા. :', startX + 350, startY + 135);
-    const dateStr = new Date(bill.createdAt).toLocaleDateString('en-IN', {day: '2-digit', month: '2-digit', year: '2-digit'}).replace(/\//g, '-');
-    doc.fontSize(11).font('Helvetica-Bold').fillColor('#0f3c88').text(dateStr, startX + 420, startY + 135);
-
-    // 3. TABLE SECTION
-    const tableY = startY + 160;
-    doc.strokeColor(lineColor).rect(startX, tableY, width, 400).stroke(); 
-
-    doc.moveTo(startX + 230, tableY).lineTo(startX + 230, tableY + 400).stroke(); 
-    doc.moveTo(startX + 290, tableY).lineTo(startX + 290, tableY + 400).stroke(); 
-    doc.moveTo(startX + 350, tableY).lineTo(startX + 350, tableY + 400).stroke(); 
-    doc.moveTo(startX + 430, tableY).lineTo(startX + 430, height + startY).stroke(); 
-
-    doc.moveTo(startX, tableY + 30).lineTo(startX + width, tableY + 30).stroke();
-
-    doc.fontSize(10).fillColor('black');
-    doc.font(gujaratiFont).text('માલની વિગત', startX + 5, tableY + 10, { width: 220, align: 'center' });
-    doc.font('Helvetica-Bold').text('HSN Code', startX + 230, tableY + 10, { width: 60, align: 'center' });
-    doc.font(gujaratiFont).text('નંગ / મીટર', startX + 290, tableY + 10, { width: 60, align: 'center' });
-    doc.font(gujaratiFont).text('ભાવ', startX + 350, tableY + 10, { width: 80, align: 'center' });
-    doc.font(gujaratiFont).text('રકમ રૂ.', startX + 430, tableY + 10, { width: 105, align: 'center' });
-
-    // Items
-    let y = tableY + 40;
-    doc.fontSize(11).fillColor('#0f3c88');
-    let totalQty = 0;
-    bill.items.forEach(item => {
-        doc.font(gujaratiFont).text(item.name, startX + 10, y);
-        doc.font('Helvetica').text(item.hsn || '6211', startX + 230, y, { width: 60, align: 'center' });
-        doc.text(item.quantity.toString(), startX + 290, y, { width: 60, align: 'center' });
-        doc.text(item.price.toFixed(0), startX + 350, y, { width: 70, align: 'right' });
-        doc.text((item.price * item.quantity).toFixed(0), startX + 430, y, { width: 95, align: 'right' });
-        totalQty += item.quantity;
-        y += 22;
-    });
-
-    if (totalQty > 0) {
-        doc.strokeColor(lineColor).lineWidth(1).moveTo(startX + 290, y + 2).lineTo(startX + 350, y + 2).stroke();
-        doc.fontSize(14).font('Helvetica-Bold').fillColor('black').text(totalQty.toString(), startX + 290, y + 8, { width: 60, align: 'center' });
-    }
-
-    // 4. FOOTER SECTION
-    const footerY = tableY + 400;
-    doc.strokeColor(lineColor).rect(startX, footerY, 340, height - (footerY - startY)).stroke(); 
-    doc.rect(startX + 340, footerY, width - 340, height - (footerY - startY)).stroke(); 
-
-    if (qrDataUrl) {
-        doc.image(qrDataUrl, startX + 15, footerY + 15, { width: 80 });
-    }
-
-    doc.fontSize(20).fillColor('#0f3c88').font('Helvetica-Bold').text('GPay / PhonePe', startX + 110, footerY + 25);
-    doc.fontSize(16).text(`${bill.actualTotal}-only`, startX + 110, footerY + 55);
-    doc.strokeColor(lineColor).moveTo(startX + 110, footerY + 50).lineTo(startX + 300, footerY + 50).stroke();
-    doc.moveTo(startX + 110, footerY + 75).lineTo(startX + 300, footerY + 75).stroke();
-
-    doc.fontSize(8).fillColor('black').font(gujaratiFont);
-    doc.text('ટર્મ્સ એન્ડ કન્ડીશન :', startX + 10, height + startY - 45);
-    doc.text('૧. ન્યાયક્ષેત્ર રાજકોટ રહેશે.', startX + 10, height + startY - 35);
-    doc.text('૨. ભૂલચૂક લેવી દેવી.', startX + 10, height + startY - 25);
-
-    const calcWidth = width - 340;
-    const calcCol1 = 85;
-    const rowH = 18;
-    let cy = footerY;
-
-    const drawCalcRow = (gujLabel, engLabel, val) => {
-        doc.fillColor('black');
-        if (gujLabel) {
-            doc.fontSize(8).font(gujaratiFont).text(gujLabel, startX + 345, cy + 5, { continued: true });
-            doc.font('Helvetica').text(` (${engLabel})`, { continued: false });
-        } else {
-            doc.fontSize(8).font('Helvetica').text(engLabel, startX + 345, cy + 5);
+    return `
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+Gujarati:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --accent: #3b82f6;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --bg-light: #f8fafc;
+            --border: #e2e8f0;
         }
-        doc.fontSize(10).fillColor('#0f3c88').font('Helvetica').text(val ? val + " -" : " -", startX + 340 + calcCol1, cy + 4, { width: calcWidth - calcCol1 - 5, align: 'right' });
-        doc.strokeColor(lineColor).moveTo(startX + 340, cy + rowH).lineTo(startX + width, cy + rowH).stroke();
-        cy += rowH;
-    };
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Outfit', 'Noto Sans Gujarati', sans-serif; 
+            padding: 40px;
+            color: var(--text-dark);
+            background: #fff;
+            line-height: 1.5;
+        }
+        .bill-container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 2px solid var(--primary);
+            padding: 24px;
+            position: relative;
+            background: #fff;
+            box-shadow: 0 0 40px rgba(0,0,0,0.05);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 20px;
+            margin-bottom: 24px;
+        }
+        .shop-info { flex: 2; }
+        .tax-invoice-badge {
+            background: var(--primary);
+            color: white;
+            padding: 6px 16px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            display: inline-block;
+            margin-bottom: 12px;
+            border-radius: 4px;
+        }
+        .shop-name {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+        .shop-subtitle {
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .shop-address {
+            font-size: 11px;
+            color: var(--text-muted);
+            max-width: 300px;
+        }
+        .bill-meta {
+            flex: 1;
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .meta-item {
+            font-size: 12px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        .meta-label { font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: 10px; }
+        .meta-value { font-weight: 700; color: var(--primary); }
 
-    drawCalcRow('સબટોટલ', 'Subtotal', bill.totalAmount.toFixed(0));
-    drawCalcRow('', 'CGST 2.5%', bill.cgst.toFixed(2));
-    drawCalcRow('', 'SGST 2.5%', bill.sgst.toFixed(2));
-    drawCalcRow('', 'IGST %', '');
-    drawCalcRow('સબટોટલ', 'Subtotal', (bill.totalAmount + bill.cgst + bill.sgst).toFixed(0));
-    drawCalcRow('રાઉન્ડ ઓફ', 'RO', (bill.roundOff || 0).toFixed(0));
+        .party-details {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .party-card {
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        .card-title {
+            font-size: 9px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 4px;
+        }
+        .party-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+        .party-info { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
 
-    const finalTotal = bill.actualTotal || 0;
-    doc.fontSize(12).font(gujaratiFont).fillColor('black').text('કુલ', startX + 345, cy + 8, { continued: true });
-    doc.font('Helvetica-Bold').text(' (Total)');
-    doc.fontSize(16).font('Helvetica-Bold').fillColor('#c00').text(`${finalTotal}/-`, startX + 340 + calcCol1, cy + 7, { width: calcWidth - calcCol1 - 5, align: 'right' });
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+            font-size: 12px;
+        }
+        .items-table th {
+            background: var(--bg-light);
+            padding: 12px;
+            text-align: left;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10px;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+        .items-table td { border: 1px solid var(--border); }
 
-    doc.save();
-    doc.rotate(-8, { origin: [startX + 480, height + startY - 40] });
-    // Positioned at the very bottom right to avoid all internal table lines
-    const stampBoxX = startX + 435;
-    const stampBoxY = height + startY - 55;
-    doc.rect(stampBoxX, stampBoxY, 95, 25).lineWidth(1.5).strokeColor('#0f3c88').opacity(0.4).stroke();
+        .footer {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 40px;
+        }
+        .qr-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: var(--bg-light);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        .qr-code { width: 80px; height: 80px; border: 1px solid #fff; border-radius: 8px; }
+        .payment-info h4 { font-size: 14px; color: var(--primary); margin-bottom: 4px; }
+        .payment-info p { font-size: 10px; color: var(--text-muted); }
+
+        .totals-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+        .total-row.grand-total {
+            background: var(--primary);
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-weight: 800;
+            font-size: 18px;
+        }
+        .signature-area {
+            margin-top: 40px;
+            text-align: right;
+            padding-right: 20px;
+        }
+        .signature-line {
+            width: 180px;
+            border-top: 1px solid var(--primary);
+            margin-left: auto;
+            margin-top: 60px;
+            padding-top: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 120px;
+            font-weight: 900;
+            color: rgba(30, 58, 138, 0.03);
+            white-space: nowrap;
+            z-index: -1;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="watermark">SHREE HARI</div>
     
-    doc.fontSize(7).fillColor('#0f3c88');
-    doc.font(gujaratiFont).text('શ્રી હરિ ડ્રેસીસ', stampBoxX + 2, stampBoxY + 8, { width: 50, align: 'right' });
-    doc.font('Helvetica-Bold').fontSize(6).text('&', stampBoxX + 54, stampBoxY + 10);
-    doc.font(gujaratiFont).fontSize(7).text('કટપીસ', stampBoxX + 62, stampBoxY + 8, { width: 30, align: 'left' });
-    doc.restore();
+    <div class="bill-container">
+        <div class="header">
+            <div class="shop-info">
+                <div class="tax-invoice-badge">TAX INVOICE</div>
+                <h1 class="shop-name">${settings.shopName || 'SHREE HARI DRESSES'}</h1>
+                <div class="shop-subtitle">Wholesale & Retail Market</div>
+                <div class="shop-address">${settings.shopAddress || 'MAVDI, RAJKOT - 360 004'}</div>
+                <div class="party-info" style="margin-top: 8px; font-weight: 700;">GSTIN: ${settings.gstin || '24BRNPM8073Q1ZU'}</div>
+            </div>
+            <div class="bill-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Bill Date:</span>
+                    <span class="meta-value">${formatDate(bill.createdAt)}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Book No:</span>
+                    <span class="meta-value">${bookNum}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Bill No:</span>
+                    <span class="meta-value" style="font-size: 16px;">#${billNum}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Status:</span>
+                    <span class="meta-value" style="color: ${bill.status === 'void' ? '#ef4444' : '#10b981'}">${bill.status?.toUpperCase() || 'PAID'}</span>
+                </div>
+            </div>
+        </div>
 
-    doc.fontSize(9).fillColor('black').font('Helvetica').text('Shree Hari Dresses & Cutpiece', startX + 340, height + startY - 20, { width: calcWidth, align: 'center' });
+        <div class="party-details">
+            <div class="party-card">
+                <div class="card-title">Billed To (Customer)</div>
+                <div class="party-name">${bill.customerNameGujarati || bill.customerName || 'Cash Customer'}</div>
+                ${bill.customerNameGujarati && bill.customerName ? `<div class="party-info">(${bill.customerName})</div>` : ''}
+                <div class="party-info">${bill.customerAddressGujarati || bill.customerAddress || 'Walk-in Customer'}</div>
+                <div class="party-info">Phone: ${bill.customerPhone || 'N/A'}</div>
+            </div>
+            <div class="party-card">
+                <div class="card-title">Payment Info</div>
+                <div class="meta-item" style="justify-content: flex-start; margin-top: 8px;">
+                    <span class="meta-label">Method:</span>
+                    <span class="meta-value" style="text-transform: uppercase;">${bill.paymentMode || 'Cash'}</span>
+                </div>
+                <div class="meta-item" style="justify-content: flex-start; margin-top: 8px;">
+                    <span class="meta-label">Place of Supply:</span>
+                    <span class="meta-value">Gujarat (24)</span>
+                </div>
+            </div>
+        </div>
+
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px; text-align: center;">SR</th>
+                    <th>Product Description</th>
+                    <th style="width: 80px; text-align: center;">HSN</th>
+                    <th style="width: 80px; text-align: center;">Qty</th>
+                    <th style="width: 100px; text-align: right;">Rate</th>
+                    <th style="width: 120px; text-align: right;">Total Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${itemRows}
+                ${emptyRowsHTML}
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <div class="qr-section">
+                <img src="${qrDataUrl}" class="qr-code" />
+                <div class="payment-info">
+                    <h4>Scan to Pay</h4>
+                    <p>Easily pay via GPay, PhonePe, or any UPI app.</p>
+                    <p style="margin-top: 4px; font-weight: 700; color: var(--text-dark);">${settings.upiId || '9924387087@okbizaxis'}</p>
+                </div>
+            </div>
+            
+            <div class="totals-section">
+                <div class="total-row">
+                    <span class="meta-label">Taxable Value</span>
+                    <span class="meta-value">₹${bill.totalAmount.toFixed(2)}</span>
+                </div>
+                <div class="total-row">
+                    <span class="meta-label">CGST (2.5%)</span>
+                    <span class="meta-value">₹${bill.cgst.toFixed(2)}</span>
+                </div>
+                <div class="total-row">
+                    <span class="meta-label">SGST (2.5%)</span>
+                    <span class="meta-value">₹${bill.sgst.toFixed(2)}</span>
+                </div>
+                ${bill.roundOff ? `
+                <div class="total-row">
+                    <span class="meta-label">Round Off</span>
+                    <span class="meta-value">₹${bill.roundOff.toFixed(2)}</span>
+                </div>` : ''}
+                <div class="total-row grand-total">
+                    <span>TOTAL</span>
+                    <span>₹${bill.actualTotal.toLocaleString('en-IN')}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="signature-area">
+            ${settings.signature ? `<img src="${settings.signature}" style="height: 60px; margin-bottom: -15px; opacity: 0.8;" />` : ''}
+            <div class="signature-line">Authorized Signatory</div>
+        </div>
+        
+        <div style="margin-top: 32px; font-size: 9px; color: var(--text-muted); text-align: center; border-top: 1px dashed var(--border); padding-top: 12px;">
+            Thank you for shopping at ${settings.shopName || 'Shree Hari Dresses'}. Visit again!
+        </div>
+    </div>
+</body>
+</html>
+    `;
 };
 
 const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
 
-    return new Promise(async (resolve, reject) => {
-        try {
-            const doc = new PDFDocument({ margin: 0, size: 'A4' });
-            
-            // Highly robust font loading sequence
-            const notoPath = path.resolve(__dirname, 'NotoSansGujarati-Regular.ttf');
-            const lohitPath = path.resolve(__dirname, 'Lohit-Gujarati.ttf');
-            const kalamPath = path.resolve(__dirname, 'Kalam-Regular.ttf');
-            
-            let mainFont = 'Helvetica';
-            
-            try {
-                if (fs.existsSync(notoPath)) {
-                    doc.registerFont('GujaratiFont', notoPath);
-                    mainFont = 'GujaratiFont';
-                } else if (fs.existsSync(lohitPath)) {
-                    doc.registerFont('GujaratiFont', lohitPath);
-                    mainFont = 'GujaratiFont';
-                } else if (fs.existsSync(kalamPath)) {
-                    doc.registerFont('GujaratiFont', kalamPath);
-                    mainFont = 'GujaratiFont';
-                }
-            } catch (err) {
-                console.error("Font registration failed:", err);
-                mainFont = 'Helvetica';
-            }
-            
-            doc.font(mainFont);
-
-            let buffers = [];
-            doc.on('data', buffers.push.bind(buffers));
-            doc.on('error', (err) => reject(err));
-            doc.on('end', () => {
-                let pdfData = Buffer.concat(buffers);
-                resolve(pdfData);
-            });
-
-            for (let i = 0; i < bills.length; i++) {
-                if (i > 0) doc.addPage();
-                try {
-                    await drawBillOnPage(doc, bills[i], settings, mainFont);
-                } catch (drawErr) {
-                    console.error(`Error drawing bill ${i}:`, drawErr);
-                    // Continue to next bill if one fails, or decide to fail all
-                }
-            }
-
-            doc.end();
-        } catch (err) {
-            console.error("PDF Generation Final Error:", err);
-            reject(err);
-        }
+    const browser = await puppeteer.launch({
+        executablePath: CHROME_PATH,
+        headless: 'shell',
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     });
+
+    try {
+        const page = await browser.newPage();
+        const pdfBuffers = [];
+
+        for (const bill of bills) {
+            const html = await buildBillHTML(bill, settings);
+            await page.setContent(html, { waitUntil: 'networkidle0' });
+            
+            const pdf = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '0', right: '0', bottom: '0', left: '0' }
+            });
+            pdfBuffers.push(pdf);
+        }
+
+        await browser.close();
+        
+        // If single bill, return buffer directly. 
+        // If multiple (for bill book), return the first one for now (or use a merger if strictly needed)
+        // Note: For bill books, we usually want one continuous PDF. 
+        // Puppeteer generates one per setContent. To get all in one, we'd need to put all HTML in one page with page-breaks.
+        
+        if (pdfBuffers.length === 1) return pdfBuffers[0];
+        
+        // For multiple bills, we'll re-run with all HTML combined and page-breaks
+        const combinedBrowser = await puppeteer.launch({
+            executablePath: CHROME_PATH,
+            headless: 'shell',
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+        });
+        const combinedPage = await combinedBrowser.newPage();
+        
+        let combinedHTML = '';
+        for (const bill of bills) {
+            const html = await buildBillHTML(bill, settings);
+            combinedHTML += `<div style="page-break-after: always;">${html}</div>`;
+        }
+        
+        await combinedPage.setContent(combinedHTML, { waitUntil: 'networkidle0' });
+        const finalPdf = await combinedPage.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '0', right: '0', bottom: '0', left: '0' }
+        });
+        
+        await combinedBrowser.close();
+        return finalPdf;
+
+    } catch (err) {
+        if (browser) await browser.close();
+        throw err;
+    }
 };
 
 module.exports = { generateBillPdf };

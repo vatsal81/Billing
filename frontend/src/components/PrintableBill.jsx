@@ -54,6 +54,11 @@ export default function PrintableBill({ bill }) {
               </div>
               <div style={{fontWeight: 'bold'}}>GSTIN - {settings.gstin || '24BRNPM8073Q1ZU'}</div>
               <div>{settings.stateInfo || 'State : Gujarat    Code : 24'}</div>
+              {settings.logo && (
+                <div style={{marginTop: '10px', textAlign: 'center'}}>
+                  <img src={settings.logo} alt="Logo" style={{maxHeight: '60px', maxWidth: '100%'}} />
+                </div>
+              )}
             </div>
             <div style={{width: '65%', padding: '10px 8px', textAlign: 'center'}}>
               <h1 style={{fontSize: '28px', margin: '0 0 4px 0', color: '#002060', fontWeight: 'bold'}}>{settings.shopName || t('shopName')}</h1>
@@ -199,6 +204,10 @@ export default function PrintableBill({ bill }) {
                    }}>
                      {settings.stampName || 'શ્રી હરિ ડ્રેસીસ & કટપીસ'}
                    </div>
+
+                   {settings.signature && (
+                     <img src={settings.signature} alt="Signature" style={{maxHeight: '60px', marginBottom: '5px', zIndex: 0}} />
+                   )}
                    
                    <span style={{fontWeight: 'bold', fontSize: '13px', zIndex: 1}}>{settings.shopName || t('shopName')}</span>
                 </div>

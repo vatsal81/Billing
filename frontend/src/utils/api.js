@@ -45,6 +45,11 @@ export const fetchBills = async () => {
   return data;
 };
 
+export const fetchBillById = async (id) => {
+  const { data } = await API.get(`/bills/${id}`);
+  return data;
+};
+
 export const generateBill = async (billData) => {
   const { data } = await API.post('/bills', billData);
   return data;
@@ -72,14 +77,49 @@ export const fetchSettings = async () => {
   return data;
 };
 
-export const updateSettings = async (settings) => {
-  const { data } = await API.post('/settings', settings);
+export const transliterateText = async (text) => {
+  if (!text || text.trim() === '') return '';
+  try {
+    const url = `https://www.google.com/inputtools/request?text=${encodeURIComponent(text)}&ime=transliteration_en_gu&num=1`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data && data[0] === 'SUCCESS' && data[1] && data[1][0] && data[1][0][1]) {
+      return data[1][0][1][0];
+    }
+  } catch (error) {
+    console.error('Transliteration failed:', error);
+  }
+  return text; // Fallback to original text if fails
+};
+
+export const updateSettings = async (settingsData) => {
+  const { data } = await API.put('/settings', settingsData);
   return data;
 };
 
 // Customers
+export const fetchCustomers = async () => {
+  const { data } = await API.get('/customers');
+  return data;
+};
+
 export const searchCustomers = async (name) => {
   const { data } = await API.get(`/customers/search?name=${name}`);
+  return data;
+};
+
+export const createCustomer = async (customerData) => {
+  const { data } = await API.post('/customers', customerData);
+  return data;
+};
+
+export const updateCustomer = async (id, customerData) => {
+  const { data } = await API.put(`/customers/${id}`, customerData);
+  return data;
+};
+
+export const deleteCustomer = async (id) => {
+  const { data } = await API.delete(`/customers/${id}`);
   return data;
 };
 
@@ -99,4 +139,75 @@ export const deleteExpense = async (id) => {
   return data;
 };
 
+// Purchase
+export const fetchPurchaseBills = async () => {
+  const { data } = await API.get('/purchase');
+  return data;
+};
+
+export const createPurchaseBill = async (billData) => {
+  const { data } = await API.post('/purchase', billData);
+  return data;
+};
+
+export const downloadPurchaseReport = async (month, year) => {
+  const response = await API.get(`/purchase/monthly-pdf?month=${month}&year=${year}`, {
+    responseType: 'blob'
+  });
+  return response.data;
+};
+
+export const downloadSinglePurchaseBillPdf = async (id) => {
+  const response = await API.get(`/purchase/${id}/pdf`, {
+    responseType: 'blob'
+  });
+  return response.data;
+};
+
+export const deletePurchaseBill = async (id) => {
+  const { data } = await API.delete(`/purchase/${id}`);
+  return data;
+};
+
+// Suppliers
+export const fetchSuppliers = async () => {
+  const { data } = await API.get('/suppliers');
+  return data;
+};
+
+export const createSupplier = async (supplierData) => {
+  const { data } = await API.post('/suppliers', supplierData);
+  return data;
+};
+
+export const updateSupplier = async (id, supplierData) => {
+  const { data } = await API.put(`/suppliers/${id}`, supplierData);
+  return data;
+};
+
+export const deleteSupplier = async (id) => {
+  const { data } = await API.delete(`/suppliers/${id}`);
+  return data;
+};
+
+// Analytics
+export const fetchAnalyticsStats = async (period = '30d') => {
+  const { data } = await API.get(`/analytics/stats?period=${period}`);
+  return data;
+};
+
+// Ledger
+export const fetchLedgerEntries = async (partyId) => {
+  const { data } = await API.get(`/ledger/${partyId}`);
+  return data;
+};
+
+export const createLedgerEntry = async (entryData) => {
+  const { data } = await API.post('/ledger', entryData);
+  return data;
+};
+
 export default API;
+
+
+

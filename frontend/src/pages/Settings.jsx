@@ -13,7 +13,9 @@ export default function Settings() {
     stateInfo: '',
     terms1: '',
     terms2: '',
-    stampName: ''
+    stampName: '',
+    logo: '',
+    signature: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,14 +32,58 @@ export default function Settings() {
     } catch(e) { console.error(e) } finally { setLoading(false); }
   };
 
+  const handleFileChange = (e, field) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image too large. Please use an image smaller than 2MB.");
+        return;
+      }
+      setSettings({ ...settings, [field]: file });
+      
+      const previewUrl = URL.createObjectURL(file);
+      if (field === 'logo') setLogoPreview(previewUrl);
+      if (field === 'signature') setSigPreview(previewUrl);
+    }
+  };
+
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [sigPreview, setSigPreview] = useState(null);
+
+  const getImageUrl = (field) => {
+    const value = settings[field];
+    if (!value) return null;
+    if (value instanceof File) {
+        return field === 'logo' ? logoPreview : sigPreview;
+    }
+    if (value.startsWith('uploads')) {
+        return `http://localhost:5000/${value}`;
+    }
+    return value; // Base64
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
-      await updateSettings(settings);
+      const formData = new FormData();
+      Object.keys(settings).forEach(key => {
+        if (key !== 'logo' && key !== 'signature') {
+          formData.append(key, settings[key]);
+        }
+      });
+      
+      if (settings.logo instanceof File) formData.append('logo', settings.logo);
+      if (settings.signature instanceof File) formData.append('signature', settings.signature);
+
+      await updateSettings(formData);
       setMsg("Settings saved exactly as provided.");
       setTimeout(() => setMsg(''), 3000);
-    } catch(e) { } finally { setSaving(false); }
+      loadSettings(); // Reload to get paths
+    } catch(e) { 
+        console.error(e);
+        alert("Failed to save settings");
+    } finally { setSaving(false); }
   };
 
   if (loading) return <div>Loading...</div>;
@@ -86,6 +132,50 @@ export default function Settings() {
           <div className="input-group" style={{marginBottom: 0}}>
             <label className="input-label">Rubber Stamp Name (Gujarati / English)</label>
             <input type="text" className="input-field" value={settings.stampName} onChange={(e) => setSettings({...settings, stampName: e.target.value})} />
+          </div>
+
+          <div className="form-grid">
+            <div className="input-group">
+              <label className="input-label">Company Logo</label>
+              <div style={{border: '2px dashed var(--border-color)', padding: '20px', borderRadius: '12px', textAlign: 'center', background: 'rgba(255,255,255,0.02)'}}>
+                {getImageUrl('logo') ? (
+                  <div style={{position: 'relative', display: 'inline-block'}}>
+                    <img src={getImageUrl('logo')} alt="Logo" style={{maxHeight: '100px', borderRadius: '8px'}} />
+                    <button type="button" onClick={() => {
+                        setSettings({...settings, logo: ''});
+                        setLogoPreview(null);
+                    }} style={{position: 'absolute', top: '-10px', right: '-10px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer'}}>×</button>
+                  </div>
+                ) : (
+                  <div onClick={() => document.getElementById('logo-upload').click()} style={{cursor: 'pointer'}}>
+                    <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Click to upload Logo</p>
+                    <p style={{fontSize: '0.7rem', color: 'var(--text-secondary)'}}>(PNG/JPG, Max 2MB)</p>
+                  </div>
+                )}
+                <input id="logo-upload" type="file" hidden accept="image/*" onChange={(e) => handleFileChange(e, 'logo')} />
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label className="input-label">Authorized Signature</label>
+              <div style={{border: '2px dashed var(--border-color)', padding: '20px', borderRadius: '12px', textAlign: 'center', background: 'rgba(255,255,255,0.02)'}}>
+                {getImageUrl('signature') ? (
+                  <div style={{position: 'relative', display: 'inline-block'}}>
+                    <img src={getImageUrl('signature')} alt="Signature" style={{maxHeight: '100px', borderRadius: '8px'}} />
+                    <button type="button" onClick={() => {
+                        setSettings({...settings, signature: ''});
+                        setSigPreview(null);
+                    }} style={{position: 'absolute', top: '-10px', right: '-10px', background: 'var(--danger)', color: 'white', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer'}}>×</button>
+                  </div>
+                ) : (
+                  <div onClick={() => document.getElementById('sig-upload').click()} style={{cursor: 'pointer'}}>
+                    <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem'}}>Click to upload Signature</p>
+                    <p style={{fontSize: '0.7rem', color: 'var(--text-secondary)'}}>(PNG/JPG, Max 2MB)</p>
+                  </div>
+                )}
+                <input id="sig-upload" type="file" hidden accept="image/*" onChange={(e) => handleFileChange(e, 'signature')} />
+              </div>
+            </div>
           </div>
           
           <button type="submit" className="btn btn-primary" disabled={saving}>

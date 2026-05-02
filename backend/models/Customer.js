@@ -9,6 +9,7 @@ const customerSchema = mongoose.Schema({
     phone: { type: String, default: '' },
 
     totalSpent: { type: Number, default: 0 },
+    balance: { type: Number, default: 0 },
     lastVisit: { type: Date, default: Date.now }
 }, { timestamps: true });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { generateBill, searchCustomers } from '../utils/api';
-import { Zap, Printer, CheckCircle2, History, RefreshCw, User, MapPin, Phone, MessageCircle, X } from 'lucide-react';
+import { generateBill, searchCustomers, createCustomer, transliterateText } from '../utils/api';
+import { Zap, Printer, CheckCircle2, History, RefreshCw, User, MapPin, Phone, MessageCircle, X, Plus, Save } from 'lucide-react';
 
 import { useLanguage } from '../utils/LanguageContext';
 import PrintableBill from '../components/PrintableBill';
@@ -11,6 +11,7 @@ import { generatePDFBlob } from '../utils/pdfGenerator';
 export default function Dashboard() {
   const { t } = useLanguage();
   const [targetAmount, setTargetAmount] = useState('');
+  const [customerId, setCustomerId] = useState(null);
   const [customerName, setCustomerName] = useState('');
   const [customerNameGujarati, setCustomerNameGujarati] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
@@ -18,8 +19,14 @@ export default function Dashboard() {
 
 
   const [customerPhone, setCustomerPhone] = useState('');
+  const [paymentMode, setPaymentMode] = useState('cash');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' });
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -49,12 +56,18 @@ export default function Dashboard() {
     try {
       setLoading(true);
       setError(null);
+      
+      // Artificial delay to show the premium processing animation
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      
       const generatedBill = await generateBill({
         targetAmount,
+        customerId,
         customerName,
         customerNameGujarati,
         customerAddress,
-        customerPhone
+        customerPhone,
+        paymentMode
       });
 
       setBill(generatedBill);
@@ -68,16 +81,18 @@ export default function Dashboard() {
   const clearForm = () => {
     setBill(null);
     setTargetAmount('');
+    setCustomerId(null);
     setCustomerName('');
     setCustomerAddress('');
     setCustomerPhone('');
+    setPaymentMode('cash');
   };
 
   useEffect(() => {
-    if (customerName.length > 1 && showSuggestions) {
+    if (searchTerm.length > 1 && showSuggestions) {
       const fetchC = async () => {
          try {
-           const data = await searchCustomers(customerName);
+           const data = await searchCustomers(searchTerm);
            setSuggestions(data);
          } catch(e){}
       };
@@ -86,9 +101,10 @@ export default function Dashboard() {
     } else {
       setSuggestions([]);
     }
-  }, [customerName, showSuggestions]);
+  }, [searchTerm, showSuggestions]);
 
   const selectCustomer = (c) => {
+    setCustomerId(c._id);
     setCustomerName(c.name);
     setCustomerNameGujarati(c.nameGujarati || '');
     setCustomerAddress(c.address || '');
@@ -100,12 +116,54 @@ export default function Dashboard() {
   };
 
   const handleNewCustomer = () => {
-    setCustomerAddress('');
-    setCustomerAddressGujarati('');
-    setCustomerPhone('');
+    setShowAddModal(true);
     setSuggestions([]);
     setShowSuggestions(false);
   };
+
+  const handleSaveCustomer = async (e) => {
+    e.preventDefault();
+    setSavingCustomer(true);
+    try {
+      const created = await createCustomer(newCustomer);
+      selectCustomer(created);
+      setShowAddModal(false);
+      setNewCustomer({ name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' });
+    } catch (err) {
+      alert('Failed to save customer');
+    } finally {
+      setSavingCustomer(false);
+    }
+  };
+
+  // Auto-transliterate English fields to Gujarati fields
+  useEffect(() => {
+    if (!showAddModal) return;
+    
+    const translateName = async () => {
+      if (newCustomer.name) {
+        const trans = await transliterateText(newCustomer.name);
+        setNewCustomer(prev => ({ ...prev, nameGujarati: trans }));
+      }
+    };
+    
+    const timeout = setTimeout(translateName, 800);
+    return () => clearTimeout(timeout);
+  }, [newCustomer.name, showAddModal]);
+
+  useEffect(() => {
+    if (!showAddModal) return;
+    
+    const translateAddress = async () => {
+      if (newCustomer.address) {
+        const trans = await transliterateText(newCustomer.address);
+        setNewCustomer(prev => ({ ...prev, addressGujarati: trans }));
+      }
+    };
+    
+    const timeout = setTimeout(translateAddress, 800);
+    return () => clearTimeout(timeout);
+  }, [newCustomer.address, showAddModal]);
 
 
 
@@ -136,98 +194,119 @@ export default function Dashboard() {
             <div className="pos-form-row">
               <div className="input-group" style={{flex: 1, marginBottom: 0, position: 'relative'}}>
                 <label className="input-label"><User size={14} style={{display: 'inline', marginBottom: '-2px'}}/> {t('custNameAlt')}</label>
-                <GujaratiInput 
-                  className="input-field" 
-                  placeholder={t('customerName')}
-                  value={customerNameGujarati || customerName}
-                  onChange={(val) => {
-                    setCustomerNameGujarati(val);
-                    setShowSuggestions(true);
-                  }}
-                  onOriginal={(orig) => {
-                    setCustomerName(orig);
-                  }}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
-                />
-
-
-
-                {/* Only show Existing Customer suggestions if we are NOT actively showing Gujarati transliteration */}
-                {suggestions.length > 0 && showSuggestions && customerName.length > 2 && (
-                  <ul style={{
-                    position: 'absolute', 
-                    top: '100%', 
-                    left: 0, 
-                    right: 0, 
-                    background: 'var(--bg-primary)', 
-                    border: '1px solid var(--border-color)', 
-                    borderRadius: '8px', 
-                    zIndex: 50, 
-                    listStyle: 'none', 
-                    margin: '5px 0 0 0', 
-                    padding: '5px', 
-                    maxHeight: '180px', 
-                    overflowY: 'auto', 
-                    boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
+                
+                {customerId ? (
+                  <div style={{
+                    padding: '12px 16px', 
+                    background: 'rgba(99, 102, 241, 0.05)', 
+                    border: '1px solid rgba(99, 102, 241, 0.2)', 
+                    borderRadius: '8px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
                   }}>
-                    <li style={{padding: '5px 10px', fontSize: '0.7rem', color: 'var(--accent-primary)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                      <span>Suggestions:</span>
-                      <button 
-                        onClick={() => setShowSuggestions(false)}
-                        style={{background: 'none', border: 'none', color: '#666', cursor: 'pointer', padding: '2px'}}
-                      >
-                        <X size={12} />
-                      </button>
-                    </li>
-                    <li 
-                      onClick={handleNewCustomer}
-                      style={{padding: '10px 12px', cursor: 'pointer', background: 'rgba(3, 105, 161, 0.05)', color: 'var(--accent-primary)', borderBottom: '1px solid var(--border-color)', fontWeight: 'bold'}}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(3, 105, 161, 0.1)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(3, 105, 161, 0.05)'}
-                    >
-                      <div style={{fontSize: '0.85rem'}}>+ {t('newCustomer') || 'New Customer'}</div>
-                      <div style={{fontSize: '1rem', marginTop: '2px'}}>
-                        {customerNameGujarati} <span style={{fontSize: '0.8rem', opacity: 0.7}}>({customerName})</span>
+                    <div>
+                      <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--text-primary)'}}>{customerNameGujarati || customerName} {customerNameGujarati && <span style={{fontSize:'0.85rem', color:'var(--text-secondary)'}}>({customerName})</span>}</div>
+                      <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', gap: '12px'}}>
+                        {customerPhone && <span><Phone size={12}/> {customerPhone}</span>}
+                        {(customerAddressGujarati || customerAddress) && <span><MapPin size={12}/> {customerAddressGujarati || customerAddress}</span>}
                       </div>
-                    </li>
-
-
-
-
-
-                    {suggestions.map(c => (
-                      <li key={c._id} 
-                          onClick={() => selectCustomer(c)}
-                          style={{padding: '12px 16px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', flexDirection: 'column'}}>
-                        <span style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{c.name}</span>
-                        {(c.address || c.phone) && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{c.phone} {c.address}</span>}
-                      </li>
-                    ))}
-                  </ul>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setCustomerId(null);
+                        setCustomerName('');
+                        setCustomerNameGujarati('');
+                        setCustomerAddress('');
+                        setCustomerAddressGujarati('');
+                        setCustomerPhone('');
+                        setSearchTerm('');
+                      }}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)', 
+                        color: 'var(--danger)', 
+                        border: 'none', 
+                        padding: '6px 12px', 
+                        borderRadius: '6px', 
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <X size={14}/> Change
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{display: 'flex', gap: '12px'}}>
+                    <div style={{position: 'relative', flex: 1}}>
+                      <input 
+                        type="text"
+                        className="input-field" 
+                        placeholder="Search customer by name or phone..."
+                        value={searchTerm}
+                        onChange={(e) => {
+                          setSearchTerm(e.target.value);
+                          setShowSuggestions(true);
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
+                      />
+                      {suggestions.length > 0 && showSuggestions && searchTerm.length > 1 && (
+                        <ul style={{
+                          position: 'absolute', 
+                          top: '100%', 
+                          left: 0, 
+                          right: 0, 
+                          background: 'var(--bg-primary)', 
+                          border: '1px solid var(--border-color)', 
+                          borderRadius: '8px', 
+                          zIndex: 50, 
+                          listStyle: 'none', 
+                          margin: '5px 0 0 0', 
+                          padding: '5px', 
+                          maxHeight: '180px', 
+                          overflowY: 'auto', 
+                          boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
+                        }}>
+                          {suggestions.map(c => (
+                            <li key={c._id} 
+                                onClick={() => selectCustomer(c)}
+                                style={{padding: '12px 16px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', flexDirection: 'column'}}>
+                              <span style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{c.nameGujarati || c.name} {c.nameGujarati && <span style={{fontSize:'0.8rem', opacity:0.7}}>({c.name})</span>}</span>
+                              {(c.address || c.phone) && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{c.phone} {c.addressGujarati || c.address}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <button 
+                      type="button"
+                      className="btn btn-secondary" 
+                      onClick={handleNewCustomer}
+                      style={{whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px'}}
+                    >
+                      <Plus size={16}/> New Customer
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
 
             <div className="pos-form-row">
               <div className="input-group" style={{flex: 1, marginBottom: 0}}>
-                <label className="input-label"><Phone size={14} style={{display: 'inline', marginBottom: '-2px'}}/> Phone Number (Optional)</label>
-                <input 
-                  type="text" 
+                <label className="input-label">Payment Mode</label>
+                <select 
                   className="input-field" 
-                  placeholder="e.g. 9876543210"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                />
-              </div>
-              <div className="input-group" style={{flex: 1, marginBottom: 0}}>
-                <label className="input-label"><MapPin size={14} style={{display: 'inline', marginBottom: '-2px'}}/> {t('custAddrAlt')}</label>
-                <GujaratiInput 
-                  className="input-field" 
-                  placeholder={t('address')}
-                  value={customerAddress}
-                  onChange={(val) => setCustomerAddress(val)} 
-                />
+                  value={paymentMode} 
+                  onChange={(e) => setPaymentMode(e.target.value)}
+                >
+                  <option value="cash">Cash</option>
+                  <option value="online">Online / UPI</option>
+                  <option value="credit">Credit (Udhaar)</option>
+                </select>
               </div>
             </div>
 
@@ -268,6 +347,25 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Premium Full-Screen Loading Overlay */}
+      {loading && !bill && (
+        <div className="premium-loader-overlay">
+          <div className="receipt-scanner">
+            <div className="receipt-lines">
+              <div className="receipt-line" style={{ width: '60%' }}></div>
+              <div className="receipt-line" style={{ width: '100%' }}></div>
+              <div className="receipt-line" style={{ width: '80%' }}></div>
+              <div className="receipt-line" style={{ width: '100%', marginTop: '8px' }}></div>
+              <div className="receipt-line" style={{ width: '40%' }}></div>
+            </div>
+          </div>
+          <h2 className="loader-title">Generating Smart Bill...</h2>
+          <p className="loader-subtitle">
+            Processing optimal product combinations and calculating taxes.<br/>Please wait a moment.
+          </p>
+        </div>
+      )}
+      
       {/* Bill Preview Section */}
       {bill && (
         <div className="animate-fade-in">
@@ -294,6 +392,60 @@ export default function Dashboard() {
 
         </div>
       )}
+
+      {/* Add Customer Modal */}
+      {showAddModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }} onClick={e => e.target === e.currentTarget && setShowAddModal(false)}>
+          <div className="modal-content" style={{ maxWidth: '600px', width: '100%', background: 'var(--bg-primary)', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+            <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Add New Customer</h2>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Enter details to securely store customer</p>
+              </div>
+              <button type="button" className="close-btn" onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+            </div>
+            
+            <form onSubmit={handleSaveCustomer}>
+              <div className="modal-body" style={{ padding: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <label className="input-label">Customer Name (English) <span style={{color: 'var(--danger)'}}>*</span></label>
+                    <input type="text" className="input-field" required placeholder="e.g. Rahul Patel" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
+                  </div>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <label className="input-label">Customer Name (Gujarati)</label>
+                    <GujaratiInput className="input-field" placeholder="e.g. રાહુલ પટેલ" value={newCustomer.nameGujarati} onChange={val => setNewCustomer({ ...newCustomer, nameGujarati: val })} onOriginal={orig => { if (!newCustomer.name) setNewCustomer({ ...newCustomer, name: orig }); }} />
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">Phone Number</label>
+                  <input type="text" className="input-field" placeholder="e.g. 9898088844" value={newCustomer.phone} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <label className="input-label">Address (English)</label>
+                    <textarea className="input-field" rows="2" placeholder="Full address..." value={newCustomer.address} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
+                  </div>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <label className="input-label">Address (Gujarati)</label>
+                    <GujaratiInput className="input-field" placeholder="સરનામું..." value={newCustomer.addressGujarati} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.address) setNewCustomer({ ...newCustomer, address: orig }); }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingCustomer} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Save size={16} /> {savingCustomer ? 'Saving...' : 'Save & Select'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
