@@ -233,6 +233,14 @@ const generateBillPdf = async (billOrBills, settings) => {
         headless: 'new'
     };
 
+    // Auto-detect local chrome if not set
+    if (!launchOptions.executablePath) {
+        const localChrome = path.join(process.cwd(), '.cache', 'puppeteer', 'chrome', 'linux-124.0.6367.201', 'chrome-linux64', 'chrome');
+        if (fs.existsSync(localChrome)) {
+            launchOptions.executablePath = localChrome;
+        }
+    }
+
     console.log('Launching browser with options:', JSON.stringify({ ...launchOptions, executablePath: launchOptions.executablePath || 'default' }));
     const browser = await puppeteer.launch(launchOptions);
 
