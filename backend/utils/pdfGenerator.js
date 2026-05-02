@@ -282,14 +282,25 @@ const generateBillPdf = async (billOrBills, settings) => {
     console.log('Final Launch Options:', JSON.stringify({ ...launchOptions, executablePath: launchOptions.executablePath || 'DEFAULT' }));
     
     let browser;
-    try {
-        browser = await puppeteerCore.launch(launchOptions);
-        console.log('Browser launched successfully');
-    } catch (launchError) {
-        console.error('--- BROWSER LAUNCH CRITICAL FAILURE ---');
-        console.error('Message:', launchError.message);
-        console.error('Stack:', launchError.stack);
-        throw new Error(`Browser launch failed: ${launchError.message}`);
+    let retries = 3;
+    while (retries > 0) {
+        try {
+            browser = await puppeteerCore.launch(launchOptions);
+            console.log('Browser launched successfully');
+            break;
+        } catch (launchError) {
+            console.error(`Launch attempt failed (${retries} retries left):`, launchError.message);
+            if (launchError.message.includes('ETXTBSY') && retries > 1) {
+                console.log('File busy, waiting 2 seconds before retry...');
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                retries--;
+                continue;
+            }
+            console.error('--- BROWSER LAUNCH CRITICAL FAILURE ---');
+            console.error('Message:', launchError.message);
+            console.error('Stack:', launchError.stack);
+            throw new Error(`Browser launch failed: ${launchError.message}`);
+        }
     }
 
     try {
