@@ -350,7 +350,10 @@ const generateBillPdf = async (billOrBills, settings) => {
             console.log(`Generating PDF for bill serial: ${bill.serialNumber}`);
             const page = await browser.newPage();
             const html = buildBillHTML(bill, settings);
-            await page.setContent(html, { waitUntil: 'networkidle0' });
+            await page.setContent(html, { 
+                waitUntil: 'load',
+                timeout: 60000 
+            });
             
             const pdf = await page.pdf({
                 format: 'A4',
