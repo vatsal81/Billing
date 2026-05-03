@@ -8,6 +8,13 @@ export const getBackendUrl = () => {
   return API.defaults.baseURL.replace('/api', '');
 };
 
+export const getFrontendUrl = () => {
+  // If we're on localhost, we should still use the production URL for WhatsApp links
+  // so that the customer can actually open them on their phone.
+  const productionFrontend = "https://billing-system-qa1a.onrender.com";
+  return window.location.hostname === 'localhost' ? productionFrontend : window.location.origin;
+};
+
 // Add token to every request
 API.interceptors.request.use((req) => {
   const userInfo = localStorage.getItem('userInfo');

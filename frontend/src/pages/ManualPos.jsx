@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchProducts, generateManualBill, searchCustomers, createCustomer, transliterateText } from '../utils/api';
+import { fetchProducts, generateManualBill, searchCustomers, createCustomer, transliterateText, getFrontendUrl } from '../utils/api';
 import { ShoppingCart, User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import GujaratiInput from '../components/GujaratiInput';
@@ -100,9 +100,8 @@ const ManualPos = () => {
         alert("No phone number recorded for this customer.");
         return;
     }
-    const backendBaseUrl = `http://${window.location.hostname}:5000`;
-    const pdfLink = `${backendBaseUrl}/api/bills/${bill._id}/pdf`;
-    const text = `નમસ્તે ${customerName || 'ગ્રાહક મિત્ર'},\n\nશ્રી હરિ ડ્રેસીસ & કટપીસમાં પધારવા બદલ આભાર! 🛍️\n\nબિલ વિગતો:\n📅 તારીખ: ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\n🧾 બિલ નં: ${bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase()}\n💰 કુલ રકમ: ₹${bill.actualTotal.toLocaleString('en-IN')}\n\nતમારું બિલ જોવા અથવા ડાઉનલોડ કરવા માટે નીચેની લિંક પર ક્લિક કરો:\n${pdfLink}\n\nફરી પધારજો! આપનો દિવસ શુભ રહે. 😊\n\n------------------\n\nHello ${customerName || 'Valued Customer'},\n\nThank you for shopping at Shree Hari! 🛍️\n\nYour PDF Bill: ${pdfLink}\n\nHave a great day!`;
+    const viewLink = `${getFrontendUrl()}/view-bill/${bill._id}`;
+    const text = `નમસ્તે ${customerName || 'ગ્રાહક મિત્ર'},\n\nશ્રી હરિ ડ્રેસીસ & કટપીસમાં પધારવા બદલ આભાર! 🛍️\n\nબિલ વિગતો:\n📅 તારીખ: ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\n🧾 બિલ નં: ${bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase()}\n💰 કુલ રકમ: ₹${bill.actualTotal.toLocaleString('en-IN')}\n\nતમારું બિલ જોવા અથવા ડાઉનલોડ કરવા માટે નીચેની લિંક પર ક્લિક કરો:\n${viewLink}\n\nફરી પધારજો! આપનો દિવસ શુભ રહે. 😊\n\n------------------\n\nHello ${customerName || 'Valued Customer'},\n\nThank you for shopping at Shree Hari! 🛍️\n\nYour Online Bill: ${viewLink}\n\nHave a great day!`;
     const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
   };

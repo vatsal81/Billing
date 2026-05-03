@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { generateBill, searchCustomers, createCustomer, transliterateText } from '../utils/api';
+import { generateBill, searchCustomers, createCustomer, transliterateText, getFrontendUrl } from '../utils/api';
 import { Zap, Printer, CheckCircle2, History, RefreshCw, User, MapPin, Phone, MessageCircle, X, Plus, Save } from 'lucide-react';
 
 import { useLanguage } from '../utils/LanguageContext';
@@ -39,11 +39,9 @@ export default function Dashboard() {
     
     setLoading(true);
     // Always use the Render URL for the PDF link to ensure it works on mobile/whatsapp
-    const productionBackend = "https://billing-8ffn.onrender.com";
-    const backendBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : productionBackend);
-    const pdfLink = `${backendBaseUrl}/api/bills/${bill._id}/pdf`;
+    const viewLink = `${getFrontendUrl()}/view-bill/${bill._id}`;
     
-    const text = `નમસ્તે ${customerName || 'ગ્રાહક મિત્ર'},\n\nશ્રી હરિ ડ્રેસીસ & કટપીસમાં પધારવા બદલ આભાર! 🛍️\n\nબિલ વિગતો:\n📅 તારીખ: ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\n🧾 બિલ નં: ${bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase()}\n💰 કુલ રકમ: ₹${bill.actualTotal.toLocaleString('en-IN')}\n\nતમારું બિલ જોવા અથવા ડાઉનલોડ કરવા માટે નીચેની લિંક પર ક્લિક કરો:\n${pdfLink}\n\nફરી પધારજો! આપનો દિવસ શુભ રહે. 😊\n\n------------------\n\nHello ${customerName || 'Valued Customer'},\n\nThank you for shopping at Shree Hari! 🛍️\n\nYour PDF Bill: ${pdfLink}\n\nHave a great day!`;
+    const text = `નમસ્તે ${customerName || 'ગ્રાહક મિત્ર'},\n\nશ્રી હરિ ડ્રેસીસ & કટપીસમાં પધારવા બદલ આભાર! 🛍️\n\nબિલ વિગતો:\n📅 તારીખ: ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\n🧾 બિલ નં: ${bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase()}\n💰 કુલ રકમ: ₹${bill.actualTotal.toLocaleString('en-IN')}\n\nતમારું બિલ જોવા અથવા ડાઉનલોડ કરવા માટે નીચેની લિંક પર ક્લિક કરો:\n${viewLink}\n\nફરી પધારજો! આપનો દિવસ શુભ રહે. 😊\n\n------------------\n\nHello ${customerName || 'Valued Customer'},\n\nThank you for shopping at Shree Hari! 🛍️\n\nYour Online Bill: ${viewLink}\n\nHave a great day!`;
 
     
     const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
