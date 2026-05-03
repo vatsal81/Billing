@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchSettings, updateSettings } from '../utils/api';
+import { fetchSettings, updateSettings, getBackendUrl } from '../utils/api';
 import { Settings as SettingsIcon, Save } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 
@@ -57,7 +57,7 @@ export default function Settings() {
         return field === 'logo' ? logoPreview : sigPreview;
     }
     if (value.startsWith('uploads')) {
-        return `http://localhost:5000/${value}`;
+        return `${getBackendUrl()}/${value}`;
     }
     return value; // Base64
   };

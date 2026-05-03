@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Printer, Download, CheckCircle, ShieldCheck } from 'lucide-react';
 import { numberToWords } from '../utils/numberToWords';
+import { getBackendUrl } from '../utils/api';
 import './PurchaseBillView.css';
 
 const PurchaseBillView = ({ bill, onClose }) => {
@@ -21,7 +22,7 @@ const PurchaseBillView = ({ bill, onClose }) => {
         try {
             const userInfo = localStorage.getItem('userInfo');
             const token = userInfo ? JSON.parse(userInfo).token : null;
-            const response = await fetch(`http://localhost:5000/api/purchase/${bill._id}/pdf`, {
+            const response = await fetch(`${getBackendUrl()}/api/purchase/${bill._id}/pdf`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             if (!response.ok) throw new Error('PDF generation failed');

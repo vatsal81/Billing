@@ -53,7 +53,7 @@ const Analytics = () => {
 
     return (
         <div className="page-container animate-fade-in">
-            <header className="page-header" style={{ marginBottom: '24px' }}>
+            <header className="page-header">
                 <div>
                     <h1 className="text-gradient">Business Analytics</h1>
                     <p className="text-secondary">Comprehensive overview of your business performance</p>
@@ -81,7 +81,7 @@ const Analytics = () => {
                 </div>
             </header>
 
-            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+            <div className="stats-grid" style={{ marginBottom: '32px' }}>
                 {statCards.map((card, index) => (
                     <div key={index} className="premium-card stat-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '20px', transition: 'transform 0.2s' }}>
                         <div style={{ padding: '12px', borderRadius: '12px', background: card.bg, color: card.color }}>
@@ -97,7 +97,7 @@ const Analytics = () => {
                 ))}
             </div>
 
-            <div className="analytics-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+            <div className="charts-grid">
                 <div className="premium-card" style={{ padding: '24px', position: 'relative' }}>
                     {loading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.5)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px' }}><div className="loader"></div></div>}
                     <h3 style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>

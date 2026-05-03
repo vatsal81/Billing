@@ -158,12 +158,12 @@ export default function History() {
 
   return (
     <div className="animate-fade-in">
-      <header className="pos-form-row" style={{marginBottom: '40px', justifyContent: 'space-between', alignItems: 'center'}}>
+      <header className="page-header">
         <div>
           <h2>{t('histTitle')}</h2>
           <p style={{color: 'var(--text-secondary)'}}>{t('histSubtitle')}</p>
         </div>
-        <div className="pos-form-row" style={{gap: '12px', marginBottom: 0}}>
+        <div className="header-actions">
           <button className="btn btn-secondary" onClick={exportCSV}>
              <Download size={18} /> Export CSV
           </button>
@@ -186,22 +186,28 @@ export default function History() {
             <Download size={20} /> Download Complete Bill Books (100 Bills/Book)
           </h4>
           <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
-            {getAvailableBooks().map(bookNum => (
-              <button 
-                key={bookNum}
-                className="btn btn-secondary" 
-                onClick={() => window.open(`http://${window.location.hostname}:5000/api/bills/book/${bookNum}/pdf`, '_blank')}
-                style={{borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)', padding: '8px 16px'}}
-              >
-                Book {String(bookNum).padStart(2, '0')} (PDF)
-              </button>
-            ))}
+            {getAvailableBooks().map(bookNum => {
+              const productionBackend = "https://billing-8ffn.onrender.com";
+              const backendBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : productionBackend);
+              const downloadUrl = `${backendBaseUrl}/api/bills/book/${bookNum}/pdf`;
+              
+              return (
+                <button 
+                  key={bookNum}
+                  className="btn btn-secondary" 
+                  onClick={() => window.open(downloadUrl, '_blank')}
+                  style={{borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)', padding: '8px 16px'}}
+                >
+                  Book {String(bookNum).padStart(2, '0')} (PDF)
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Analytics Board */}
-      <div className="grid-responsive stats-grid" style={{marginBottom: '40px'}}>
+      <div className="stats-grid" style={{marginBottom: '40px'}}>
         
         <div className="glass-panel" style={{padding: '24px', display: 'flex', alignItems: 'center', gap: '20px'}}>
           <div style={{background: 'rgba(16, 185, 129, 0.1)', padding: '16px', borderRadius: '16px', color: 'var(--success)'}}>
@@ -235,7 +241,7 @@ export default function History() {
       </div>
 
       {/* Charts */}
-      <div className="grid-responsive charts-grid" style={{marginBottom: '40px'}}>
+      <div className="charts-grid" style={{marginBottom: '40px'}}>
         <div className="glass-panel" style={{padding: '24px', height: '350px'}}>
           <h3 style={{marginBottom: '20px'}}>Revenue Timeline</h3>
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
@@ -271,33 +277,35 @@ export default function History() {
       {/* History Ledger Table */}
       <div className="glass-panel" style={{padding: '24px'}}>
         
-        <div className="pos-form-row" style={{justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
+        <div className="page-header" style={{ marginBottom: '24px' }}>
           <h3>{t('recentReceipts')}</h3>
-          <div className="pos-form-row" style={{marginBottom: 0}}>
-            <input 
-               type="date" 
-               className="input-field" 
-               style={{marginBottom: 0, padding: '8px 12px'}} 
-               value={startDate} 
-               onChange={(e)=>setStartDate(e.target.value)} 
-            />
-            <input 
-               type="date" 
-               className="input-field" 
-               style={{marginBottom: 0, padding: '8px 12px'}} 
-               value={endDate} 
-               onChange={(e)=>setEndDate(e.target.value)} 
-            />
-            <div style={{position: 'relative', width: '250px'}}>
-              <Search size={16} style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)'}} />
+          <div className="header-actions" style={{ flex: 1, justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'flex-end' }}>
               <input 
-                type="text" 
+                type="date" 
                 className="input-field" 
-                style={{marginBottom: 0, paddingLeft: '36px'}}
-                placeholder="Search Name or Bill No..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: 'auto', flex: 1, minWidth: '130px' }} 
+                value={startDate} 
+                onChange={(e)=>setStartDate(e.target.value)} 
               />
+              <input 
+                type="date" 
+                className="input-field" 
+                style={{ width: 'auto', flex: 1, minWidth: '130px' }} 
+                value={endDate} 
+                onChange={(e)=>setEndDate(e.target.value)} 
+              />
+              <div style={{position: 'relative', flex: 2, minWidth: '200px'}}>
+                <Search size={16} style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)'}} />
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  style={{paddingLeft: '36px'}}
+                  placeholder="Search..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         </div>

@@ -173,11 +173,13 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in">
-      <header className="no-print" style={{marginBottom: '30px'}}>
-        <h2 className="text-gradient" style={{fontSize: '2rem'}}>{t('autoTitle')}</h2>
-        <p style={{color: 'var(--text-secondary)'}}>
-           {t('autoSubtitle')}
-        </p>
+      <header className="page-header no-print">
+        <div>
+          <h2 className="text-gradient" style={{fontSize: 'min(8vw, 2.2rem)'}}>{t('autoTitle')}</h2>
+          <p style={{color: 'var(--text-secondary)', fontSize: '0.95rem'}}>
+             {t('autoSubtitle')}
+          </p>
+        </div>
       </header>
 
       {error && (
@@ -188,8 +190,8 @@ export default function Dashboard() {
 
       {/* Input Section - Hidden during print */}
       {!bill && (
-        <div className="glass-panel no-print animate-fade-in" style={{padding: '30px', maxWidth: '600px', margin: '0 auto'}}>
-          <h3 style={{marginBottom: '24px', textAlign: 'center'}}>{t('generateNewBill')}</h3>
+        <div className="glass-panel no-print animate-fade-in" style={{padding: 'min(6vw, 30px)', maxWidth: '600px', margin: '0 auto'}}>
+          <h3 style={{marginBottom: '24px', textAlign: 'center', fontSize: '1.4rem'}}>{t('generateNewBill')}</h3>
           
           <form onSubmit={handleGenerate} style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
             
@@ -242,12 +244,12 @@ export default function Dashboard() {
                     </button>
                   </div>
                 ) : (
-                  <div style={{display: 'flex', gap: '12px'}}>
-                    <div style={{position: 'relative', flex: 1}}>
+                  <div className="form-grid" style={{gap: '12px', display: 'grid'}}>
+                    <div style={{position: 'relative', width: '100%'}}>
                       <input 
                         type="text"
                         className="input-field" 
-                        placeholder="Search customer by name or phone..."
+                        placeholder={t('searchCustPlaceholder') || "Search customer..."}
                         value={searchTerm}
                         onChange={(e) => {
                           setSearchTerm(e.target.value);
@@ -257,26 +259,25 @@ export default function Dashboard() {
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
                       />
                       {suggestions.length > 0 && showSuggestions && searchTerm.length > 1 && (
-                        <ul style={{
+                        <ul className="glass-panel" style={{
                           position: 'absolute', 
                           top: '100%', 
                           left: 0, 
                           right: 0, 
-                          background: 'var(--bg-primary)', 
-                          border: '1px solid var(--border-color)', 
-                          borderRadius: '8px', 
                           zIndex: 50, 
                           listStyle: 'none', 
-                          margin: '5px 0 0 0', 
-                          padding: '5px', 
-                          maxHeight: '180px', 
+                          margin: '8px 0 0 0', 
+                          padding: '8px', 
+                          maxHeight: '220px', 
                           overflowY: 'auto', 
-                          boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
+                          boxShadow: 'var(--glass-shadow)',
+                          background: 'white'
                         }}>
                           {suggestions.map(c => (
                             <li key={c._id} 
                                 onClick={() => selectCustomer(c)}
-                                style={{padding: '12px 16px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', flexDirection: 'column'}}>
+                                className="hover-row"
+                                style={{padding: '12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', marginBottom: '4px'}}>
                               <span style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{c.nameGujarati || c.name} {c.nameGujarati && <span style={{fontSize:'0.8rem', opacity:0.7}}>({c.name})</span>}</span>
                               {(c.address || c.phone) && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{c.phone} {c.addressGujarati || c.address}</span>}
                             </li>
@@ -288,9 +289,9 @@ export default function Dashboard() {
                       type="button"
                       className="btn btn-secondary" 
                       onClick={handleNewCustomer}
-                      style={{whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px'}}
+                      style={{width: '100%', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center'}}
                     >
-                      <Plus size={16}/> New Customer
+                      <Plus size={18}/> New Customer
                     </button>
                   </div>
                 )}
@@ -316,7 +317,16 @@ export default function Dashboard() {
               <input 
                 type="number" 
                 className="input-field" 
-                style={{fontSize: '2rem', textAlign: 'center', padding: '20px', letterSpacing: '2px', width: '100%', borderColor: 'var(--success)', backgroundColor: 'rgba(16, 185, 129, 0.05)'}}
+                style={{
+                  fontSize: 'min(10vw, 2.2rem)', 
+                  textAlign: 'center', 
+                  padding: '24px 16px', 
+                  letterSpacing: '1px', 
+                  width: '100%', 
+                  borderColor: 'var(--success)', 
+                  backgroundColor: 'rgba(16, 185, 129, 0.03)',
+                  height: 'auto'
+                }}
                 placeholder={t('finalTotalInput')}
                 value={targetAmount}
                 onChange={(e) => setTargetAmount(e.target.value)}
@@ -372,12 +382,12 @@ export default function Dashboard() {
       {bill && (
         <div className="animate-fade-in">
           
-          <div className="no-print pos-form-row" style={{justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px'}}>
+          <div className="page-header no-print">
             <div style={{display: 'flex', alignItems: 'center', gap: '12px', color: 'var(--success)'}}>
               <CheckCircle2 size={24} />
               <h3 style={{color: 'var(--text-primary)'}}>{t('billGenerated')}</h3>
             </div>
-            <div className="pos-form-row" style={{gap: '12px', marginBottom: 0}}>
+            <div className="header-actions">
               <button className="btn btn-secondary" onClick={clearForm}>
                 <History size={18} /> {t('newBillBtn')}
               </button>
@@ -425,17 +435,17 @@ export default function Dashboard() {
                   <input type="text" className="input-field" placeholder="e.g. 9898088844" value={newCustomer.phone} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label className="input-label">Address (English)</label>
-                    <textarea className="input-field" rows="2" placeholder="Full address..." value={newCustomer.address} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
-                  </div>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label className="input-label">Address (Gujarati)</label>
-                    <GujaratiInput className="input-field" placeholder="સરનામું..." value={newCustomer.addressGujarati} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.address) setNewCustomer({ ...newCustomer, address: orig }); }} />
+                  <div className="form-grid">
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label className="input-label">Address (English)</label>
+                      <textarea className="input-field" rows="2" placeholder="Full address..." value={newCustomer.address} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label className="input-label">Address (Gujarati)</label>
+                      <GujaratiInput className="input-field" placeholder="સરનામું..." value={newCustomer.addressGujarati} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.name) setNewCustomer({ ...newCustomer, name: orig }); }} />
+                    </div>
                   </div>
                 </div>
-              </div>
 
               <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>

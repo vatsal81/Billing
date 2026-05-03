@@ -195,9 +195,11 @@ const ManualPos = () => {
 
   return (
     <div className="animate-fade-in no-print">
-      <header style={{ marginBottom: '30px' }}>
-        <h2 className="text-gradient" style={{ fontSize: '2rem' }}>{t('manualTitle')}</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>{t('manualSubtitle')}</p>
+      <header className="page-header no-print">
+        <div>
+          <h2 className="text-gradient" style={{ fontSize: 'min(7vw, 2.2rem)' }}>{t('manualTitle')}</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t('manualSubtitle')}</p>
+        </div>
       </header>
 
       {error && (
@@ -208,34 +210,48 @@ const ManualPos = () => {
 
       <div className="pos-container">
         {/* Left Side: Product Selection */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{ marginBottom: '20px' }}>{t('stockList')}</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
+        <div className="glass-panel" style={{ padding: 'min(4vw, 20px)' }}>
+          <h3 style={{ marginBottom: '16px', fontSize: '1.2rem' }}>{t('stockList')}</h3>
+          <div className="stats-grid" style={{ 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', 
+            gap: 'min(3vw, 16px)' 
+          }}>
             {products.map(p => (
               <div key={p._id}
-                onClick={() => addToCart(p)}
                 style={{
-                  padding: '16px',
+                  padding: '12px',
                   background: 'rgba(255,255,255,0.03)',
                   borderRadius: '12px',
                   border: '1px solid var(--border-color)',
-                  cursor: 'pointer',
                   textAlign: 'center',
-                  transition: '0.2s ease'
+                  transition: 'var(--transition)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px'
                 }} className="product-card">
-                <h4 style={{ fontSize: '1rem', marginBottom: '8px' }}>
-                  {p.name} {p.nameEnglish && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}><br/>({p.nameEnglish})</span>}
+                <h4 style={{ fontSize: '0.9rem', fontWeight: '600', margin: 0 }}>
+                  {p.name}
                 </h4>
-                <p style={{ color: 'var(--success)', fontWeight: 'bold' }}>₹{p.price}</p>
-                <button className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.8rem', marginTop: '12px', width: '100%' }}>{t('addBtn')}</button>
+                {p.nameEnglish && <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>({p.nameEnglish})</span>}
+                <p style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '1.1rem', margin: '4px 0' }}>₹{p.price}</p>
+                <button 
+                  className="btn btn-primary" 
+                  style={{ padding: '6px 10px', fontSize: '0.75rem', marginTop: 'auto', width: '100%', borderRadius: '8px' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToCart(p);
+                  }}
+                >
+                  {t('addBtn')}
+                </button>
               </div>
             ))}
           </div>
         </div>
 
         {/* Right Side: Live Cart & Form */}
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ marginBottom: '20px' }}>{t('yourBill')}</h3>
+        <div className="glass-panel" style={{ padding: 'min(4vw, 24px)', display: 'flex', flexDirection: 'column' }}>
+          <h3 style={{ marginBottom: '16px', fontSize: '1.2rem' }}>{t('yourBill')}</h3>
 
           <div className="pos-form-row">
             <div className="input-group" style={{ flex: 1, position: 'relative' }}>
@@ -286,12 +302,12 @@ const ManualPos = () => {
                   </button>
                 </div>
               ) : (
-                <div style={{display: 'flex', gap: '12px'}}>
-                  <div style={{position: 'relative', flex: 1}}>
-                    <input 
+                <div className="form-grid" style={{ gap: '12px', display: 'grid' }}>
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <input
                       type="text"
-                      className="input-field" 
-                      placeholder="Search customer by name or phone..."
+                      className="input-field"
+                      placeholder={t('searchCustPlaceholder') || "Search customer..."}
                       value={searchTerm}
                       onChange={(e) => {
                         setSearchTerm(e.target.value);
@@ -301,40 +317,39 @@ const ManualPos = () => {
                       onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
                     />
                     {suggestions.length > 0 && showSuggestions && searchTerm.length > 1 && (
-                      <ul style={{
-                        position: 'absolute', 
-                        top: '100%', 
-                        left: 0, 
-                        right: 0, 
-                        background: 'var(--bg-primary)', 
-                        border: '1px solid var(--border-color)', 
-                        borderRadius: '8px', 
-                        zIndex: 50, 
-                        listStyle: 'none', 
-                        margin: '5px 0 0 0', 
-                        padding: '5px', 
-                        maxHeight: '180px', 
-                        overflowY: 'auto', 
-                        boxShadow: '0 10px 20px rgba(0,0,0,0.1)'
+                      <ul className="glass-panel" style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        zIndex: 50,
+                        listStyle: 'none',
+                        margin: '8px 0 0 0',
+                        padding: '8px',
+                        maxHeight: '220px',
+                        overflowY: 'auto',
+                        boxShadow: 'var(--glass-shadow)',
+                        background: 'white'
                       }}>
                         {suggestions.map(c => (
-                          <li key={c._id} 
-                              onClick={() => selectCustomer(c)}
-                              style={{padding: '12px 16px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', flexDirection: 'column'}}>
-                            <span style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{c.nameGujarati || c.name} {c.nameGujarati && <span style={{fontSize:'0.8rem', opacity:0.7}}>({c.name})</span>}</span>
-                            {(c.address || c.phone) && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{c.phone} {c.addressGujarati || c.address}</span>}
+                          <li key={c._id}
+                            onClick={() => selectCustomer(c)}
+                            className="hover-row"
+                            style={{ padding: '12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{c.nameGujarati || c.name} {c.nameGujarati && <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>({c.name})</span>}</span>
+                            {(c.address || c.phone) && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone} {c.addressGujarati || c.address}</span>}
                           </li>
                         ))}
                       </ul>
                     )}
                   </div>
-                  <button 
+                  <button
                     type="button"
-                    className="btn btn-secondary" 
+                    className="btn btn-secondary"
                     onClick={handleNewCustomer}
-                    style={{whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px'}}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
                   >
-                    <Plus size={16}/> New Customer
+                    <Plus size={18} /> New Customer
                   </button>
                 </div>
               )}
@@ -400,13 +415,35 @@ const ManualPos = () => {
       )}
 
       {bill && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', overflowY: 'auto' }}>
-          <div className="no-print" style={{ width: '100%', maxWidth: '800px', display: 'flex', justifyContent: 'flex-end', gap: '16px', marginBottom: '20px' }}>
-            <button className="btn" style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid #22c55e' }} onClick={() => handleWhatsApp(bill)}>WhatsApp</button>
-            <button className="btn btn-primary" onClick={() => window.print()}>Print</button>
-            <button className="btn btn-secondary" onClick={clearForm}>Close</button>
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          background: 'rgba(0,0,0,0.92)', 
+          zIndex: 2000, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          padding: 'min(5vw, 40px)', 
+          overflowY: 'auto',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div className="no-print" style={{ 
+            width: '100%', 
+            maxWidth: '800px', 
+            display: 'flex', 
+            justifyContent: 'center', 
+            gap: '12px', 
+            marginBottom: '20px',
+            flexWrap: 'wrap'
+          }}>
+            <button className="btn" style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid #22c55e', flex: 1, minWidth: '120px' }} onClick={() => handleWhatsApp(bill)}>WhatsApp</button>
+            <button className="btn btn-primary" style={{ flex: 1, minWidth: '120px' }} onClick={() => window.print()}>Print</button>
+            <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px' }} onClick={clearForm}>Close</button>
           </div>
-          <div style={{ width: '100%', maxWidth: '800px' }}><PrintableBill bill={bill} /></div>
+          <div style={{ width: '100%', maxWidth: '800px', display: 'flex', justifyContent: 'center' }}><PrintableBill bill={bill} /></div>
         </div>
       )}
 
@@ -424,7 +461,7 @@ const ManualPos = () => {
             
             <form onSubmit={handleSaveCustomer}>
               <div className="modal-body" style={{ padding: '24px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                <div className="form-grid" style={{ marginBottom: '20px' }}>
                   <div className="input-group" style={{ marginBottom: 0 }}>
                     <label className="input-label">Customer Name (English) <span style={{color: 'var(--danger)'}}>*</span></label>
                     <input type="text" className="input-field" required placeholder="e.g. Rahul Patel" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
@@ -440,17 +477,17 @@ const ManualPos = () => {
                   <input type="text" className="input-field" placeholder="e.g. 9898088844" value={newCustomer.phone} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label className="input-label">Address (English)</label>
-                    <textarea className="input-field" rows="2" placeholder="Full address..." value={newCustomer.address} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
-                  </div>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label className="input-label">Address (Gujarati)</label>
-                    <GujaratiInput className="input-field" placeholder="સરનામું..." value={newCustomer.addressGujarati} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.address) setNewCustomer({ ...newCustomer, address: orig }); }} />
+                  <div className="form-grid">
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label className="input-label">Address (English)</label>
+                      <textarea className="input-field" rows="2" placeholder="Full address..." value={newCustomer.address} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
+                    </div>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <label className="input-label">Address (Gujarati)</label>
+                      <GujaratiInput className="input-field" placeholder="સરનામું..." value={newCustomer.addressGujarati} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.address) setNewCustomer({ ...newCustomer, address: orig }); }} />
+                    </div>
                   </div>
                 </div>
-              </div>
 
               <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>

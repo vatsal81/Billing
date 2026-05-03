@@ -169,13 +169,13 @@ const SupplierLedger = ({ selectedSupplier, ledger, setEditSupplier, setActiveMo
             </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '1px solid var(--border-color)' }}>
+        <div className="stats-grid" style={{ borderBottom: '1px solid var(--border-color)', gap: 0 }}>
             {[
                 { label: 'Total Udhaar (Purchased)', val: '₹' + ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'), color: '#ef4444' },
                 { label: 'Total Jama (Paid)',      val: '₹' + ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'),  color: '#10b981' },
                 { label: 'Net Balance Due',     val: '₹' + (selectedSupplier.balance?.toLocaleString('en-IN') || 0), color: selectedSupplier.balance > 0 ? '#ef4444' : '#10b981' },
-            ].map(({ label, val, color }) => (
-                <div key={label} style={{ padding: '16px', textAlign: 'center', borderRight: '1px solid var(--border-color)' }}>
+            ].map(({ label, val, color }, idx) => (
+                <div key={label} style={{ padding: '16px', textAlign: 'center', borderRight: idx < 2 ? '1px solid var(--border-color)' : 'none' }}>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{label}</p>
                     <p style={{ fontSize: '1.1rem', fontWeight: 700, color }}>{val}</p>
                 </div>
@@ -388,7 +388,7 @@ const Suppliers = () => {
                 </div>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: selectedSupplier ? '1fr 1.5fr' : '1fr', gap: '24px', transition: 'all 0.3s ease' }}>
+            <div className="charts-grid" style={{ gridTemplateColumns: selectedSupplier ? '1fr 1.5fr' : '1fr', transition: 'all 0.3s ease' }}>
 
                 {/* Supplier List */}
                 <SupplierList 

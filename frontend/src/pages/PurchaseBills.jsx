@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Download, FileText, ShoppingBag, Calendar, User, Hash, Trash2, Save, Search, Building, Truck, Briefcase, Eye } from 'lucide-react';
-import { fetchPurchaseBills, createPurchaseBill, downloadPurchaseReport, fetchSuppliers, deletePurchaseBill } from '../utils/api';
+import { fetchPurchaseBills, createPurchaseBill, downloadPurchaseReport, fetchSuppliers, deletePurchaseBill, getBackendUrl } from '../utils/api';
 import PurchaseBillView from './PurchaseBillView';
 import '../index.css';
 
@@ -827,7 +827,7 @@ const PurchaseBills = () => {
                                                     {bill.billImage ? (
                                                         <button className="action-btn view" onClick={() => {
                                                             const isPath = bill.billImage.startsWith('uploads');
-                                                            const imageUrl = isPath ? `http://localhost:5000/${bill.billImage}` : bill.billImage;
+                                                            const imageUrl = isPath ? `${getBackendUrl()}/${bill.billImage}` : bill.billImage;
                                                             const win = window.open();
                                                             win.document.write(`<img src="${imageUrl}" style="max-width: 100%"/>`);
                                                         }} title="View Original Bill Image">

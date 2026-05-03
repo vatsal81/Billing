@@ -1,14 +1,39 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLanguage } from '../utils/LanguageContext';
 import { fetchSettings } from '../utils/api';
 
 export default function PrintableBill({ bill }) {
   const { t } = useLanguage();
   const [settings, setSettings] = useState(null);
+  const [scale, setScale] = useState(1);
+  const wrapperRef = useRef(null);
 
   useEffect(() => {
     fetchSettings().then(d => setSettings(d)).catch(e => console.log('Err settings', e));
   }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (wrapperRef.current) {
+        const containerWidth = wrapperRef.current.offsetWidth - 40; // 20px padding on each side
+        const billWidth = 794; // 210mm in pixels (96dpi)
+        if (containerWidth < billWidth) {
+          setScale(containerWidth / billWidth);
+        } else {
+          setScale(1);
+        }
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    // Initial delay to ensure offsetWidth is captured correctly after fade-in
+    const timeout = setTimeout(handleResize, 100);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(timeout);
+    };
+  }, [bill, settings]);
 
   if (!bill || !settings) return null;
 
@@ -29,18 +54,23 @@ export default function PrintableBill({ bill }) {
   const finalTotal = bill.actualTotal || bill.targetAmount || 0;
 
   return (
-    <div id="printable-bill-wrapper" style={{
+    <div id="printable-bill-wrapper" ref={wrapperRef} style={{
       display: 'flex',
       justifyContent: 'center',
-      padding: '20px 0'
+      padding: '20px 0',
+      width: '100%',
+      overflow: 'hidden'
     }}>
       <div id="printable-bill" style={{
         width: '210mm', 
-        minHeight: '200mm', // Allow height to grow based on items
-        background: '#eedd82', // Yellowish realistic bill color
+        minHeight: '200mm',
+        transform: `scale(${scale})`,
+        transformOrigin: 'top center',
+        background: '#eedd82', 
         color: 'black',
         padding: '15px',
-        fontFamily: 'arial, sans-serif'
+        fontFamily: 'arial, sans-serif',
+        marginBottom: `calc(-200mm * (1 - ${scale}))` // Offset the height gap from scaling
       }}>
         <div style={{ border: '2px solid #000', display: 'flex', flexDirection: 'column', minHeight: '180mm' }}>
           

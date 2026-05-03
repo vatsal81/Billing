@@ -22,7 +22,76 @@ const loadFontAsBase64 = (fontName) => {
 const kalamBase64 = loadFontAsBase64('Kalam-Regular.ttf');
 const gujaratiBase64 = loadFontAsBase64('NotoSansGujarati-Regular.ttf');
 
-const buildBillHTML = (bill, settings = {}) => {
+const getBillStyles = () => `
+    @font-face {
+        font-family: 'Kalam';
+        src: url(data:font/ttf;charset=utf-8;base64,${kalamBase64}) format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+    @font-face {
+        font-family: 'Gujarati';
+        src: url(data:font/ttf;charset=utf-8;base64,${gujaratiBase64}) format('truetype');
+        font-weight: normal;
+        font-style: normal;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+        font-family: Arial, sans-serif; 
+        background: #fff;
+        padding: 0;
+    }
+    .bill-wrapper {
+        width: 210mm;
+        padding: 10mm;
+        background: #fff;
+        page-break-after: always;
+    }
+    .bill-wrapper:last-child {
+        page-break-after: auto;
+    }
+    .bill-container {
+        width: 190mm;
+        min-height: 277mm;
+        background: #eedd82;
+        color: black;
+        padding: 15px;
+        border: 2px solid #000;
+        display: flex;
+        flex-direction: column;
+        margin: 0 auto;
+    }
+    .header-section { display: flex; border-bottom: 2px solid #000; }
+    .header-left { width: 35%; border-right: 2px solid #000; padding: 8px; font-size: 13px; line-height: 1.4; }
+    .header-right { width: 65%; padding: 10px 8px; text-align: center; }
+    .customer-meta-section { display: flex; border-bottom: 2px solid #000; }
+    .customer-info { width: 68%; border-right: 2px solid #000; padding: 6px; font-size: 14px; line-height: 1.8; }
+    .meta-info { width: 32%; font-size: 14px; }
+    .info-row { display: flex; align-items: flex-end; }
+    .dotted-line {
+        border-bottom: 1px dotted #000;
+        flex: 1;
+        font-family: 'Kalam', 'Gujarati', cursive;
+        color: #0f3c88;
+        font-size: 16px;
+        padding-left: 8px;
+        margin-left: 5px;
+    }
+    .items-table { width: 100%; border-collapse: collapse; flex-grow: 1; display: flex; flex-direction: column; }
+    .items-table thead tr { border-bottom: 2px solid #000; font-size: 14px; font-weight: bold; display: flex; width: 100%; font-family: 'Gujarati', sans-serif; }
+    .items-table tbody { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
+    .footer-section { display: flex; border-top: 2px solid #000; margin-top: auto; height: 300px; }
+    .footer-left { width: 68%; border-right: 2px solid #000; padding: 8px; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
+    .footer-right { width: 32%; }
+    .total-row { display: flex; border-bottom: 1px solid #000; padding: 4px 8px; font-size: 13px; font-family: 'Gujarati', sans-serif; }
+    .gpay-text { position: absolute; top: 10px; left: 20px; font-family: 'Kalam', cursive; font-size: 28px; color: #0f3c88; opacity: 0.8; transform: rotate(-15deg); }
+    .stamp-area { border-top: 2px solid #000; padding: 8px; text-align: center; position: relative; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+    .stamp { position: absolute; top: 5px; color: #0f3c88; border: 2px dotted #0f3c88; border-radius: 8px; padding: 5px 8px; transform: rotate(-5deg); opacity: 0.9; background: rgba(238, 221, 130, 0.5); font-weight: bold; font-size: 12px; font-family: 'Gujarati', sans-serif; }
+    .gujarati-text { font-family: 'Gujarati', sans-serif; }
+    .kalam-text { font-family: 'Kalam', 'Gujarati', cursive; }
+`;
+
+const buildSingleBillHTML = (bill, settings = {}) => {
     const formatDate = (date) => 
         date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-') : 'N/A';
 
@@ -40,16 +109,6 @@ const buildBillHTML = (bill, settings = {}) => {
 
     const finalTotal = bill.actualTotal || 0;
 
-    const itemRows = bill.items.map((item, idx) => `
-        <tr style="display: flex; width: 100%; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 18px;">
-            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 45%; text-align: left;">${item.name}</td>
-            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 15%;"></td>
-            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 10%; text-align: center;">${item.quantity}</td>
-            <td style="padding: 6px 8px; border-right: 2px solid #000; width: 12%; text-align: right;">${item.price.toFixed(0)}</td>
-            <td style="padding: 6px 8px; width: 18%; text-align: right;">${(item.price * item.quantity).toFixed(0)}</td>
-        </tr>
-    `).join('');
-
     const emptyRowsHTML = Array.from({length: Math.max(1, 10 - bill.items.length)}).map((_, i) => `
         <tr style="display: flex; width: 100%; ${i === 0 ? 'flex-grow: 1;' : ''}">
             <td style="padding: 12px; border-right: 1px solid #000; width: 45%">&nbsp;</td>
@@ -61,78 +120,6 @@ const buildBillHTML = (bill, settings = {}) => {
     `).join('');
 
     return `
-<!DOCTYPE html>
-<html lang="gu">
-<head>
-    <meta charset="UTF-8">
-    <style>
-        @font-face {
-            font-family: 'Kalam';
-            src: url(data:font/ttf;charset=utf-8;base64,${kalamBase64}) format('truetype');
-            font-weight: normal;
-            font-style: normal;
-        }
-        @font-face {
-            font-family: 'Gujarati';
-            src: url(data:font/ttf;charset=utf-8;base64,${gujaratiBase64}) format('truetype');
-            font-weight: normal;
-            font-style: normal;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: Arial, sans-serif; 
-            background: #fff;
-            padding: 0;
-        }
-        .bill-wrapper {
-            width: 210mm;
-            padding: 10mm;
-            background: #fff;
-        }
-        .bill-container {
-            width: 190mm;
-            min-height: 277mm;
-            background: #eedd82;
-            color: black;
-            padding: 15px;
-            border: 2px solid #000;
-            display: flex;
-            flex-direction: column;
-            margin: 0 auto;
-        }
-        .header-section { display: flex; border-bottom: 2px solid #000; }
-        .header-left { width: 35%; border-right: 2px solid #000; padding: 8px; font-size: 13px; line-height: 1.4; }
-        .header-right { width: 65%; padding: 10px 8px; text-align: center; }
-        .customer-meta-section { display: flex; border-bottom: 2px solid #000; }
-        .customer-info { width: 68%; border-right: 2px solid #000; padding: 6px; font-size: 14px; line-height: 1.8; }
-        .meta-info { width: 32%; font-size: 14px; }
-        .info-row { display: flex; align-items: flex-end; }
-        .dotted-line {
-            border-bottom: 1px dotted #000;
-            flex: 1;
-            font-family: 'Kalam', 'Gujarati', cursive;
-            color: #0f3c88;
-            font-size: 16px;
-            padding-left: 8px;
-            margin-left: 5px;
-        }
-        .items-table { width: 100%; border-collapse: collapse; flex-grow: 1; display: flex; flex-direction: column; }
-        .items-table thead tr { border-bottom: 2px solid #000; font-size: 14px; font-weight: bold; display: flex; width: 100%; font-family: 'Gujarati', sans-serif; }
-        .items-table tbody { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
-        .footer-section { display: flex; border-top: 2px solid #000; margin-top: auto; height: 300px; }
-        .footer-left { width: 68%; border-right: 2px solid #000; padding: 8px; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
-        .footer-right { width: 32%; }
-        .total-row { display: flex; border-bottom: 1px solid #000; padding: 4px 8px; font-size: 13px; font-family: 'Gujarati', sans-serif; }
-        .gpay-text { position: absolute; top: 10px; left: 20px; font-family: 'Kalam', cursive; font-size: 28px; color: #0f3c88; opacity: 0.8; transform: rotate(-15deg); }
-        .stamp-area { border-top: 2px solid #000; padding: 8px; text-align: center; position: relative; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
-        .stamp { position: absolute; top: 5px; color: #0f3c88; border: 2px dotted #0f3c88; border-radius: 8px; padding: 5px 8px; transform: rotate(-5deg); opacity: 0.9; background: rgba(238, 221, 130, 0.5); font-weight: bold; font-size: 12px; font-family: 'Gujarati', sans-serif; }
-        
-        /* Font helper classes */
-        .gujarati-text { font-family: 'Gujarati', sans-serif; }
-        .kalam-text { font-family: 'Kalam', 'Gujarati', cursive; }
-    </style>
-</head>
-<body>
     <div class="bill-wrapper">
         <div class="bill-container">
             <div class="header-section">
@@ -251,6 +238,24 @@ const buildBillHTML = (bill, settings = {}) => {
             </div>
         </div>
     </div>
+    `;
+};
+
+const buildBillHTML = (billOrBills, settings = {}) => {
+    const isArray = Array.isArray(billOrBills);
+    const bills = isArray ? billOrBills : [billOrBills];
+    
+    const billsHTML = bills.map(bill => buildSingleBillHTML(bill, settings)).join('');
+
+    return `
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <style>${getBillStyles()}</style>
+</head>
+<body>
+    ${billsHTML}
 </body>
 </html>
     `;
@@ -358,35 +363,27 @@ const generateBillPdf = async (billOrBills, settings) => {
     }
 
     try {
-        const pdfBuffers = [];
-        for (const bill of bills) {
-            console.log(`Generating PDF for bill serial: ${bill.serialNumber}`);
-            const page = await browser.newPage();
-            const html = buildBillHTML(bill, settings);
-            
-            // Set content and wait for fonts
-            await page.setContent(html, { 
-                waitUntil: 'load',
-                timeout: 60000 
-            });
+        console.log(`Generating PDF for ${bills.length} bills...`);
+        const page = await browser.newPage();
+        const html = buildBillHTML(bills, settings);
+        
+        // Set content and wait for fonts
+        await page.setContent(html, { 
+            waitUntil: 'load',
+            timeout: 120000 
+        });
 
-            // CRITICAL: Wait for fonts to be ready in the browser
-            await page.evaluateHandle('document.fonts.ready');
-            
-            const pdf = await page.pdf({
-                format: 'A4',
-                printBackground: true,
-                margin: { top: '0', right: '0', bottom: '0', left: '0' }
-            });
-            pdfBuffers.push(pdf);
-            await page.close();
-        }
-
-        if (!isArray) {
-            return pdfBuffers[0];
-        }
-
-        return pdfBuffers[0];
+        // CRITICAL: Wait for fonts to be ready in the browser
+        await page.evaluateHandle('document.fonts.ready');
+        
+        const pdf = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '0', right: '0', bottom: '0', left: '0' }
+        });
+        
+        await page.close();
+        return pdf;
     } catch (genError) {
         console.error('PDF GENERATION ERROR:', genError.message);
         throw genError;

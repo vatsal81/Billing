@@ -56,14 +56,16 @@ export default function Expenses() {
 
   return (
     <div className="animate-fade-in">
-      <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <header className="page-header">
         <div>
           <h2>Expenses</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Track shop costs, utilities, and other overheads.</p>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Total Expenses</p>
-          <h3 style={{ color: 'var(--danger)', fontSize: '1.8rem' }}>₹{totalExpenses.toLocaleString('en-IN')}</h3>
+        <div className="header-actions" style={{ textAlign: 'right' }}>
+          <div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Total Expenses</p>
+            <h3 style={{ color: 'var(--danger)', fontSize: '1.8rem' }}>₹{totalExpenses.toLocaleString('en-IN')}</h3>
+          </div>
         </div>
       </header>
 
@@ -84,7 +86,7 @@ export default function Expenses() {
 
       {error && <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px' }}>
+      <div className="charts-grid" style={{ gridTemplateColumns: expenses.length > 0 ? '1fr 2fr' : '1fr' }}>
         {/* Add Expense Form */}
         <div className="glass-panel" style={{ padding: '24px', height: 'fit-content' }}>
           <h3 style={{ marginBottom: '20px' }}>Log New Expense</h3>

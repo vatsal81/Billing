@@ -173,12 +173,12 @@ export default function Inventory() {
 
   return (
     <div className="animate-fade-in">
-      <header style={{marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+      <header className="page-header">
         <div>
           <h2>{t('invTitle')}</h2>
           <p style={{color: 'var(--text-secondary)'}}>{t('invSubtitle')}</p>
         </div>
-        <div style={{display: 'flex', gap: '12px'}}>
+        <div className="header-actions">
           <button className="btn btn-secondary" onClick={handleExportCSV} disabled={products.length === 0}>
             <Download size={18} /> Export CSV
           </button>
@@ -195,7 +195,7 @@ export default function Inventory() {
         </div>
       )}
 
-      <div style={{display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px'}}>
+      <div className="charts-grid" style={{ gridTemplateColumns: products.length > 0 ? '1fr 2fr' : '1fr' }}>
         
         {/* Add Product Form */}
         <div className="glass-panel" style={{padding: '24px', height: 'fit-content'}}>
@@ -278,18 +278,20 @@ export default function Inventory() {
 
         {/* Product List */}
         <div className="glass-panel" style={{padding: '24px'}}>
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '20px'}}>
+          <div className="page-header" style={{ marginBottom: '20px' }}>
             <h3 style={{margin: 0}}>{t('currentStock')} ({filteredProducts.length})</h3>
-            <div className="input-group" style={{marginBottom: 0, flex: 1, maxWidth: '300px', position: 'relative'}}>
-              <Search size={16} style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)'}} />
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="Search by name or HSN..." 
-                style={{paddingLeft: '40px', paddingRight: '12px'}}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="header-actions" style={{ flex: 1, maxWidth: '300px' }}>
+              <div className="input-group" style={{marginBottom: 0, width: '100%', position: 'relative'}}>
+                <Search size={16} style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)'}} />
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="Search..." 
+                  style={{paddingLeft: '40px'}}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
           </div>
           
@@ -303,16 +305,17 @@ export default function Inventory() {
                 </p>
               ) : (
                 filteredProducts.map(p => (
-                  <div key={p._id} style={{
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
+                  <div key={p._id} className="responsive-grid" style={{
                     padding: '16px',
                     background: 'rgba(255,255,255,0.03)',
                     borderRadius: '12px',
-                    border: '1px solid var(--border-color)'
+                    border: '1px solid var(--border-color)',
+                    gap: '16px',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+                    alignItems: 'center'
                   }}>
-                    <div style={{flex: 1}}>
+                    <div style={{flex: 1, minWidth: '150px'}}>
                       <h4 style={{fontSize: '1.1rem'}}>{p.name} {p.nameEnglish && <span style={{fontSize: '0.9rem', color: 'var(--text-secondary)'}}>({p.nameEnglish})</span>}</h4>
                       <p style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>HSN: {p.hsnCode || 'N/A'}</p>
                       {editingPrice === p._id ? (
@@ -334,28 +337,26 @@ export default function Inventory() {
                         </p>
                       )}
                     </div>
-                    <div style={{textAlign: 'right', paddingRight: '20px'}}>
-                      <div style={{fontSize: '0.9rem', color: 'var(--text-secondary)'}}>In Stock</div>
-                      <div style={{fontWeight: 'bold', fontSize: '1.2rem', color: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'var(--danger)' : 'var(--text-primary)'}}>
-                         {p.stockAmount || 0} {(p.stockAmount || 0) <= (p.lowStockThreshold || 5) && <span style={{fontSize: '0.8rem', color: 'var(--danger)'}}><br/>(Low)</span>}
+                    <div style={{textAlign: 'right', minWidth: '80px'}}>
+                      <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>In Stock</div>
+                      <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'var(--danger)' : 'var(--text-primary)'}}>
+                         {p.stockAmount || 0} {(p.stockAmount || 0) <= (p.lowStockThreshold || 5) && <span style={{fontSize: '0.7rem', color: 'var(--danger)'}}><br/>(Low)</span>}
                       </div>
                     </div>
-                    <div style={{display: 'flex', gap: '8px'}}>
+                    <div style={{display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
                       <button 
-                        className="btn btn-secondary" 
-                        style={{padding: '8px', borderRadius: '8px', fontSize: '0.8rem'}}
+                        className="btn btn-secondary s-sm" 
                         onClick={() => handleRestock(p)}
                         title="Restock"
                       >
                         Restock
                       </button>
                       <button 
-                        className="btn btn-danger" 
-                        style={{padding: '8px', borderRadius: '8px'}}
+                        className="btn btn-danger s-sm" 
                         onClick={() => handleDelete(p._id)}
                         title="Delete Product"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
