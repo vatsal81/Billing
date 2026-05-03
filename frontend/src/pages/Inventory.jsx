@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchProducts, createProduct, deleteProduct, updateProduct, transliterateText } from '../utils/api';
-import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import GujaratiInput from '../components/GujaratiInput';
 import Modal from '../components/Modal';
@@ -26,7 +26,10 @@ export default function Inventory() {
   // Restock Modal States
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [restockAmount, setRestockAmount] = useState('50');
+  const [restockAmount, setRestockAmount] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [successToast, setSuccessToast] = useState(null);
 
 
   const loadProducts = async () => {
@@ -136,26 +139,54 @@ export default function Inventory() {
   const handleRestock = (product) => {
     setSelectedProduct(product);
     setIsRestockModalOpen(true);
-    setRestockAmount('50');
+    setRestockAmount('');
   };
 
-  const handleConfirmRestock = async () => {
-    if (!restockAmount || isNaN(restockAmount) || !selectedProduct) return;
+  const handleUpdateStock = async () => {
+    if (!restockAmount || restockAmount <= 0 || !selectedProduct || isProcessing) return;
+    
+    // Step 1: Force UI to processing state instantly
+    setIsProcessing(true);
+    setShowSuccess(false);
     
     try {
-      setLoading(true);
-      await updateProduct(selectedProduct._id, { 
+      // Step 2: Cinematic Delay for the Truck Journey (3.5s)
+      // We do this first to ensure the user sees the "Story"
+      const simulation = new Promise(resolve => setTimeout(resolve, 3500));
+      
+      // Step 3: Perform actual DB update in parallel or after
+      const update = updateProduct(selectedProduct._id, {
         stockAmount: Number(selectedProduct.stockAmount) + Number(restockAmount) 
       });
-      setIsRestockModalOpen(false);
-      setSelectedProduct(null);
+
+      // Wait for both the cinematic story AND the database update to finish
+      await Promise.all([simulation, update]);
+      
+      // Step 4: Transition to Success
+      setIsProcessing(false);
+      setShowSuccess(true);
       await loadProducts();
     } catch (err) {
       setError(err.response?.data?.message || err.message);
-      setLoading(false);
+      setIsProcessing(false);
+      setShowSuccess(false);
     }
   };
 
+  const closeRestockModal = () => {
+    if (showSuccess) {
+      setSuccessToast({
+        name: selectedProduct.name,
+        newStock: (Number(selectedProduct.stockAmount) || 0) + (Number(restockAmount) || 0)
+      });
+      setTimeout(() => setSuccessToast(null), 4000);
+    }
+    setIsRestockModalOpen(false);
+    setRestockAmount('');
+    setShowSuccess(false);
+    setIsProcessing(false);
+    setSelectedProduct(null);
+  };
 
   const handleUpdatePrice = async (id) => {
     if (!newPrice || isNaN(newPrice)) return;
@@ -276,6 +307,32 @@ export default function Inventory() {
           </form>
         </div>
 
+        {/* Success Toast */}
+        {successToast && (
+          <div style={{ 
+            margin: '0 8px 16px', 
+            padding: '12px 16px', 
+            background: '#f0fdf4', 
+            border: '1px solid #bbf7d0', 
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            animation: 'slideDown 0.4s ease-out'
+          }}>
+            <div style={{ background: '#22c55e', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Check size={14} strokeWidth={4} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, color: '#166534', fontWeight: '700', fontSize: '0.9rem' }}>Stock updated successfully!</p>
+              <p style={{ margin: 0, color: '#15803d', fontSize: '0.8rem', opacity: 0.8 }}>{successToast.name} new stock is {successToast.newStock}</p>
+            </div>
+            <button onClick={() => setSuccessToast(null)} style={{ background: 'none', border: 'none', color: '#166534', cursor: 'pointer', padding: '4px' }}>
+              <Plus size={18} style={{ transform: 'rotate(45deg)' }} />
+            </button>
+          </div>
+        )}
+
         {/* Product List */}
         <div className="premium-card" style={{padding: '24px', margin: '0 8px'}}>
           <div className="page-header" style={{ marginBottom: '20px' }}>
@@ -373,7 +430,6 @@ export default function Inventory() {
                                 padding: '2px 8px',
                                 borderRadius: '8px',
                                 transition: 'background 0.2s',
-                                hover: { background: 'rgba(16, 185, 129, 0.1)' }
                               }}
                               className="price-tag"
                             >
@@ -384,37 +440,67 @@ export default function Inventory() {
                       </div>
                     </div>
 
-                    <div style={{display: 'flex', alignItems: 'center', gap: '24px', zIndex: 1}}>
-                      <div style={{textAlign: 'right'}}>
-                        <p style={{fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '4px'}}>Current Stock</p>
+                    <div style={{
+                      display: 'flex', 
+                      flexDirection: window.innerWidth < 640 ? 'column' : 'row',
+                      alignItems: window.innerWidth < 640 ? 'stretch' : 'center', 
+                      gap: '16px', 
+                      zIndex: 1,
+                      paddingTop: '16px',
+                      marginTop: '4px',
+                      borderTop: '1px solid #f1f5f9'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <p style={{fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', fontWeight: 800, marginBottom: '4px'}}>Current Stock</p>
                         <div style={{
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '8px',
-                          padding: '6px 16px',
-                          borderRadius: '12px',
-                          background: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                          color: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'var(--danger)' : 'var(--success)',
-                          border: `1px solid ${(p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
+                          padding: '4px 14px',
+                          borderRadius: '100px',
+                          background: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? '#fef2f2' : '#f0fdf4',
+                          color: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? '#dc2626' : '#166534',
+                          border: `1px solid ${(p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? '#fecaca' : '#bbf7d0'}`,
                           fontWeight: '800',
-                          fontSize: '1.2rem'
+                          fontSize: '1.1rem'
                         }}>
                           {p.stockAmount || 0}
                           {(p.stockAmount || 0) <= (p.lowStockThreshold || 5) && <AlertTriangle size={16} />}
                         </div>
                       </div>
 
-                      <div style={{display: 'flex', gap: '8px'}}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
                         <button 
                           className="btn btn-secondary" 
-                          style={{padding: '10px 16px', borderRadius: '12px'}}
+                          style={{
+                            flex: 1,
+                            height: '44px', 
+                            padding: '0 20px', 
+                            borderRadius: '12px',
+                            fontSize: '0.9rem',
+                            fontWeight: '700',
+                            background: '#f8fafc',
+                            border: '1.2px solid #e2e8f0',
+                            color: '#334155'
+                          }}
                           onClick={() => handleRestock(p)}
                         >
-                          Restock
+                          {t('restock')}
                         </button>
                         <button 
                           className="btn btn-danger" 
-                          style={{width: '44px', height: '44px', padding: 0, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center'}}
+                          style={{
+                            width: '44px', 
+                            height: '44px', 
+                            padding: 0, 
+                            borderRadius: '12px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            background: '#fef2f2',
+                            border: '1.2px solid #fecaca',
+                            color: '#dc2626'
+                          }}
                           onClick={() => handleDelete(p._id)}
                         >
                           <Trash2 size={18} />
@@ -457,131 +543,161 @@ export default function Inventory() {
         </div>
       )}
 
-      <style>{`
-          @keyframes shake {
-              0%, 100% { transform: translateX(0); }
-              25% { transform: translateX(-10px); }
-              75% { transform: translateX(10px); }
-          }
-          .alert-modal {
-              box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.25);
-          }
-          .modal-header {
-            padding: 24px 24px 12px;
-            display: grid;
-            grid-template-columns: 44px 1fr 44px;
-            align-items: center;
-            background: white;
-            border-bottom: 1px solid #f1f5f9;
-            width: 100% !important;
-            box-sizing: border-box !important;
-          }
-          .modal-title {
-            grid-column: 2;
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 800;
-            color: #1e293b;
-            text-align: center;
-            margin: 0;
-          }
-          .modal-close-btn {
-            grid-column: 3;
-            background: #f1f5f9;
-            border: none;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-left: auto;
-          }
-          .modal-close-btn:hover {
-            background: #e2e8f0;
-            color: #0f172a;
-            transform: rotate(90deg);
-          }
-          .modal-container {
-            background: white;
-            width: 100%;
-            max-width: 360px;
-            margin: 32px auto;
-            border-radius: 24px;
-            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(0, 0, 0, 0.05);
-            position: relative;
-            animation: scaleUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-          }
-          .premium-input {
-            width: 100%;
-            border: 2px solid #e2e8f0;
-            border-radius: 16px;
-            padding: 12px 16px;
-            font-size: 1rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background: #f8fafc;
-          }
-          .premium-input:focus {
-            border-color: #3b82f6;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-            outline: none;
-          }
-      `}</style>
-
       {/* Premium Restock Modal */}
       <Modal 
         isOpen={isRestockModalOpen} 
-        onClose={() => setIsRestockModalOpen(false)}
-        title="Restock Item"
-        footer={
+        onClose={closeRestockModal}
+        title={(!showSuccess && !isProcessing) ? "Restock Item" : ""}
+        footer={(!showSuccess && !isProcessing) ? (
           <>
-            <button className="btn btn-secondary" onClick={() => setIsRestockModalOpen(false)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleConfirmRestock}>Update Stock</button>
+            <button className="btn btn-secondary" onClick={closeRestockModal}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleUpdateStock} style={{ background: '#0369a1', border: 'none' }} disabled={isProcessing}>
+              {isProcessing ? "Updating..." : "Update Stock"}
+            </button>
           </>
-        }
+        ) : null}
       >
-        <div style={{ textAlign: 'center', padding: '0' }}>
-          {/* Product Header */}
-          <div style={{ marginBottom: '16px' }}>
-            <h2 style={{ margin: '0 0 4px 0', color: '#0f172a', fontSize: '1.4rem', fontWeight: '800', fontFamily: "'Outfit', sans-serif" }}>
-              {selectedProduct?.name}
-            </h2>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem', color: '#64748b', background: '#f1f5f9', padding: '4px 12px', borderRadius: '100px', fontWeight: '600' }}>
-               <span>Stock:</span>
-               <span style={{ color: '#0369a1', fontWeight: '800' }}>{selectedProduct?.stockAmount}</span>
+        {isProcessing ? (
+          /* Elite Premium Delivery Unloading Screen */
+          <div style={{ textAlign: 'center', padding: '40px 0', background: 'white' }}>
+             <div className="premium-delivery-container">
+                <div className="road-line"></div>
+                <div className="truck-shadow"></div>
+                <div className="elite-truck journey kicking">
+                   <div className="exhaust-smoke journey-mode"></div>
+                   <div className="exhaust-smoke journey-mode"></div>
+                   <Truck size={48} color="#0369a1" strokeWidth={2.5} />
+                </div>
+                
+                {/* Dynamic Packages - Delayed until Arrival */}
+                <div className="elite-package journey-mode"><div className="box-trail"></div></div>
+                <div className="elite-package journey-mode" style={{ animationDelay: '2s' }}><div className="box-trail"></div></div>
+                <div className="elite-package journey-mode" style={{ animationDelay: '2.6s' }}><div className="box-trail"></div></div>
+                
+                <div className="shop-bag-container">
+                   <ShoppingBag size={40} color="#94a3b8" />
+                   {/* Celebratory Sparkles at the end */}
+                   <div className="success-sparkle sparkle-1"></div>
+                   <div className="success-sparkle sparkle-2"></div>
+                   <div className="success-sparkle sparkle-3"></div>
+                   <div className="success-sparkle sparkle-4"></div>
+                </div>
+             </div>
+             
+             <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', marginBottom: '4px' }}>
+               Restocking Shop...
+             </h2>
+             <p style={{ color: '#64748b', fontSize: '1rem', marginBottom: '0' }}>
+               Synchronizing with database
+             </p>
+             
+             <div className="progress-bar-container">
+                <div className="progress-bar-fill"></div>
+             </div>
+          </div>
+        ) : !showSuccess ? (
+          <div style={{ textAlign: 'center', padding: '0' }}>
+
+            {/* Product Info */}
+            <div style={{ marginBottom: '12px' }}>
+              <h3 style={{ margin: '0 0 2px 0', color: '#0f172a', fontSize: '1.3rem', fontWeight: '800' }}>
+                {selectedProduct?.name}
+              </h3>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '4px 12px', borderRadius: '100px', fontWeight: '600' }}>
+                 <span>Stock:</span>
+                 <span style={{ color: '#0369a1', fontWeight: '800' }}>{selectedProduct?.stockAmount}</span>
+              </div>
+            </div>
+            
+            {/* Amount to Add Box */}
+            <div style={{ marginBottom: '12px', textAlign: 'left' }}>
+              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Amount to Add
+              </label>
+              <div style={{ padding: '10px 16px', background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                <input 
+                  type="number" 
+                  className="premium-input" 
+                  style={{ 
+                    fontSize: '1.8rem', 
+                    textAlign: 'center', 
+                    fontWeight: 800, 
+                    padding: '0', 
+                    border: 'none', 
+                    outline: 'none', 
+                    background: 'transparent', 
+                    color: '#0f172a', 
+                    width: '100%' 
+                  }}
+                  value={restockAmount}
+                  onChange={(e) => setRestockAmount(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+            
+            {/* New Total Stock Box */}
+            <div style={{ padding: '12px', background: '#f0f7ff', borderRadius: '16px', border: '1.5px solid #e0f2fe' }}>
+              <p style={{ margin: '0 0 2px 0', fontSize: '0.75rem', color: '#0369a1', fontWeight: 700 }}>
+                New Total Stock
+              </p>
+              <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '900', color: '#075985' }}>
+                 {(Number(selectedProduct?.stockAmount) || 0) + (Number(restockAmount) || 0)}
+              </h3>
             </div>
           </div>
-          
-          {/* Amount to Add Box */}
-          <div style={{ marginBottom: '16px', padding: '16px', background: '#ffffff', borderRadius: '20px', border: '1.5px solid #f1f5f9', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
-            <label style={{ display: 'block', textAlign: 'center', marginBottom: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Amount to Add
-            </label>
-            <input 
-              type="number" 
-              className="premium-input" 
-              style={{ fontSize: '2rem', textAlign: 'center', fontWeight: 800, padding: '0', border: 'none', background: 'transparent', color: '#0f172a', width: '100%' }}
-              value={restockAmount}
-              onChange={(e) => setRestockAmount(e.target.value)}
-              autoFocus
-            />
+        ) : (
+          /* Success Screen - High-End Google Pay Animation */
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+             <div className="success-checkmark-circle" style={{ 
+               width: '80px', 
+               height: '80px', 
+               background: '#22c55e', 
+               color: 'white', 
+               borderRadius: '50%', 
+               display: 'flex', 
+               alignItems: 'center', 
+               justifyContent: 'center', 
+               margin: '0 auto 24px auto',
+               position: 'relative',
+               boxShadow: '0 10px 25px rgba(34, 197, 94, 0.3)'
+             }}>
+               <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="success-checkmark-check">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+               </svg>
+             </div>
+             
+             <div className="success-content-fade" style={{ animationDelay: '0.8s' }}>
+               <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', marginBottom: '4px' }}>
+                 Stock Updated!
+               </h2>
+               <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '24px' }}>
+                 Inventory synchronized
+               </p>
+               
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '32px' }}>
+                  <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '16px' }}>
+                     <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Added</p>
+                     <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#0f172a' }}>+{restockAmount}</p>
+                  </div>
+                  <div style={{ background: '#f0f9ff', padding: '16px', borderRadius: '16px', border: '1px solid #e0f2fe' }}>
+                     <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: '#0369a1', fontWeight: 700, textTransform: 'uppercase' }}>New Stock</p>
+                     <p style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800, color: '#0369a1' }}>
+                       {(Number(selectedProduct?.stockAmount) || 0) + (Number(restockAmount) || 0)}
+                     </p>
+                  </div>
+               </div>
+               
+               <button 
+                 className="btn btn-primary" 
+                 style={{ width: '100%', height: '54px', borderRadius: '16px', fontSize: '1.1rem', fontWeight: 800, background: '#0369a1', border: 'none' }}
+                 onClick={closeRestockModal}
+               >
+                 Done
+               </button>
+             </div>
           </div>
-          
-          {/* New Total Stock Box */}
-          <div style={{ padding: '14px', background: '#f5f7ff', borderRadius: '20px', border: '1.5px solid #e0e7ff' }}>
-            <p style={{ margin: '0 0 2px 0', fontSize: '0.85rem', color: '#4f46e5', fontWeight: 700 }}>
-              New Total Stock
-            </p>
-            <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '900', color: '#3730a3' }}>
-               {(Number(selectedProduct?.stockAmount) || 0) + (Number(restockAmount) || 0)}
-            </h3>
-          </div>
-        </div>
+        )}
       </Modal>
     </div>
   );

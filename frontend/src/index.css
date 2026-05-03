@@ -1908,3 +1908,494 @@ table {
 .total-row td {
   vertical-align: middle;
 }
+/* Google Pay Style Success Animation */
+@keyframes drawCheck {
+  0% { stroke-dashoffset: 48; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes circleFill {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes successPop {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.success-checkmark-circle {
+  animation: circleFill 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.success-checkmark-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: drawCheck 0.4s 0.3s ease-out forwards;
+}
+
+.success-content-fade {
+  animation: successPop 0.5s 0.6s ease-out both;
+}
+
+
+@keyframes slideDown {
+  0% { transform: translateY(-20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+
+/* Essential Modal Animations */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes popIn {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes scaleUp {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+
+/* Unique Liquid Pulse Loader */
+@keyframes pulseCore {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.5; }
+}
+
+@keyframes rotateRing1 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes rotateRing2 {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.loader-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 24px auto;
+}
+
+.loader-core {
+  position: absolute;
+  top: 25px;
+  left: 25px;
+  width: 30px;
+  height: 30px;
+  background: #0369a1;
+  border-radius: 50%;
+  animation: pulseCore 1.5s ease-in-out infinite;
+  box-shadow: 0 0 20px rgba(3, 105, 161, 0.4);
+}
+
+.loader-ring-1 {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-top-color: #0369a1;
+  border-radius: 50%;
+  animation: rotateRing1 1.5s linear infinite;
+}
+
+.loader-ring-2 {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 60px;
+  height: 60px;
+  border: 3px solid transparent;
+  border-bottom-color: #0ea5e9;
+  border-radius: 50%;
+  animation: rotateRing2 1s linear infinite;
+  opacity: 0.7;
+}
+
+
+/* Shree Hari Signature Tailor Loader */
+.tailor-loader {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  position: relative;
+  background: #fbbf24; /* Tape Yellow */
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    #000 0deg 1deg,
+    transparent 1deg 10deg
+  );
+  box-shadow: inset 0 0 0 8px #fbbf24, 0 0 20px rgba(251, 191, 36, 0.4);
+  animation: tapeSpin 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.tailor-loader::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: white;
+  border: 2px dashed #0369a1; /* Stitch Line */
+  animation: pulseFabric 2s ease-in-out infinite;
+}
+
+@keyframes tapeSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulseFabric {
+  0%, 100% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+
+/* Latest Modern Liquid Loader */
+.liquid-loader {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  filter: contrast(12);
+  background: white;
+  margin: 0 auto 20px;
+}
+
+.liquid-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 32px;
+  height: 32px;
+  background: #0369a1;
+  border-radius: 50%;
+  filter: blur(8px);
+  transform: translate(-50%, -50%);
+}
+
+.liquid-dot:nth-child(1) {
+  animation: liquidMove1 2s ease-in-out infinite;
+}
+
+.liquid-dot:nth-child(2) {
+  background: #38bdf8;
+  animation: liquidMove2 2s ease-in-out infinite;
+}
+
+@keyframes liquidMove1 {
+  0%, 100% { transform: translate(-150%, -50%); }
+  50% { transform: translate(50%, -50%); }
+}
+
+@keyframes liquidMove2 {
+  0%, 100% { transform: translate(50%, -50%); }
+  50% { transform: translate(-150%, -50%); }
+}
+
+
+/* Custom Shop Delivery Loader */
+.delivery-loader-container {
+  width: 120px;
+  height: 60px;
+  margin: 0 auto 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.delivery-truck {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  animation: truckVibrate 0.2s infinite alternate;
+}
+
+.delivery-package {
+  position: absolute;
+  bottom: 15px;
+  left: 60px;
+  width: 12px;
+  height: 12px;
+  background: #d97706; /* Cardboard Color */
+  border-radius: 2px;
+  animation: unloadPackage 1.5s infinite;
+}
+
+.delivery-package:nth-child(3) { animation-delay: 0.5s; }
+.delivery-package:nth-child(4) { animation-delay: 1s; }
+
+@keyframes truckVibrate {
+  from { transform: translateY(0); }
+  to { transform: translateY(-1.5px); }
+}
+
+@keyframes unloadPackage {
+  0% { transform: translateX(0) scale(0); opacity: 0; }
+  20% { transform: translateX(0) scale(1); opacity: 1; }
+  100% { transform: translateX(60px) scale(0.8); opacity: 0; }
+}
+
+
+/* Elite Premium Delivery Loader */
+.premium-delivery-container {
+  width: 200px;
+  height: 80px;
+  margin: 0 auto 30px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-bottom: 5px;
+}
+
+.road-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
+}
+
+.elite-truck {
+  position: relative;
+  z-index: 2;
+  animation: truckSuspension 0.4s ease-in-out infinite alternate;
+}
+
+.elite-package {
+  position: absolute;
+  bottom: 12px;
+  left: 50px;
+  width: 14px;
+  height: 14px;
+  background: #d97706;
+  border: 1px solid #b45309;
+  border-radius: 2px;
+  box-shadow: 1px 1px 0 #92400e;
+  z-index: 1;
+  animation: eliteUnload 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.elite-package::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(0,0,0,0.1); /* Box Tape */
+}
+
+@keyframes truckSuspension {
+  from { transform: translateY(0) rotate(0deg); }
+  to { transform: translateY(-2px) rotate(0.5deg); }
+}
+
+@keyframes eliteUnload {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  10% { transform: translate(0, 0) scale(1); opacity: 1; }
+  80% { transform: translate(110px, -5px) scale(0.9); opacity: 1; }
+  100% { transform: translate(120px, 0) scale(0.7); opacity: 0; }
+}
+
+.progress-bar-container {
+  width: 160px;
+  height: 4px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  margin: 15px auto 0;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: #0369a1;
+  width: 0%;
+  animation: fillProgress 3.5s linear forwards;
+}
+
+@keyframes fillProgress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+
+/* Elite Micro-Details for Delivery Loader */
+.exhaust-smoke {
+  position: absolute;
+  bottom: 15px;
+  left: 10px;
+  width: 6px;
+  height: 6px;
+  background: #cbd5e1;
+  border-radius: 50%;
+  opacity: 0;
+  animation: exhaustPuff 0.8s infinite;
+}
+
+.exhaust-smoke:nth-child(2) { animation-delay: 0.3s; }
+.exhaust-smoke:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes exhaustPuff {
+  0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  100% { transform: translate(-20px, -10px) scale(2); opacity: 0; }
+}
+
+.shop-bag-container {
+  position: relative;
+  z-index: 2;
+  animation: bagPulse 1.8s infinite;
+}
+
+@keyframes bagPulse {
+  0%, 40%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); color: #0369a1; }
+}
+
+.truck-shadow {
+  position: absolute;
+  bottom: 8px;
+  left: 15px;
+  width: 40px;
+  height: 4px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 50%;
+  filter: blur(2px);
+  animation: shadowPulse 0.4s ease-in-out infinite alternate;
+}
+
+@keyframes shadowPulse {
+  from { transform: scaleX(1); opacity: 0.2; }
+  to { transform: scaleX(1.1); opacity: 0.1; }
+}
+
+
+/* High-Visibility Adjustments */
+.exhaust-smoke {
+  background: #64748b !important; /* Darker Grey */
+}
+
+.truck-shadow {
+  background: rgba(0,0,0,0.2) !important; /* Stronger Shadow */
+}
+
+
+/* World Class Elite Finale Details */
+@keyframes suspensionKick {
+  0%, 100% { transform: translateY(0); }
+  20% { transform: translateY(-5px); } /* Kick up when package leaves */
+}
+
+.elite-truck.kicking {
+  animation: truckSuspension 0.4s ease-in-out infinite alternate, suspensionKick 0.6s ease-in-out infinite;
+}
+
+.box-trail {
+  position: absolute;
+  height: 2px;
+  background: rgba(217, 119, 6, 0.2);
+  filter: blur(2px);
+  width: 20px;
+  right: 100%;
+  top: 50%;
+}
+
+.success-sparkle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #22c55e;
+  border-radius: 50%;
+  opacity: 0;
+  animation: sparkleBurst 0.5s 3.3s ease-out forwards;
+}
+
+@keyframes sparkleBurst {
+  0% { transform: scale(0); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: scale(4) translate(var(--tw-x), var(--tw-y)); opacity: 0; }
+}
+
+.sparkle-1 { --tw-x: 20px; --tw-y: -20px; }
+.sparkle-2 { --tw-x: -20px; --tw-y: -20px; }
+.sparkle-3 { --tw-x: 20px; --tw-y: 20px; }
+.sparkle-4 { --tw-x: -20px; --tw-y: 20px; }
+
+
+/* Ultimate Realism Details */
+.wheel {
+  position: absolute;
+  bottom: -4px;
+  width: 10px;
+  height: 10px;
+  background: #334155;
+  border-radius: 50%;
+  border: 2px dashed #94a3b8;
+  animation: wheelSpin 0.3s linear infinite;
+}
+
+.wheel-front { left: 28px; }
+.wheel-back { left: 4px; }
+
+@keyframes wheelSpin {
+  100% { transform: rotate(360deg); }
+}
+
+.ground-reflection {
+  position: absolute;
+  bottom: -15px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  background: linear-gradient(180deg, rgba(3, 105, 161, 0.1), transparent);
+  filter: blur(4px);
+  transform: scaleY(-1);
+}
+
+.impact-pulse {
+  animation: impactBag 1.8s infinite;
+}
+
+@keyframes impactBag {
+  0%, 40%, 100% { transform: scale(1); }
+  45% { transform: scale(1.2) translateY(-5px); } /* Bounce up on impact */
+  50% { transform: scale(1); }
+}
+
+
+/* World Class Cinematic Journey */
+.elite-truck.journey {
+  animation: 
+    driveIn 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards,
+    truckSuspension 0.4s 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes driveIn {
+  0% { transform: translateX(-150px) rotate(-1deg); opacity: 0; }
+  70% { transform: translateX(10px) rotate(2deg); opacity: 1; } /* Slight overshoot */
+  100% { transform: translateX(0) rotate(0deg); opacity: 1; }
+}
+
+/* Delay packages until truck stops (1.2s) */
+.elite-package.journey-mode {
+  animation: eliteUnload 1.8s 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.elite-package.journey-mode:nth-child(2n) { animation-delay: 2s; }
+.elite-package.journey-mode:nth-child(3n) { animation-delay: 2.6s; }
+
+.exhaust-smoke.journey-mode {
+  animation: exhaustPuff 0.8s 1.2s infinite; /* Only smoke after arrival */
+}
+
