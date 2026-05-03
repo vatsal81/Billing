@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchBills, voidBill, deleteBill, fetchExpenses, getFrontendUrl, getBackendUrl } from '../utils/api';
 
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { TrendingUp, FileText, Banknote, RefreshCw, Eye, X, Printer, Search, Download, Ban, MessageCircle, Share2, Trash2 } from 'lucide-react';
 
 import { useLanguage } from '../utils/LanguageContext';
@@ -242,15 +242,46 @@ export default function History() {
       <div className="charts-grid" style={{marginBottom: '40px'}}>
         <div className="glass-panel" style={{padding: '24px', height: '350px'}}>
           <h3 style={{marginBottom: '20px'}}>Revenue Timeline</h3>
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
-            <LineChart data={trendData} margin={{ top: 10, right: 10, left: 40, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="name" stroke="var(--text-secondary)" />
-              <YAxis stroke="var(--text-secondary)" />
-              <Tooltip contentStyle={{backgroundColor: 'var(--bg-card)', border: 'none', borderRadius: '8px'}}/>
-              <Line type="monotone" dataKey="revenue" stroke="var(--accent-primary)" strokeWidth={3} dot={{r: 4}} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div style={{ width: '100%', height: '300px' }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
+              <AreaChart data={trendData} margin={{ top: 10, right: 10, left: 20, bottom: 20 }}>
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fontSize: 11, fill: 'var(--text-secondary)'}}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fontSize: 11, fill: 'var(--text-secondary)'}}
+                  tickFormatter={(val) => `₹${val >= 1000 ? (val/1000) + 'k' : val}`}
+                />
+                <Tooltip 
+                  contentStyle={{backgroundColor: 'rgba(30, 41, 59, 0.9)', border: 'none', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', backdropFilter: 'blur(4px)'}}
+                  itemStyle={{color: 'white'}}
+                  formatter={(value) => [`₹${value.toLocaleString('en-IN')}`, 'Revenue']}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="var(--accent-primary)" 
+                  strokeWidth={4} 
+                  fillOpacity={1} 
+                  fill="url(#colorRevenue)" 
+                  animationDuration={1500}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         <div className="glass-panel" style={{padding: '24px', height: '350px', display: 'flex', flexDirection: 'column'}}>

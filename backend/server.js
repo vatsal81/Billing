@@ -17,6 +17,16 @@ const app = express();
 // Security Middleware
 app.use(helmet({
     crossOriginResourcePolicy: false,
+    contentSecurityPolicy: {
+        directives: {
+            "default-src": ["'self'"],
+            "connect-src": ["'self'", "https://www.google.com"],
+            "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+            "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+            "img-src": ["'self'", "data:", "https://*"],
+        },
+    },
 }));
 app.use(cors({
     origin: [
