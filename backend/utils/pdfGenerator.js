@@ -65,8 +65,8 @@ const getBillStyles = () => `
     .header-left { width: 35%; border-right: 2px solid #000; padding: 8px; font-size: 13px; line-height: 1.4; }
     .header-right { width: 65%; padding: 10px 8px; text-align: center; }
     .customer-meta-section { display: flex; border-bottom: 2px solid #000; }
-    .customer-info { width: 68%; border-right: 2px solid #000; padding: 6px; font-size: 14px; line-height: 1.8; }
-    .meta-info { width: 32%; font-size: 14px; }
+    .customer-info { width: 68%; border-right: 2px solid #000; padding: 6px; font-size: 14px; line-height: 1.8; font-family: 'Gujarati', sans-serif; }
+    .meta-info { width: 32%; font-size: 14px; font-family: 'Gujarati', sans-serif; }
     .info-row { display: flex; align-items: flex-end; }
     .dotted-line {
         border-bottom: 1px dotted #000;
