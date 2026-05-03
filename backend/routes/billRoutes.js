@@ -19,7 +19,7 @@ router.route('/manual')
         validate
     ], generateManualBill);
 
-router.route('/:id').get(protect, getBillById).delete(protect, require('../controllers/billController').deleteBill);
+router.route('/:id').get(getBillById).delete(protect, require('../controllers/billController').deleteBill);
 router.route('/:id/pdf').get(getBillPdf);
 router.route('/book/:bookNumber/pdf').get(getBookPdf);
 router.route('/:id/void').put(protect, voidBill);

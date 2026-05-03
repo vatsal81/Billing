@@ -31,7 +31,7 @@ const ViewBill = () => {
     }, [id]);
 
     const handleDownloadPdf = () => {
-        const pdfUrl = `${getBackendUrl()}/api/bills/${id}/pdf`;
+        const pdfUrl = `${getBackendUrl()}/api/bills/${id}/pdf?download=true`;
         window.open(pdfUrl, '_blank');
     };
 

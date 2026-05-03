@@ -9,10 +9,7 @@ export const getBackendUrl = () => {
 };
 
 export const getFrontendUrl = () => {
-  // If we're on localhost, we should still use the production URL for WhatsApp links
-  // so that the customer can actually open them on their phone.
-  const productionFrontend = "https://billing-system-qa1a.onrender.com";
-  return window.location.hostname === 'localhost' ? productionFrontend : window.location.origin;
+  return window.location.origin;
 };
 
 // Add token to every request
