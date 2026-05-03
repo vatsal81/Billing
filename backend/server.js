@@ -33,7 +33,7 @@ app.use(cors({
         'https://billing-jet-ten.vercel.app',
         'https://billing-1-ri5i.onrender.com',
         'http://localhost:5173', // For local development
-        'http://localhost:3000'
+        'http://localhost:5000'
     ],
     credentials: true
 }));
