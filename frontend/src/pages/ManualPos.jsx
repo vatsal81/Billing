@@ -147,7 +147,14 @@ const ManualPos = () => {
       closing = 'May Your New Attire Bring You Endless Confidence And Joy.';
     }
 
-    const text = `\u2728 SHREE HARI DRESSES & CUTPIECE \u2728\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n\uD83E\uDDFE Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : \u20B9${totalAmount.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n\uD83D\uDD17 View Your Invoice:\n${viewLink}\n\n\uD83D\uDCAC "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting \uD83D\uDE09\n━━━━━━━━━━━━━━━━━━━━━━━`;
+    const sparkles = '\u2728';
+    const page = '\uD83D\uDCC4';
+    const linkIcon = '\uD83D\uDD17';
+    const speech = '\uD83D\uDCAF';
+    const smile = '\uD83D\uDE0A';
+    const rupee = '\u20B9';
+
+    const text = `${sparkles} SHREE HARI DRESSES & CUTPIECE ${sparkles}\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n${page} Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : ${rupee}${totalAmount.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n${linkIcon} View Your Invoice:\n${viewLink}\n\n${speech} "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting ${smile}\n━━━━━━━━━━━━━━━━━━━━━━━`;
 
     const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
@@ -243,11 +250,18 @@ const ManualPos = () => {
   }, [newCustomer.address, showAddModal]);
 
   return (
-    <div className="animate-fade-in no-print">
-      <header className="page-header no-print">
+    <div className="animate-fade-in no-print" style={{ 
+      flex: 1, 
+      display: 'flex', 
+      flexDirection: 'column',
+      overflow: 'hidden',
+      height: '100%',
+      padding: '8px' // Decreased from all sides
+    }}>
+      <header className="page-header no-print" style={{ marginBottom: '12px' }}>
         <div>
-          <h2 className="text-gradient" style={{ fontSize: 'min(7vw, 2.2rem)' }}>{t('manualTitle')}</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{t('manualSubtitle')}</p>
+          <h2 className="text-gradient" style={{ fontSize: 'min(6vw, 1.8rem)' }}>{t('manualTitle')}</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{t('manualSubtitle')}</p>
         </div>
       </header>
 
@@ -257,10 +271,24 @@ const ManualPos = () => {
         </div>
       )}
 
-      <div className="pos-container">
+      <div className="pos-container" style={{ 
+        flex: 1, 
+        overflow: 'hidden',
+        display: 'grid',
+        gridTemplateColumns: window.innerWidth > 1024 ? '1.2fr 1fr' : '1fr',
+        gap: '12px', // Compact gap
+        minHeight: 0
+      }}>
         {/* Left Side: Product Selection */}
-        <div className="glass-panel" style={{ padding: 'min(4vw, 20px)' }}>
-          <h3 style={{ marginBottom: '16px', fontSize: '1.2rem' }}>{t('stockList')}</h3>
+        <div className="glass-panel" style={{ 
+          padding: '12px', // Compact padding
+          overflowY: 'auto',
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '12px'
+        }}>
+          <h3 style={{ marginBottom: '12px', fontSize: '1rem' }}>{t('stockList')}</h3>
           <div style={{ 
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
@@ -287,17 +315,17 @@ const ManualPos = () => {
               >
                 {/* Minimalist Top Layout */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <h4 style={{ fontSize: '1.15rem', fontWeight: '800', margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
                     {p.name}
                   </h4>
-                  {p.nameEnglish && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '500'}}>{p.nameEnglish}</span>}
+                  {p.nameEnglish && <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500'}}>{p.nameEnglish}</span>}
                 </div>
                 
-                <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', opacity: 0.3, margin: '4px 0' }}></div>
+                <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', opacity: 0.3, margin: '2px 0' }}></div>
                 
                 {/* Bottom Action Row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                  <span style={{ color: 'var(--accent-primary)', fontWeight: '900', fontSize: '1.25rem', letterSpacing: '-0.5px' }}>₹{p.price}</span>
+                  <span style={{ color: 'var(--accent-primary)', fontWeight: '900', fontSize: '1.1rem', letterSpacing: '-0.5px' }}>₹{p.price}</span>
                   
                   <button 
                     type="button"
@@ -328,8 +356,15 @@ const ManualPos = () => {
         </div>
 
         {/* Right Side: Live Cart & Form */}
-        <div className="glass-panel" style={{ padding: 'min(4vw, 24px)', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ marginBottom: '16px', fontSize: '1.2rem' }}>{t('yourBill')}</h3>
+        <div className="glass-panel" style={{ 
+          padding: '12px', // Compact padding
+          display: 'flex', 
+          flexDirection: 'column',
+          overflowY: 'auto',
+          height: '100%',
+          borderRadius: '12px'
+        }}>
+          <h3 style={{ marginBottom: '12px', fontSize: '1rem' }}>{t('yourBill')}</h3>
 
           <div className="pos-form-row">
             <div className="input-group" style={{ flex: 1, position: 'relative' }}>
@@ -470,17 +505,17 @@ const ManualPos = () => {
                   className="btn btn-primary hover-lift" 
                   style={{ 
                     width: '100%', 
-                    marginTop: '24px',
-                    padding: '18px',
-                    fontSize: '1.15rem',
+                    marginTop: '16px',
+                    padding: '12px',
+                    fontSize: '1rem',
                     fontWeight: '800',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '12px',
+                    gap: '10px',
                     background: 'var(--accent-gradient)',
-                    borderRadius: 'var(--radius-lg)',
-                    boxShadow: '0 8px 20px rgba(3, 105, 161, 0.3)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: '0 4px 12px rgba(3, 105, 161, 0.2)',
                     border: 'none',
                     letterSpacing: '0.5px'
                   }} 
@@ -583,50 +618,73 @@ const ManualPos = () => {
 
       {/* Add Customer Modal */}
       {showAddModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }} onClick={e => e.target === e.currentTarget && setShowAddModal(false)}>
-          <div className="modal-content" style={{ maxWidth: '600px', width: '100%', background: 'var(--bg-primary)', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
-            <div className="modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          background: 'rgba(0,0,0,0.6)', 
+          zIndex: 5000, 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          padding: '20px',
+          paddingBottom: '100px' // Extra space for bottom nav
+        }} onClick={e => e.target === e.currentTarget && setShowAddModal(false)}>
+          <div className="modal-content" style={{ 
+            maxWidth: '360px', // Ultra-compact professional width
+            width: '92%', 
+            background: 'var(--bg-primary)', 
+            borderRadius: '10px', 
+            boxShadow: '0 15px 30px rgba(0, 0, 0, 0.15)',
+            maxHeight: '70vh',
+            display: 'flex',
+            flexDirection: 'column',
+            border: '1px solid var(--border-color)'
+          }}>
+            <div className="modal-header" style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Add New Customer</h2>
-                <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Enter details to securely store customer</p>
+                <h2 style={{ fontSize: '1.05rem', fontWeight: '800' }}>Quick Add</h2>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Store new customer details</p>
               </div>
-              <button type="button" className="close-btn" onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+              <button type="button" className="close-btn" onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={16} /></button>
             </div>
             
-            <form onSubmit={handleSaveCustomer}>
-              <div className="modal-body" style={{ padding: '24px' }}>
-                <div className="form-grid" style={{ marginBottom: '20px' }}>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label className="input-label">Customer Name (English) <span style={{color: 'var(--danger)'}}>*</span></label>
-                    <input type="text" className="input-field" required placeholder="e.g. Rahul Patel" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
+            <form onSubmit={handleSaveCustomer} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div className="modal-body" style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
+                <div className="form-grid" style={{ marginBottom: '12px', gridTemplateColumns: '1fr' }}>
+                  <div className="input-group" style={{ marginBottom: '10px' }}>
+                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Name (English) *</label>
+                    <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} required placeholder="Rahul Patel" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
+                  </div>
+                  <div className="input-group" style={{ marginBottom: '10px' }}>
+                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Name (Gujarati)</label>
+                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="રાહુલ પટેલ" value={newCustomer.nameGujarati} onChange={val => setNewCustomer({ ...newCustomer, nameGujarati: val })} onOriginal={orig => { if (!newCustomer.name) setNewCustomer({ ...newCustomer, name: orig }); }} />
+                  </div>
+                </div>
+
+                <div className="input-group" style={{ marginBottom: '12px' }}>
+                  <label className="input-label" style={{ fontSize: '0.7rem' }}>Phone Number</label>
+                  <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="9898088844" value={newCustomer.phone} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
+                </div>
+
+                <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+                  <div className="input-group" style={{ marginBottom: '10px' }}>
+                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Address (English)</label>
+                    <textarea className="input-field" rows="1" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="Full address..." value={newCustomer.address} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
                   </div>
                   <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label className="input-label">Customer Name (Gujarati)</label>
-                    <GujaratiInput className="input-field" placeholder="e.g. રાહુલ પટેલ" value={newCustomer.nameGujarati} onChange={val => setNewCustomer({ ...newCustomer, nameGujarati: val })} onOriginal={orig => { if (!newCustomer.name) setNewCustomer({ ...newCustomer, name: orig }); }} />
+                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Address (Gujarati)</label>
+                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="સરનામું..." value={newCustomer.addressGujarati} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.address) setNewCustomer({ ...newCustomer, address: orig }); }} />
                   </div>
                 </div>
+              </div>
 
-                <div className="input-group">
-                  <label className="input-label">Phone Number</label>
-                  <input type="text" className="input-field" placeholder="e.g. 9898088844" value={newCustomer.phone} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
-                </div>
-
-                  <div className="form-grid">
-                    <div className="input-group" style={{ marginBottom: 0 }}>
-                      <label className="input-label">Address (English)</label>
-                      <textarea className="input-field" rows="2" placeholder="Full address..." value={newCustomer.address} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
-                    </div>
-                    <div className="input-group" style={{ marginBottom: 0 }}>
-                      <label className="input-label">Address (Gujarati)</label>
-                      <GujaratiInput className="input-field" placeholder="સરનામું..." value={newCustomer.addressGujarati} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.address) setNewCustomer({ ...newCustomer, address: orig }); }} />
-                    </div>
-                  </div>
-                </div>
-
-              <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={savingCustomer} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Save size={16} /> {savingCustomer ? 'Saving...' : 'Save & Select'}
+              <div className="modal-footer" style={{ padding: '10px 16px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingCustomer} style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Save size={12} /> {savingCustomer ? 'Saving...' : 'Save & Select'}
                 </button>
               </div>
             </form>

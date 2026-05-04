@@ -63,7 +63,14 @@ export default function Dashboard() {
       closing = 'May Your New Attire Bring You Endless Confidence And Joy.';
     }
 
-    const text = `\u2728 SHREE HARI DRESSES & CUTPIECE \u2728\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n\uD83E\uDDFE Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${billNo}\nAmount : \u20B9${bill.actualTotal.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n\uD83D\uDD17 View Your Invoice:\n${viewLink}\n\n\uD83D\uDCAC "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting \uD83D\uDE09\n━━━━━━━━━━━━━━━━━━━━━━━`;
+    const sparkles = '\u2728';
+    const page = '\uD83D\uDCC4';
+    const linkIcon = '\uD83D\uDD17';
+    const speech = '\uD83D\uDCAF';
+    const smile = '\uD83D\uDE0A';
+    const rupee = '\u20B9';
+
+    const text = `${sparkles} SHREE HARI DRESSES & CUTPIECE ${sparkles}\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n${page} Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${billNo}\nAmount : ${rupee}${bill.actualTotal.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n${linkIcon} View Your Invoice:\n${viewLink}\n\n${speech} "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting ${smile}\n━━━━━━━━━━━━━━━━━━━━━━━`;
 
     
     const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
