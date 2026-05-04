@@ -561,8 +561,22 @@ const PurchaseBills = () => {
             </header>
 
             {isAdding && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '1200px', width: '95%' }}>
+                <div style={{
+                    position: 'fixed', 
+                    top: 0, 
+                    left: 0, 
+                    right: 0, 
+                    bottom: 0, 
+                    background: 'rgba(0,0,0,0.8)', 
+                    zIndex: 9000, 
+                    padding: '16px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+                    paddingTop: window.innerWidth < 768 ? '40px' : '20px',
+                    overflowY: 'auto'
+                }}>
+                    <div className="modal-content" style={{ maxWidth: '1200px', width: '95%', position: 'relative' }}>
                         <style>{`
                             @media (max-width: 768px) {
                                 .desktop-only { display: none !important; }

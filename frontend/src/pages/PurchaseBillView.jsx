@@ -64,14 +64,18 @@ const PurchaseBillView = ({ bill, onClose }) => {
     return (
         <div className="bill-view-overlay">
             <div className="bill-view-container">
-                <div className="bill-view-header no-print">
-                    <div className="header-left">
-                        <button className="btn btn-secondary" onClick={onClose}><X size={18} /> <span>Close</span></button>
-                    </div>
-                    <div className="header-right">
-                        <button className="btn btn-secondary" onClick={handlePrint}><Printer size={18} /> <span>Print</span></button>
-                        <button className="btn btn-primary" onClick={handleDownloadPdf}><Download size={18} /> <span>Download PDF</span></button>
-                    </div>
+                <div className="bill-view-header no-print" style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gap: '8px',
+                    padding: '8px',
+                    maxWidth: '600px',
+                    width: '100%',
+                    justifyContent: 'stretch'
+                }}>
+                    <button className="btn btn-secondary" onClick={onClose} style={{ padding: '8px 4px', fontSize: '0.8rem' }}><X size={14} /> <span>Close</span></button>
+                    <button className="btn btn-secondary" onClick={handlePrint} style={{ padding: '8px 4px', fontSize: '0.8rem' }}><Printer size={14} /> <span>Print</span></button>
+                    <button className="btn btn-primary" onClick={handleDownloadPdf} style={{ padding: '8px 4px', fontSize: '0.8rem' }}><Download size={14} /> <span>PDF</span></button>
                 </div>
 
                 <div style={{ width: '100%', display: 'flex', justifyContent: 'center', overflow: 'visible' }}>
