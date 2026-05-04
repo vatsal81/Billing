@@ -545,17 +545,55 @@ const PurchaseBills = () => {
 
     return (
         <div className="page-container">
-            <header className="page-header">
+            <style>{`
+                @media (max-width: 768px) {
+                    .desktop-only { display: none !important; }
+                    .mobile-only { display: block !important; }
+                    .bill-top-grid, .bill-header-grid, .bill-footer-grid, .eway-grid, .attachments-grid { 
+                        grid-template-columns: 1fr !important; 
+                        gap: 16px !important; 
+                    }
+                }
+                @media (min-width: 769px) {
+                    .desktop-only { display: block !important; }
+                    .mobile-only { display: none !important; }
+                }
+                
+                @keyframes pulse-ring {
+                    0% { transform: scale(.33); }
+                    80%, 100% { opacity: 0; }
+                }
+                @keyframes pulse-dot {
+                    0% { transform: scale(.8); }
+                    50% { transform: scale(1); }
+                    100% { transform: scale(.8); }
+                }
+                @keyframes scale-up {
+                    0% { transform: scale(0.5); opacity: 0; }
+                    100% { transform: scale(1); opacity: 1; }
+                }
+                @keyframes checkmark {
+                    0% { stroke-dashoffset: 50; }
+                    100% { stroke-dashoffset: 0; }
+                }
+            `}</style>
+            <header className="page-header" style={{ marginBottom: '32px' }}>
                 <div>
                     <h1 className="text-gradient">Purchase Entry</h1>
                     <p className="text-secondary">Manage supplier invoices and inventory stock</p>
                 </div>
-                <div className="header-actions">
-                    <button className="btn btn-secondary" onClick={handleDownloadReport}>
-                        <Download size={18} /> Monthly PDF
+                <div className="header-actions" style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: window.innerWidth < 768 ? '1fr 1fr' : 'auto auto', 
+                    gap: '12px',
+                    width: window.innerWidth < 768 ? '100%' : 'auto',
+                    marginTop: window.innerWidth < 768 ? '16px' : '0'
+                }}>
+                    <button className="btn btn-secondary" onClick={handleDownloadReport} style={{ height: 'auto', minHeight: '70px', padding: '10px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', flex: 1 }}>
+                        <Download size={20} /> <span>Monthly PDF</span>
                     </button>
-                    <button className="btn btn-primary" onClick={() => { setIsEditing(false); setEditingId(null); resetForm(); setBillPreview(null); setEwayPreview(null); setIsAdding(true); }}>
-                        <Plus size={18} /> Add New Bill
+                    <button className="btn btn-primary" onClick={() => { setIsEditing(false); setEditingId(null); resetForm(); setBillPreview(null); setEwayPreview(null); setIsAdding(true); }} style={{ height: 'auto', minHeight: '70px', padding: '10px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', flex: 1 }}>
+                        <Plus size={20} /> <span>Add New Bill</span>
                     </button>
                 </div>
             </header>
@@ -577,38 +615,6 @@ const PurchaseBills = () => {
                     overflowY: 'auto'
                 }}>
                     <div className="modal-content" style={{ maxWidth: '1200px', width: '95%', position: 'relative' }}>
-                        <style>{`
-                            @media (max-width: 768px) {
-                                .desktop-only { display: none !important; }
-                                .mobile-only { display: block !important; }
-                                .bill-top-grid, .bill-header-grid, .bill-footer-grid, .eway-grid, .attachments-grid { 
-                                    grid-template-columns: 1fr !important; 
-                                    gap: 16px !important; 
-                                }
-                            }
-                            @media (min-width: 769px) {
-                                .desktop-only { display: block !important; }
-                                .mobile-only { display: none !important; }
-                            }
-                            
-                            @keyframes pulse-ring {
-                                0% { transform: scale(.33); }
-                                80%, 100% { opacity: 0; }
-                            }
-                            @keyframes pulse-dot {
-                                0% { transform: scale(.8); }
-                                50% { transform: scale(1); }
-                                100% { transform: scale(.8); }
-                            }
-                            @keyframes scale-up {
-                                0% { transform: scale(0.5); opacity: 0; }
-                                100% { transform: scale(1); opacity: 1; }
-                            }
-                            @keyframes checkmark {
-                                0% { stroke-dashoffset: 50; }
-                                100% { stroke-dashoffset: 0; }
-                            }
-                        `}</style>
 
                         {(saving || showSuccess) && (
                             <div style={{
@@ -1211,24 +1217,34 @@ const PurchaseBills = () => {
                 ) : (
                     <div className="bills-list-container">
                         <div className="premium-card">
-                            <div className="card-header">
-                                <h3 className="card-title">Recent Purchase Invoices</h3>
-                                <div className="card-tools" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                    <div style={{ position: 'relative' }}>
-                                        <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                        <input
-                                            type="text"
-                                            className="input-field"
-                                            placeholder="Search by supplier or bill no..."
-                                            style={{ paddingLeft: '32px', fontSize: '12px', height: '36px', width: '260px' }}
-                                            value={searchQuery}
-                                            onChange={e => setSearchQuery(e.target.value)}
-                                        />
+                            <div className="card-header" style={{ 
+                                    flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+                                    alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+                                    gap: '16px'
+                                }}>
+                                    <h3 className="card-title">Recent Purchase Invoices</h3>
+                                    <div className="card-tools" style={{ 
+                                        display: 'flex', 
+                                        gap: '12px', 
+                                        alignItems: 'center',
+                                        width: window.innerWidth < 768 ? '100%' : 'auto'
+                                    }}>
+                                        <div style={{ position: 'relative', flex: 1 }}>
+                                            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                            <input
+                                                type="text"
+                                                className="input-field"
+                                                placeholder="Search by supplier or bill no..."
+                                                style={{ paddingLeft: '32px', fontSize: '12px', height: '36px', width: '100%' }}
+                                                value={searchQuery}
+                                                onChange={e => setSearchQuery(e.target.value)}
+                                            />
+                                        </div>
+                                        <span className="badge info" style={{ whiteSpace: 'nowrap' }}>{bills.filter(b => !searchQuery || b.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || b.billNumber?.toLowerCase().includes(searchQuery.toLowerCase())).length} Records</span>
                                     </div>
-                                    <span className="badge info">{bills.filter(b => !searchQuery || b.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || b.billNumber?.toLowerCase().includes(searchQuery.toLowerCase())).length} Records</span>
                                 </div>
-                            </div>
-                            <div className="table-container">
+                            {/* Desktop Table View */}
+                            <div className="table-container desktop-only">
                                 <table className="premium-table">
                                     <thead>
                                         <tr>
@@ -1267,22 +1283,35 @@ const PurchaseBills = () => {
                                                         {bill.items.length} Products
                                                     </span>
                                                 </td>
-                                                <td>
+                                                 <td>
                                                     <span className="text-primary font-bold">
                                                         ₹{bill.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    {bill.billImage ? (
-                                                        <button className="action-btn view" onClick={() => {
-                                                            const isPath = bill.billImage.startsWith('uploads');
-                                                            const imageUrl = isPath ? `${getBackendUrl()}/${bill.billImage}` : bill.billImage;
-                                                            const win = window.open();
-                                                            win.document.write(`<img src="${imageUrl}" style="max-width: 100%"/>`);
-                                                        }} title="View Original Bill Image">
-                                                            <ShoppingBag size={18} />
-                                                        </button>
-                                                    ) : <span className="text-secondary text-xs italic">N/A</span>}
+                                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                                        {bill.billImage ? (
+                                                            <button className="action-btn view" onClick={() => {
+                                                                const isPath = bill.billImage.startsWith('uploads');
+                                                                const imageUrl = isPath ? `${getBackendUrl()}/${bill.billImage}` : bill.billImage;
+                                                                window.open(imageUrl, '_blank');
+                                                            }} title="View Merchant Invoice Copy">
+                                                                <ShoppingBag size={18} />
+                                                            </button>
+                                                        ) : null}
+                                                        {bill.ewayBillImage ? (
+                                                            <button className="action-btn secondary" style={{ background: 'rgba(3, 105, 161, 0.1)', color: 'var(--accent-primary)' }} onClick={() => {
+                                                                const isPath = bill.ewayBillImage.startsWith('uploads');
+                                                                const imageUrl = isPath ? `${getBackendUrl()}/${bill.ewayBillImage}` : bill.ewayBillImage;
+                                                                window.open(imageUrl, '_blank');
+                                                            }} title="View E-Way Bill Scan Copy">
+                                                                <Truck size={18} />
+                                                            </button>
+                                                        ) : null}
+                                                        {!bill.billImage && !bill.ewayBillImage && (
+                                                            <span className="text-secondary text-xs italic">N/A</span>
+                                                        )}
+                                                    </div>
                                                 </td>
 
                                                 <td>
@@ -1303,11 +1332,68 @@ const PurchaseBills = () => {
                                     </tbody>
                                 </table>
                             </div>
+
+                            {/* Mobile Card View */}
+                            <div className="mobile-only" style={{ padding: '0 4px' }}>
+                                {bills.filter(b => !searchQuery || b.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || b.billNumber?.toLowerCase().includes(searchQuery.toLowerCase())).map((bill) => (
+                                    <div key={bill._id} className="mobile-purchase-card" style={{ 
+                                        background: 'white', 
+                                        borderRadius: '20px', 
+                                        padding: '16px', 
+                                        marginBottom: '16px', 
+                                        border: '1px solid #f1f5f9',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                            <div>
+                                                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '2px' }}>{bill.supplierName}</div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                                                    <FileText size={12} /> {bill.billNumber}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ color: 'var(--accent-primary)', fontWeight: 800, fontSize: '1.1rem' }}>₹{bill.totalAmount.toLocaleString('en-IN')}</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(bill.billDate).toLocaleDateString('en-IN')}</div>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                                            <span className="badge secondary" style={{ fontSize: '0.7rem', padding: '4px 8px' }}>{bill.items.length} Products</span>
+                                            {bill.billImage && <span className="badge info" style={{ fontSize: '0.7rem', padding: '4px 8px' }}>Invoice Attached</span>}
+                                        </div>
+
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            justifyContent: 'space-between', 
+                                            alignItems: 'center', 
+                                            paddingTop: '12px', 
+                                            borderTop: '1px solid #f1f5f9' 
+                                        }}>
+                                            <div style={{ display: 'flex', gap: '10px' }}>
+                                                {bill.billImage && (
+                                                    <button onClick={() => window.open(bill.billImage.startsWith('uploads') ? `${getBackendUrl()}/${bill.billImage}` : bill.billImage, '_blank')} style={{ border: 'none', background: 'rgba(3, 105, 161, 0.1)', color: 'var(--accent-primary)', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <ShoppingBag size={18} />
+                                                    </button>
+                                                )}
+                                                {bill.ewayBillImage && (
+                                                    <button onClick={() => window.open(bill.ewayBillImage.startsWith('uploads') ? `${getBackendUrl()}/${bill.ewayBillImage}` : bill.ewayBillImage, '_blank')} style={{ border: 'none', background: 'rgba(5, 150, 105, 0.1)', color: 'var(--success)', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <Truck size={18} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button className="action-btn edit" onClick={() => handleEdit(bill)} style={{ width: '36px', height: '36px' }}><Edit2 size={18} /></button>
+                                                <button className="action-btn view" onClick={() => setViewingBill(bill)} style={{ width: '36px', height: '36px' }}><Eye size={18} /></button>
+                                                <button className="action-btn delete" onClick={() => handleDeleteClick(bill)} style={{ width: '36px', height: '36px' }}><Trash2 size={18} /></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
-            {/* Premium Deletion Confirmation Modal */}
             {showDeleteConfirm && (
                 <div className="modal-overlay" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)' }}>
                     <div className="delete-modal-content" style={{ 

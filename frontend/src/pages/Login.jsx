@@ -66,9 +66,6 @@ export default function Login() {
             <LogIn size={20} /> {loading ? 'Authenticating...' : 'Secure Login'}
           </button>
         </form>
-        <p style={{textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '20px'}}>
-          Default credentials are admin / admin
-        </p>
       </div>
     </div>
   );
