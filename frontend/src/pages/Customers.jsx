@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCustomers, createCustomer, updateCustomer, deleteCustomer, fetchLedgerEntries, createLedgerEntry, fetchBillById, transliterateText } from '../utils/api';
-import { User, Plus, Search, History, ArrowUpRight, ArrowDownLeft, X, Save, Wallet, Pencil, Trash2, AlertTriangle, Phone, MapPin, Eye } from 'lucide-react';
+import { fetchCustomers, createCustomer, updateCustomer, deleteCustomer, fetchLedgerEntries, createLedgerEntry, fetchBillById, transliterateText, getFrontendUrl } from '../utils/api';
+import { User, Plus, Search, History, ArrowUpRight, ArrowDownLeft, X, Save, Wallet, Pencil, Trash2, AlertTriangle, Phone, MapPin, Eye, MessageCircle } from 'lucide-react';
 import PrintableBill from '../components/PrintableBill';
 import GujaratiInput from '../components/GujaratiInput';
 import '../index.css';
@@ -9,7 +9,15 @@ const emptyCustomer = { name: '', nameGujarati: '', address: '', addressGujarati
 
 /* ── Animated Modal Overlay ── */
 const ModalOverlay = ({ onClose, onSubmit, header, children, footer, maxWidth }) => (
-    <div className="s-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="s-overlay" 
+        style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+            padding: window.innerWidth < 768 ? '40px 16px' : '20px',
+            overflowY: 'auto'
+        }}
+        onClick={e => e.target === e.currentTarget && onClose()}>
         <span className="s-float s-f1">₹</span>
         <span className="s-float s-f2">👤</span>
         <span className="s-float s-f3">💳</span>
@@ -17,7 +25,13 @@ const ModalOverlay = ({ onClose, onSubmit, header, children, footer, maxWidth })
         <span className="s-float s-f5">💼</span>
         <span className="s-float s-f6">₹</span>
 
-        <div className="s-modal" style={maxWidth ? { maxWidth } : {}}>
+        <div className="s-modal" style={{ 
+            ...(maxWidth ? { maxWidth } : {}),
+            marginTop: window.innerWidth < 768 ? '0' : 'auto',
+            marginBottom: window.innerWidth < 768 ? '40px' : 'auto',
+            width: window.innerWidth < 768 ? '100%' : 'auto',
+            padding: window.innerWidth < 768 ? '12px' : '20px'
+        }}>
             <div className="s-modal-accent" />
             {onSubmit ? (
                 <form onSubmit={onSubmit} className="s-modal-inner">
@@ -39,16 +53,17 @@ const ModalOverlay = ({ onClose, onSubmit, header, children, footer, maxWidth })
 /* ── Customer Form Fields ── */
 const CustomerFormFields = ({ data, onChange }) => (
     <>
-        <div className="s-section-label">Basic Info</div>
-        <div className="s-form-grid" style={{ marginBottom: '20px' }}>
+        <div className="s-section-label" style={{ marginBottom: '4px', fontSize: '0.65rem', marginTop: '4px' }}>Basic Info</div>
+        <div className="s-form-grid" style={{ marginBottom: '8px', gap: '8px' }}>
             <div className="s-field">
-                <label>Customer Name <span style={{color:'#ef4444'}}>*</span></label>
-                <input type="text" required placeholder="e.g. Rahul Patel"
+                <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Customer Name <span style={{color:'#ef4444'}}>*</span></label>
+                <input type="text" required placeholder="e.g. Rahul Patel" style={{ height: '34px', fontSize: '0.85rem', padding: '0 10px' }}
                     value={data.name} onChange={e => onChange({ ...data, name: e.target.value })} />
             </div>
             <div className="s-field">
-                <label>Customer Name (Gujarati)</label>
-                <GujaratiInput placeholder="e.g. રાહુલ પટેલ" className="input-field"
+                <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Name (Gujarati)</label>
+                <GujaratiInput placeholder="નામ..." className="input-field"
+                    style={{ height: '34px', fontSize: '0.85rem' }}
                     value={data.nameGujarati} 
                     onChange={val => onChange({ ...data, nameGujarati: val })}
                     onOriginal={orig => {
@@ -58,21 +73,22 @@ const CustomerFormFields = ({ data, onChange }) => (
             </div>
         </div>
 
-        <div className="s-section-label">Contact Details</div>
-        <div className="s-form-grid" style={{ marginBottom: '20px' }}>
+        <div className="s-section-label" style={{ marginBottom: '4px', fontSize: '0.65rem', marginTop: '4px' }}>Contact Details</div>
+        <div className="s-form-grid" style={{ marginBottom: '8px', gap: '8px' }}>
             <div className="s-field s-span2">
-                <label>Phone / Mobile</label>
-                <input type="text" placeholder="e.g. 9898088844"
+                <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Phone / Mobile</label>
+                <input type="text" placeholder="e.g. 9898088844" style={{ height: '34px', fontSize: '0.85rem', padding: '0 10px' }}
                     value={data.phone} onChange={e => onChange({ ...data, phone: e.target.value })} />
             </div>
             <div className="s-field s-span2">
-                <label>Address</label>
-                <textarea rows="2" placeholder="Full address..."
+                <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Address</label>
+                <textarea rows="1" placeholder="Full address..." style={{ padding: '6px 10px', fontSize: '0.85rem', minHeight: '34px' }}
                     value={data.address} onChange={e => onChange({ ...data, address: e.target.value })} />
             </div>
             <div className="s-field s-span2">
-                <label>Address (Gujarati)</label>
+                <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Address (Gujarati)</label>
                 <GujaratiInput placeholder="સરનામું..." className="input-field"
+                    style={{ height: '34px', fontSize: '0.85rem' }}
                     value={data.addressGujarati} 
                     onChange={val => onChange({ ...data, addressGujarati: val })}
                     onOriginal={orig => {
@@ -84,7 +100,7 @@ const CustomerFormFields = ({ data, onChange }) => (
     </>
 );
 
-const CustomerList = ({ searchTerm, setSearchTerm, loading, filtered, selectedCustomer, selectCustomer, setEditCustomer, setActiveModal, setSelected }) => (
+const CustomerList = ({ searchTerm, setSearchTerm, loading, filtered, selectedCustomer, selectCustomer, setEditCustomer, setActiveModal, setSelected, expandedId, setExpandedId, ledger }) => (
     <div className="premium-card" style={{ height: 'fit-content' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
             <div style={{ position: 'relative' }}>
@@ -101,19 +117,118 @@ const CustomerList = ({ searchTerm, setSearchTerm, loading, filtered, selectedCu
                     <User size={40} style={{ marginBottom: '8px', opacity: 0.4 }} /><p>No customers found.</p>
                 </div>
             ) : filtered.map(c => (
-                <div key={c._id} onClick={() => selectCustomer(c)}
-                    style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', transition: 'background 0.15s', background: selectedCustomer?._id === c._id ? 'rgba(99, 102, 241, 0.06)' : 'transparent', borderLeft: selectedCustomer?._id === c._id ? '3px solid var(--accent-primary)' : '3px solid transparent' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
-                        <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{c.phone || 'No Phone'}</p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                            <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Outstanding</p>
-                            <p style={{ fontWeight: 700, fontSize: '0.9rem', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>₹{c.balance?.toLocaleString('en-IN') || 0}</p>
+                <div key={c._id}>
+                    <div onClick={() => {
+                        if (window.innerWidth < 768) {
+                            setExpandedId(expandedId === c._id ? null : c._id);
+                            if (selectedCustomer?._id !== c._id) selectCustomer(c);
+                        } else {
+                            selectCustomer(c);
+                        }
+                    }}
+                        style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', transition: 'background 0.15s', background: selectedCustomer?._id === c._id ? 'rgba(99, 102, 241, 0.06)' : 'transparent', borderLeft: selectedCustomer?._id === c._id ? '3px solid var(--accent-primary)' : '3px solid transparent' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{c.phone || 'No Phone'}</p>
                         </div>
-                        <button className="s-icon-btn s-edit" title="Edit" onClick={e => { e.stopPropagation(); setEditCustomer({ ...c }); setActiveModal('edit'); }}><Pencil size={14} /></button>
-                        <button className="s-icon-btn s-del" title="Delete" onClick={e => { e.stopPropagation(); setSelected(c); setActiveModal('delete'); }}><Trash2 size={14} /></button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ textAlign: 'right' }}>
+                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Outstanding</p>
+                                <p style={{ fontWeight: 700, fontSize: '0.9rem', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>₹{c.balance?.toLocaleString('en-IN') || 0}</p>
+                            </div>
+                            <div className="desktop-only" style={{ display: 'flex', gap: '4px' }}>
+                                <button className="s-icon-btn s-edit" title="Edit" onClick={e => { e.stopPropagation(); setEditCustomer({ ...c }); setActiveModal('edit'); }}><Pencil size={14} /></button>
+                                <button className="s-icon-btn s-del" title="Delete" onClick={e => { e.stopPropagation(); setSelected(c); setActiveModal('delete'); }}><Trash2 size={14} /></button>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Mobile Accordion Content */}
+                    <div className="mobile-only" style={{ 
+                        maxHeight: expandedId === c._id ? '1500px' : '0',
+                        overflow: 'hidden',
+                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                        background: '#f8fafc',
+                        borderBottom: expandedId === c._id ? '1px solid var(--border-color)' : 'none'
+                    }}>
+                        <div style={{ padding: '12px' }}>
+                            {/* Contact Shortcuts */}
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                <div style={{ flex: 1, padding: '8px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Phone size={12}/></div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{c.phone || 'No Phone'}</div>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        const balance = c.balance || 0;
+                                        const paymentLink = `${getFrontendUrl()}/pay/${c._id}/${balance}`;
+
+                                        if (balance <= 0) {
+                                            window.open(`https://wa.me/91${c.phone}?text=${encodeURIComponent(`Hello *${c.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! \u2728\n\nYour account is all clear. We look forward to seeing you again! \ud83d\ude0a`)}`, '_blank');
+                                            return;
+                                        }
+                                        
+                                        const message = `*PAYMENT REMINDER* \ud83d\udcc4\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${c.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! \u2728\n\nThis is a friendly reminder regarding your outstanding balance.\n\n\ud83d\udcb0 *Pending Amount: \u20b9${balance.toLocaleString('en-IN')}*\n\n\ud83d\udcf1 *View & Pay Online:*\n${paymentLink}\n\nKindly clear your dues at your earliest convenience.\n\nThank you for your continued trust! \ud83d\ude4f\n\n━━━━━━━━━━━━━━━━━━━━━━━\n*SHREE HARI DRESSES & CUTPIECE*`;
+                                        window.open(`https://wa.me/91${c.phone}?text=${encodeURIComponent(message)}`, '_blank');
+                                    }}
+                                    disabled={!c.phone}
+                                    style={{ padding: '8px 12px', background: '#25D366', color: 'white', borderRadius: '10px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, opacity: c.phone ? 1 : 0.5 }}
+                                >
+                                    <MessageCircle size={14} /> WhatsApp
+                                </button>
+                            </div>
+
+                            {/* Detailed Balance Summary */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+                                <div style={{ padding: '8px 10px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', marginBottom: '2px', textTransform: 'uppercase' }}>Purchased</div>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e293b' }}>₹{ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN')}</div>
+                                </div>
+                                <div style={{ padding: '8px 10px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', marginBottom: '2px', textTransform: 'uppercase' }}>Received</div>
+                                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#10b981' }}>₹{ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN')}</div>
+                                </div>
+                            </div>
+
+                            {/* Mini History */}
+                            <div style={{ marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <h4 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>Activity</h4>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Last 3</span>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    {ledger.slice(0, 3).length === 0 ? (
+                                        <div style={{ padding: '12px', textAlign: 'center', background: 'white', borderRadius: '10px', border: '1px dashed #cbd5e1', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>No entries</div>
+                                    ) : ledger.slice(0, 3).map(entry => (
+                                        <div key={entry._id} style={{ padding: '8px 10px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: entry.type === 'debit' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: entry.type === 'debit' ? '#ef4444' : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    {entry.type === 'debit' ? <ArrowUpRight size={10} /> : <ArrowDownLeft size={10} />}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{entry.description}</div>
+                                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>{new Date(entry.date).toLocaleDateString('en-IN')}</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: entry.type === 'debit' ? '#ef4444' : '#10b981' }}>
+                                                ₹{entry.amount.toLocaleString('en-IN')}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                                <button className="btn btn-secondary" style={{ height: '36px', fontSize: '0.78rem', padding: '0' }} onClick={() => { setEditCustomer({ ...c }); setActiveModal('edit'); }}>
+                                    <Pencil size={12} /> Edit Profile
+                                </button>
+                                <button className="btn s-danger-btn" style={{ height: '36px', fontSize: '0.78rem', padding: '0' }} onClick={() => { setSelected(c); setActiveModal('delete'); }}>
+                                    <Trash2 size={12} /> Delete
+                                </button>
+                            </div>
+                            <button className="btn btn-primary" style={{ width: '100%', height: '40px', fontSize: '0.85rem' }} onClick={() => { selectCustomer(c); setActiveModal('payment'); }}>
+                                <Wallet size={16} /> Receive New Payment
+                            </button>
+                        </div>
                     </div>
                 </div>
             ))}
@@ -216,9 +331,12 @@ const CustomerModals = ({
         {activeModal === 'add' && (
             <ModalOverlay onClose={() => setActiveModal(null)} onSubmit={handleAdd}
                 header={
-                    <div className="modal-header">
-                        <div><h2>Add New Customer</h2><p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '2px' }}>Register a new regular customer</p></div>
-                        <button type="button" className="close-btn" onClick={() => setActiveModal(null)}><X size={15} /></button>
+                    <div className="modal-header" style={{ position: 'relative', padding: '10px 40px 8px 16px', minHeight: 'auto' }}>
+                        <div>
+                            <h2 style={{ fontSize: '1rem', marginBottom: '0', whiteSpace: 'nowrap' }}>Add New Customer</h2>
+                            <p className="desktop-only" style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Register a new regular customer</p>
+                        </div>
+                        <button type="button" className="close-btn" style={{ position: 'absolute', right: '10px', top: '10px' }} onClick={() => setActiveModal(null)}><X size={14} /></button>
                     </div>
                 }
                 footer={<>
@@ -233,9 +351,12 @@ const CustomerModals = ({
         {activeModal === 'edit' && (
             <ModalOverlay onClose={() => setActiveModal(null)} onSubmit={handleEdit}
                 header={
-                    <div className="modal-header">
-                        <div><h2>Edit Customer</h2><p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '2px' }}>Updating <strong style={{ color: '#0f172a' }}>{editCustomer.name}</strong></p></div>
-                        <button type="button" className="close-btn" onClick={() => setActiveModal(null)}><X size={15} /></button>
+                    <div className="modal-header" style={{ position: 'relative', padding: '10px 40px 8px 16px', minHeight: 'auto' }}>
+                        <div>
+                            <h2 style={{ fontSize: '1rem', marginBottom: '0', whiteSpace: 'nowrap' }}>Edit Customer</h2>
+                            <p className="desktop-only" style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Updating {editCustomer.name}</p>
+                        </div>
+                        <button type="button" className="close-btn" style={{ position: 'absolute', right: '10px', top: '10px' }} onClick={() => setActiveModal(null)}><X size={14} /></button>
                     </div>
                 }
                 footer={<>
@@ -292,6 +413,7 @@ const Customers = () => {
     const [customers, setCustomers]           = useState([]);
     const [loading, setLoading]               = useState(true);
     const [selectedCustomer, setSelected]     = useState(null);
+    const [expandedId, setExpandedId]         = useState(null);
     const [ledger, setLedger]                 = useState([]);
     const [activeModal, setActiveModal]       = useState(null);
     const [searchTerm, setSearchTerm]         = useState('');
@@ -412,34 +534,67 @@ const Customers = () => {
 
     return (
         <div className="page-container animate-fade-in">
+            <style>{`
+                @media (max-width: 768px) {
+                    .desktop-only { display: none !important; }
+                    .mobile-only { display: block !important; }
+                }
+                @media (min-width: 769px) {
+                    .desktop-only { display: block !important; }
+                    .mobile-only { display: none !important; }
+                }
+            `}</style>
             <header className="page-header">
                 <div>
                     <h1 className="text-gradient">Customer Dues (Udhaar)</h1>
                     <p className="text-secondary">Track credit sales and payments from your regular customers</p>
                 </div>
-                <div className="header-actions">
-                    <button className="btn btn-primary" onClick={() => setActiveModal('add')}>
-                        <Plus size={18} /> Add New Customer
+                <div className="header-actions" style={{ 
+                    display: 'flex', 
+                    gap: '12px', 
+                    width: window.innerWidth < 768 ? '100%' : 'auto',
+                    marginTop: window.innerWidth < 768 ? '16px' : '0'
+                }}>
+                    <button className="btn btn-primary" onClick={() => setActiveModal('add')} style={{ 
+                        height: 'auto', 
+                        minHeight: window.innerWidth < 768 ? '70px' : 'auto', 
+                        padding: window.innerWidth < 768 ? '10px' : '8px 16px', 
+                        fontSize: window.innerWidth < 768 ? '0.85rem' : '1rem', 
+                        display: 'flex', 
+                        flexDirection: window.innerWidth < 768 ? 'column' : 'row', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: '6px', 
+                        flex: 1 
+                    }}>
+                        <Plus size={window.innerWidth < 768 ? 20 : 18} /> <span>Add New Customer</span>
                     </button>
                 </div>
             </header>
 
-            <div className="charts-grid" style={{ gridTemplateColumns: selectedCustomer ? '1fr 1.5fr' : '1fr', transition: 'all 0.3s ease' }}>
+            <div className="charts-grid" style={{ 
+                gridTemplateColumns: selectedCustomer && window.innerWidth >= 768 ? '1fr 1.5fr' : '1fr', 
+                transition: 'all 0.3s ease' 
+            }}>
                 <CustomerList 
                     searchTerm={searchTerm} setSearchTerm={setSearchTerm} 
                     loading={loading} filtered={filtered} 
                     selectedCustomer={selectedCustomer} selectCustomer={selectCustomer} 
                     setEditCustomer={setEditCustomer} setActiveModal={setActiveModal} setSelected={setSelected} 
+                    expandedId={expandedId} setExpandedId={setExpandedId}
+                    ledger={ledger}
                 />
 
                 {selectedCustomer && (
-                    <CustomerLedger
-                        selectedCustomer={selectedCustomer}
-                        ledger={ledger}
-                        setEditCustomer={setEditCustomer}
-                        setActiveModal={setActiveModal}
-                        handleViewBill={handleViewBill}
-                    />
+                    <div className="desktop-only">
+                        <CustomerLedger
+                            selectedCustomer={selectedCustomer}
+                            ledger={ledger}
+                            setEditCustomer={setEditCustomer}
+                            setActiveModal={setActiveModal}
+                            handleViewBill={handleViewBill}
+                        />
+                    </div>
                 )}
             </div>
 

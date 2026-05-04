@@ -13,6 +13,7 @@ import Suppliers from './pages/Suppliers';
 import Customers from './pages/Customers';
 import Login from './pages/Login';
 import ViewBill from './pages/ViewBill';
+import PaymentView from './pages/PaymentView';
 import { fetchAnalyticsStats } from './utils/api';
 import { useLanguage } from './utils/LanguageContext';
 import { useAuth } from './utils/AuthContext';
@@ -48,6 +49,7 @@ function App() {
       <Routes>
         {/* Public Routes - No Auth Required */}
         <Route path="/view-bill/:id" element={<ViewBill />} />
+        <Route path="/pay/:customerId/:amount" element={<PaymentView />} />
         
         {/* Protected Routes - Need Login */}
         <Route path="/*" element={
