@@ -160,6 +160,11 @@ export const createPurchaseBill = async (billData) => {
   return data;
 };
 
+export const updatePurchaseBill = async (id, billData) => {
+  const { data } = await API.put(`/purchase/${id}`, billData);
+  return data;
+};
+
 export const downloadPurchaseReport = async (month, year) => {
   const response = await API.get(`/purchase/monthly-pdf?month=${month}&year=${year}`, {
     responseType: 'blob'

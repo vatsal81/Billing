@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchProducts, createProduct, deleteProduct, updateProduct, transliterateText } from '../utils/api';
-import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import GujaratiInput from '../components/GujaratiInput';
 import Modal from '../components/Modal';
@@ -25,6 +25,8 @@ export default function Inventory() {
   
   // Restock Modal States
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isProcessingDelete, setIsProcessingDelete] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [restockAmount, setRestockAmount] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
@@ -125,14 +127,30 @@ export default function Inventory() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteClick = (product) => {
+    setSelectedProduct(product);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedProduct) return;
     try {
-      setLoading(true);
-      await deleteProduct(id);
+      setIsProcessingDelete(true);
+      // Wait for the elite shredding animation to play for dramatic effect
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      await deleteProduct(selectedProduct._id);
       await loadProducts();
+      setIsProcessingDelete(false);
+      setShowSuccess(true);
+      
+      setTimeout(() => {
+        setShowSuccess(false);
+        setIsDeleteModalOpen(false);
+        setSelectedProduct(null);
+      }, 2000);
     } catch (err) {
       setError(err.response?.data?.message || err.message);
-      setLoading(false);
+      setIsProcessingDelete(false);
     }
   };
   
@@ -365,146 +383,80 @@ export default function Inventory() {
                 </div>
               ) : (
                 filteredProducts.map(p => (
-                  <div key={p._id} className="inventory-card animate-scale-in" style={{
-                    padding: '20px',
-                    background: 'rgba(255,255,255,0.02)',
-                    borderRadius: '20px',
-                    border: '1px solid var(--border-color)',
-                    display: 'flex',
-                    flexWrap: 'wrap',
+                  <div key={p._id} className="glass-panel hover-lift receipt-card" style={{
+                    padding: '16px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
                     justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '20px',
+                    gap: '12px',
                     position: 'relative',
                     overflow: 'hidden',
-                    transition: 'all 0.3s ease'
+                    borderLeft: `5px solid ${(p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'var(--danger)' : 'var(--success)'}`
                   }}>
-                    {/* Background Glow */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '-50%',
-                      right: '-10%',
-                      width: '200px',
-                      height: '200px',
-                      background: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)',
-                      filter: 'blur(60px)',
-                      borderRadius: '50%',
-                      zIndex: 0
-                    }}></div>
-
-                    <div style={{flex: '1 1 250px', zIndex: 1}}>
-                      <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px'}}>
-                        <h4 style={{fontSize: '1.25rem', fontWeight: '700', margin: 0}}>{p.name}</h4>
-                        {p.nameEnglish && <span style={{fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '6px'}}>{p.nameEnglish}</span>}
+                    
+                    {/* Left Details */}
+                    <div className="receipt-left" style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 auto' }}>
+                      <div style={{
+                        width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
+                        background: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
+                        color: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'var(--danger)' : 'var(--success)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }} className="hide-on-mobile-small">
+                        <Package size={22} strokeWidth={2.5} />
                       </div>
-                      
-                      <div style={{display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap'}}>
-                         <div style={{display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)'}}>
-                            <span style={{opacity: 0.6}}>HSN:</span> <span style={{fontWeight: '600'}}>{p.hsnCode || 'N/A'}</span>
-                         </div>
-                         <div style={{width: '1px', height: '12px', background: 'var(--border-color)'}}></div>
-                         {editingPrice === p._id ? (
-                            <div style={{display: 'flex', gap: '6px'}}>
-                              <input 
-                                type="number" 
-                                className="input-field" 
-                                style={{width: '90px', padding: '4px 10px', height: '32px', margin: 0}}
-                                value={newPrice}
-                                onChange={(e) => setNewPrice(e.target.value)}
-                                autoFocus
-                              />
-                              <button className="btn btn-primary" style={{padding: '0 12px', height: '32px'}} onClick={() => handleUpdatePrice(p._id)}>Save</button>
-                              <button className="btn btn-secondary" style={{padding: '0 12px', height: '32px'}} onClick={() => setEditingPrice(null)}>Esc</button>
-                            </div>
-                          ) : (
-                            <div 
-                              onClick={() => { setEditingPrice(p._id); setNewPrice(p.price); }}
-                              style={{
-                                color: 'var(--success)', 
-                                fontWeight: '700', 
-                                fontSize: '1.1rem',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '2px 8px',
-                                borderRadius: '8px',
-                                transition: 'background 0.2s',
-                              }}
-                              className="price-tag"
-                            >
-                              ₹{(p.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                              <span style={{fontSize: '0.7rem', opacity: 0.6, fontWeight: 'normal'}}>Edit</span>
-                            </div>
-                          )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                        <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                          {p.name}
+                        </h4>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                          HSN: {p.hsnCode || 'N/A'} {p.nameEnglish && `• ${p.nameEnglish}`}
+                        </span>
                       </div>
                     </div>
 
-                    <div style={{
-                      display: 'flex', 
-                      flexDirection: window.innerWidth < 640 ? 'column' : 'row',
-                      alignItems: window.innerWidth < 640 ? 'stretch' : 'center', 
-                      gap: '16px', 
-                      zIndex: 1,
-                      paddingTop: '16px',
-                      marginTop: '4px',
-                      borderTop: '1px solid #f1f5f9'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <p style={{fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#94a3b8', fontWeight: 800, marginBottom: '4px'}}>Current Stock</p>
-                        <div style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '4px 14px',
-                          borderRadius: '100px',
-                          background: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? '#fef2f2' : '#f0fdf4',
-                          color: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? '#dc2626' : '#166534',
-                          border: `1px solid ${(p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? '#fecaca' : '#bbf7d0'}`,
-                          fontWeight: '800',
-                          fontSize: '1.1rem'
-                        }}>
-                          {p.stockAmount || 0}
-                          {(p.stockAmount || 0) <= (p.lowStockThreshold || 5) && <AlertTriangle size={16} />}
-                        </div>
-                      </div>
+                    {/* Middle: Actions */}
+                    <div className="receipt-actions" style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => handleRestock(p)} className="action-btn-hover" style={{background: 'rgba(3, 105, 161, 0.1)', color: 'var(--accent-primary)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Restock">
+                        <ShoppingCart size={18} /> <span className="hide-on-mobile">Restock</span>
+                      </button>
+                      <button onClick={() => handleDeleteClick(p)} className="action-btn-hover" style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Delete">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
 
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button 
-                          className="btn btn-secondary" 
-                          style={{
-                            flex: 1,
-                            height: '44px', 
-                            padding: '0 20px', 
-                            borderRadius: '12px',
-                            fontSize: '0.9rem',
-                            fontWeight: '700',
-                            background: '#f8fafc',
-                            border: '1.2px solid #e2e8f0',
-                            color: '#334155'
-                          }}
-                          onClick={() => handleRestock(p)}
+                    {/* Right: Amount & Stock */}
+                    <div className="receipt-right" style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                      {editingPrice === p._id ? (
+                        <div style={{display: 'flex', gap: '6px', marginBottom: '2px'}}>
+                          <input 
+                            type="number" 
+                            className="input-field" 
+                            style={{width: '70px', padding: '2px 6px', height: '26px', margin: 0, fontSize: '0.85rem'}}
+                            value={newPrice}
+                            onChange={(e) => setNewPrice(e.target.value)}
+                            autoFocus
+                          />
+                          <button className="btn btn-primary" style={{padding: '0 6px', height: '26px', fontSize: '0.75rem'}} onClick={() => handleUpdatePrice(p._id)}>Save</button>
+                          <button className="btn btn-secondary" style={{padding: '0 6px', height: '26px', fontSize: '0.75rem'}} onClick={() => setEditingPrice(null)}>X</button>
+                        </div>
+                      ) : (
+                        <h3 
+                          onClick={() => { setEditingPrice(p._id); setNewPrice(p.price); }}
+                          style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', letterSpacing: '-0.5px', color: 'var(--success)', cursor: 'pointer' }}
+                          title="Click to edit price"
                         >
-                          {t('restock')}
-                        </button>
-                        <button 
-                          className="btn btn-danger" 
-                          style={{
-                            width: '44px', 
-                            height: '44px', 
-                            padding: 0, 
-                            borderRadius: '12px', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            background: '#fef2f2',
-                            border: '1.2px solid #fecaca',
-                            color: '#dc2626'
-                          }}
-                          onClick={() => handleDelete(p._id)}
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                          ₹{(p.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                        </h3>
+                      )}
+                      
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '6px',
+                        background: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                        color: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'var(--danger)' : 'var(--success)',
+                        fontWeight: '800', fontSize: '0.75rem'
+                      }}>
+                        {p.stockAmount || 0} In Stock
+                        {(p.stockAmount || 0) <= (p.lowStockThreshold || 5) && <AlertTriangle size={12} />}
                       </div>
                     </div>
                   </div>
@@ -549,45 +501,40 @@ export default function Inventory() {
         onClose={closeRestockModal}
         title={(!showSuccess && !isProcessing) ? "Restock Item" : ""}
         footer={(!showSuccess && !isProcessing) ? (
-          <>
-            <button className="btn btn-secondary" onClick={closeRestockModal}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleUpdateStock} style={{ background: '#0369a1', border: 'none' }} disabled={isProcessing}>
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <button className="btn btn-secondary" style={{ flex: 1, padding: '14px 0', fontSize: '1rem', fontWeight: '700', borderRadius: '12px' }} onClick={closeRestockModal}>Cancel</button>
+            <button className="btn btn-primary hover-lift" onClick={handleUpdateStock} style={{ flex: 1, padding: '14px 0', fontSize: '1rem', fontWeight: '800', borderRadius: '12px', background: 'var(--accent-gradient)', border: 'none', boxShadow: '0 6px 16px rgba(3, 105, 161, 0.25)' }} disabled={isProcessing}>
               {isProcessing ? "Updating..." : "Update Stock"}
             </button>
-          </>
+          </div>
         ) : null}
       >
         {isProcessing ? (
           /* Elite Premium Delivery Unloading Screen */
-          <div style={{ textAlign: 'center', padding: '40px 0', background: 'white' }}>
+          <div style={{ textAlign: 'center', padding: '40px 10px', background: 'white' }}>
              <div className="premium-delivery-container">
                 <div className="road-line"></div>
                 <div className="truck-shadow"></div>
-                <div className="elite-truck journey kicking">
-                   <div className="exhaust-smoke journey-mode"></div>
-                   <div className="exhaust-smoke journey-mode"></div>
-                   <Truck size={48} color="#0369a1" strokeWidth={2.5} />
+                <div className="elite-truck">
+                   <div className="exhaust-smoke"></div>
+                   <div className="exhaust-smoke" style={{ animationDelay: '0.3s' }}></div>
+                   <Truck size={48} color="var(--accent-primary)" strokeWidth={2.5} />
                 </div>
                 
-                {/* Dynamic Packages - Delayed until Arrival */}
-                <div className="elite-package journey-mode"><div className="box-trail"></div></div>
-                <div className="elite-package journey-mode" style={{ animationDelay: '2s' }}><div className="box-trail"></div></div>
-                <div className="elite-package journey-mode" style={{ animationDelay: '2.6s' }}><div className="box-trail"></div></div>
+                {/* Dynamic Packages arcing from truck to bag */}
+                <div className="elite-package" style={{ animationDelay: '0.8s', background: 'var(--accent-primary)' }}></div>
+                <div className="elite-package" style={{ animationDelay: '1.2s', background: 'var(--success)' }}></div>
+                <div className="elite-package" style={{ animationDelay: '1.6s', background: 'var(--danger)' }}></div>
                 
                 <div className="shop-bag-container">
-                   <ShoppingBag size={40} color="#94a3b8" />
-                   {/* Celebratory Sparkles at the end */}
-                   <div className="success-sparkle sparkle-1"></div>
-                   <div className="success-sparkle sparkle-2"></div>
-                   <div className="success-sparkle sparkle-3"></div>
-                   <div className="success-sparkle sparkle-4"></div>
+                   <ShoppingBag size={40} strokeWidth={2} />
                 </div>
              </div>
              
-             <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', marginBottom: '4px' }}>
+             <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '8px' }}>
                Restocking Shop...
              </h2>
-             <p style={{ color: '#64748b', fontSize: '1rem', marginBottom: '0' }}>
+             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '0', fontWeight: '500' }}>
                Synchronizing with database
              </p>
              
@@ -599,35 +546,36 @@ export default function Inventory() {
           <div style={{ textAlign: 'center', padding: '0' }}>
 
             {/* Product Info */}
-            <div style={{ marginBottom: '12px' }}>
-              <h3 style={{ margin: '0 0 2px 0', color: '#0f172a', fontSize: '1.3rem', fontWeight: '800' }}>
+            <div style={{ marginBottom: '20px', padding: '20px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.4rem', fontWeight: '800' }}>
                 {selectedProduct?.name}
               </h3>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '4px 12px', borderRadius: '100px', fontWeight: '600' }}>
-                 <span>Stock:</span>
-                 <span style={{ color: '#0369a1', fontWeight: '800' }}>{selectedProduct?.stockAmount}</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'var(--bg-card)', padding: '6px 16px', borderRadius: '100px', fontWeight: '600', border: '1px solid var(--border-color)' }}>
+                 <span>Current Stock:</span>
+                 <span style={{ color: 'var(--accent-primary)', fontWeight: '800', fontSize: '1rem' }}>{selectedProduct?.stockAmount}</span>
               </div>
             </div>
             
             {/* Amount to Add Box */}
-            <div style={{ marginBottom: '12px', textAlign: 'left' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', paddingLeft: '4px' }}>
                 Amount to Add
               </label>
-              <div style={{ padding: '10px 16px', background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ padding: '8px 20px', background: 'var(--bg-card)', borderRadius: '16px', border: '2px solid var(--border-color)', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-primary)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}>
+                <span style={{ fontSize: '1.6rem', color: 'var(--accent-primary)', fontWeight: '800', marginRight: '12px' }}>+</span>
                 <input 
                   type="number" 
-                  className="premium-input" 
                   style={{ 
-                    fontSize: '1.8rem', 
+                    fontSize: '2.2rem', 
                     textAlign: 'center', 
                     fontWeight: 800, 
-                    padding: '0', 
+                    padding: '8px 0', 
                     border: 'none', 
                     outline: 'none', 
                     background: 'transparent', 
-                    color: '#0f172a', 
-                    width: '100%' 
+                    color: 'var(--text-primary)', 
+                    width: '100%',
+                    letterSpacing: '1px'
                   }}
                   value={restockAmount}
                   onChange={(e) => setRestockAmount(e.target.value)}
@@ -637,11 +585,11 @@ export default function Inventory() {
             </div>
             
             {/* New Total Stock Box */}
-            <div style={{ padding: '12px', background: '#f0f7ff', borderRadius: '16px', border: '1.5px solid #e0f2fe' }}>
-              <p style={{ margin: '0 0 2px 0', fontSize: '0.75rem', color: '#0369a1', fontWeight: 700 }}>
+            <div style={{ padding: '20px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '16px', border: '1px solid rgba(16, 185, 129, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--success)', fontWeight: 700 }}>
                 New Total Stock
               </p>
-              <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: '900', color: '#075985' }}>
+              <h3 style={{ margin: 0, fontSize: '2rem', fontWeight: '900', color: 'var(--success)', letterSpacing: '-0.5px' }}>
                  {(Number(selectedProduct?.stockAmount) || 0) + (Number(restockAmount) || 0)}
               </h3>
             </div>
@@ -696,6 +644,103 @@ export default function Inventory() {
                  Done
                </button>
              </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Elite Delete Modal */}
+      <Modal 
+        isOpen={isDeleteModalOpen} 
+        onClose={() => !isProcessingDelete && setIsDeleteModalOpen(false)}
+        title={(!isProcessingDelete && !showSuccess) ? "Confirm Deletion" : ""}
+        footer={(!isProcessingDelete && !showSuccess) ? (
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <button className="btn btn-secondary" style={{ flex: 1, padding: '14px 0', fontSize: '1rem', fontWeight: '700', borderRadius: '12px' }} onClick={() => setIsDeleteModalOpen(false)}>Cancel</button>
+            <button className="btn btn-primary hover-lift" onClick={handleConfirmDelete} style={{ flex: 1, padding: '14px 0', fontSize: '1rem', fontWeight: '800', borderRadius: '12px', background: 'var(--danger)', border: 'none', boxShadow: '0 6px 16px rgba(239, 68, 68, 0.25)' }}>
+              Delete Item
+            </button>
+          </div>
+        ) : null}
+      >
+        {isProcessingDelete ? (
+          /* Elite Shredding Animation */
+          <div style={{ textAlign: 'center', padding: '40px 10px', background: 'white' }}>
+             <div className="premium-delete-container">
+                <div className="delete-package">
+                   <Package size={28} strokeWidth={2.5} />
+                </div>
+                <div className="shredder-top">
+                  <div className="shredder-slot"></div>
+                </div>
+                <div className="shredder-bottom">
+                   <div className="shred-particles">
+                      <div className="shred-piece"></div>
+                      <div className="shred-piece"></div>
+                      <div className="shred-piece"></div>
+                      <div className="shred-piece"></div>
+                   </div>
+                </div>
+             </div>
+             
+             <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: 'var(--danger)', marginBottom: '8px' }}>
+               Deleting Item...
+             </h2>
+             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', marginBottom: '0', fontWeight: '500' }}>
+               Removing from database
+             </p>
+             
+             <div className="progress-bar-container">
+                <div className="progress-bar-fill" style={{ background: 'var(--danger)' }}></div>
+             </div>
+          </div>
+        ) : showSuccess ? (
+          /* Success Screen - Deletion Confirmed */
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+             <div className="success-checkmark-circle" style={{ 
+               width: '80px', 
+               height: '80px', 
+               background: 'var(--danger)', 
+               color: 'white', 
+               borderRadius: '50%', 
+               display: 'flex', 
+               alignItems: 'center', 
+               justifyContent: 'center', 
+               margin: '0 auto 24px auto',
+               position: 'relative',
+               boxShadow: '0 10px 25px rgba(239, 68, 68, 0.3)'
+             }}>
+               <Trash2 size={36} strokeWidth={2.5} className="success-checkmark-check" />
+             </div>
+             
+             <div className="success-content-fade" style={{ animationDelay: '0.4s' }}>
+               <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '4px' }}>
+                 Deleted!
+               </h2>
+               <p style={{ color: 'var(--text-secondary)', fontSize: '1.05rem', fontWeight: '600' }}>
+                 Stock deleted successfully
+               </p>
+             </div>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <div style={{ width: '60px', height: '60px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
+              <Trash2 size={30} strokeWidth={2.5} />
+            </div>
+            
+            <h3 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)', fontSize: '1.3rem', fontWeight: '800' }}>
+              Are you absolutely sure?
+            </h3>
+            
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5', marginBottom: '24px' }}>
+              You are about to permanently delete <strong style={{ color: 'var(--text-primary)' }}>{selectedProduct?.name}</strong> from your inventory. This action cannot be undone.
+            </p>
+            
+            <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px dashed rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', gap: '12px', textAlign: 'left' }}>
+               <AlertTriangle size={24} color="var(--danger)" flexShrink={0} />
+               <span style={{ fontSize: '0.85rem', color: 'var(--danger)', fontWeight: '600' }}>
+                 All stock history and records for this item will be lost.
+               </span>
+            </div>
           </div>
         )}
       </Modal>

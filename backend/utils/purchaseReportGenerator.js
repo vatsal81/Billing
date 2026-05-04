@@ -4,7 +4,76 @@ const { numberToWords } = require('./numberToWords');
 const Settings = require('../models/Settings');
 const path = require('path');
 
-const CHROME_PATH = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const fs = require('fs');
+
+// Auto-detect Chrome/Chromium path for both Local and Deployment (Render)
+const getBrowserOptions = async () => {
+    const isWindows = process.platform === 'win32';
+    let puppeteerModule = puppeteer;
+    let chromium;
+
+    if (!isWindows) {
+        try {
+            chromium = require('@sparticuz/chromium');
+        } catch (e) {
+            console.log('@sparticuz/chromium not found, falling back to puppeteer-core');
+        }
+    }
+
+    const launchOptions = {
+        args: chromium ? chromium.args : [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-zygote',
+            '--single-process'
+        ],
+        defaultViewport: chromium ? chromium.defaultViewport : null,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
+        headless: chromium ? chromium.headless : 'shell',
+    };
+
+    if (!launchOptions.executablePath) {
+        if (chromium) {
+            launchOptions.executablePath = await chromium.executablePath();
+        } else if (isWindows) {
+            const commonPaths = [
+                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe')
+            ];
+            for (const p of commonPaths) {
+                if (fs.existsSync(p)) {
+                    launchOptions.executablePath = p;
+                    break;
+                }
+            }
+        }
+
+        // If still not found, check local cache (installed by scripts/install-chrome.js)
+        if (!launchOptions.executablePath) {
+            const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
+            const findChrome = (dir) => {
+                if (!fs.existsSync(dir)) return null;
+                const files = fs.readdirSync(dir);
+                for (const file of files) {
+                    const fullPath = path.join(dir, file);
+                    if (fs.statSync(fullPath).isDirectory()) {
+                        const found = findChrome(fullPath);
+                        if (found) return found;
+                    } else if (file === 'chrome' || file === 'chrome.exe') {
+                        return fullPath;
+                    }
+                }
+                return null;
+            };
+            launchOptions.executablePath = findChrome(cacheDir);
+        }
+    }
+
+    return launchOptions;
+};
 
 const formatDate = (date) => date
     ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -15,271 +84,335 @@ const buildBillHTML = async (bill, settings = {}) => {
     const totalMeters = bill.items.reduce((a, i) => a + (i.meters || 0), 0);
     const logoInitial = bill.supplierName ? bill.supplierName.charAt(0).toUpperCase() : 'S';
 
-    const logoUrl = settings.logo ? (settings.logo.startsWith('uploads') ? `http://localhost:5000/${settings.logo}` : settings.logo) : null;
+    const formatDateInternal = (date) => {
+        if (!date) return '';
+        return new Date(date).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    };
 
-    const emptyRows = Math.max(0, 10 - bill.items.length);
+    // Generate real QR Codes
+    const invoiceQRContent = `Invoice: ${bill.billNumber}\nDate: ${formatDateInternal(bill.billDate)}\nSupplier: ${bill.supplierName}\nAmount: ₹${bill.totalAmount}`;
+    const invoiceQR = await QRCode.toDataURL(invoiceQRContent);
 
+    let ewayQR = '';
+    if (bill.ewayBillDetails?.uniqueNo) {
+        ewayQR = await QRCode.toDataURL(`E-Way Bill Unique No: ${bill.ewayBillDetails.uniqueNo}`);
+    }
+
+    // Reduced to 10 rows to ensure footer fits on the first page
+    const emptyRows = Math.max(0, 13 - bill.items.length);
     const itemRows = bill.items.map((item, idx) => `
         <tr>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:8px 10px;text-align:center;color:#64748b;">${idx + 1}</td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:8px 10px;text-align:left;font-weight:600;color:#0f172a;">${item.name || ''}</td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:8px 10px;text-align:center;color:#64748b;">${item.hsnCode || ''}</td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:8px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.pcs || 0).toFixed(2)}</td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:8px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.meters || 0).toFixed(2)}</td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:8px 10px;text-align:right;color:#64748b;">${(item.rate || 0).toFixed(2)}</td>
-            <td style="border-bottom:1px solid #e2e8f0;padding:8px 10px;text-align:right;font-weight:700;color:#1e3a8a;background:#f8fafc;">${(item.amount || 0).toFixed(2)}</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:center;color:#64748b;">${idx + 1}</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:left;font-weight:700;color:#0f172a;">${item.name || ''}</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:center;color:#64748b;">${item.hsnCode || ''}</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.pcs || 0).toFixed(2)}</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.meters || 0).toFixed(2)}</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#64748b;">${(item.rate || 0).toFixed(2)}</td>
+            <td style="border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;font-weight:800;color:#1e3a8a;background:#f8fafc;">${(item.amount || 0).toFixed(2)}</td>
         </tr>`).join('');
 
     const emptyRowsHTML = Array.from({ length: emptyRows }).map(() => `
         <tr>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:8px 10px;height:30px;"></td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;"></td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;"></td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;"></td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;"></td>
-            <td style="border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;"></td>
-            <td style="border-bottom:1px solid #e2e8f0;background:#f8fafc;"></td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;height:28px;">&nbsp;</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+            <td style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">&nbsp;</td>
         </tr>`).join('');
 
-    const taxBlock = (bill.cgst > 0 || bill.sgst > 0) ? `
-        <div style="display:flex;justify-content:space-between;padding:8px 14px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#64748b;font-size:11px;">
-            <span>CGST (2.50%)</span><span style="color:#1e293b;">₹${(bill.cgst || 0).toFixed(2)}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;padding:8px 14px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#64748b;font-size:11px;">
-            <span>SGST (2.50%)</span><span style="color:#1e293b;">₹${(bill.sgst || 0).toFixed(2)}</span>
-        </div>` : `
-        <div style="display:flex;justify-content:space-between;padding:8px 14px;border-bottom:1px solid #f1f5f9;font-weight:600;color:#64748b;font-size:11px;">
-            <span>IGST (5.00%)</span><span style="color:#1e293b;">₹${(bill.igst || 0).toFixed(2)}</span>
-        </div>`;
-
-    let ewaySection = '';
+    let ewayPage = '';
     if (bill.ewayBillDetails?.uniqueNo) {
-        let qrDataUrl = '';
-        try {
-            const qrStr = `E-Way Bill: ${bill.ewayBillDetails.uniqueNo}\nInvoice: ${bill.billNumber}\nAmount: ${bill.totalAmount}`;
-            qrDataUrl = await QRCode.toDataURL(qrStr);
-        } catch (e) {}
-
         const d = bill.ewayBillDetails;
-        const makeRow = ([l, v]) => `
-            <div style="display:grid;grid-template-columns:220px 1fr;border-bottom:1px solid #f1f5f9;padding:9px 0;">
-                <span style="color:#64748b;font-weight:600;font-size:10px;text-transform:uppercase;">${l}</span>
-                <span style="font-weight:700;color:#0f172a;">${v || 'N/A'}</span>
-            </div>`;
-
-        ewaySection = `
-        <div style="page-break-before:always; background: #fff; padding: 40px;">
-            <div style="border:1px solid #e2e8f0; padding:32px; border-radius:16px; position:relative; background:#fafafa;">
-                <div style="text-align:center; margin-bottom:32px; border-bottom:3px solid #1e3a8a; padding-bottom:16px;">
-                    <h1 style="color:#1e3a8a; margin:0; font-size:24px; font-weight:800;">E-WAY BILL SYSTEM</h1>
-                    <h2 style="color:#3b82f6; margin:8px 0; font-size:14px; font-weight:700; letter-spacing:4px;">PART - A SLIP</h2>
+        ewayPage = `
+        <div class="sagar-bill-paper eway-second-page" style="page-break-before:always; background: #fff1f2; padding: 25px; margin-top: 0; min-height: 1100px; width: 800px; margin-left: auto; margin-right: auto;">
+            <div style="border: 2px solid #fecaca; padding: 20px; height: 100%; border-radius: 12px; position: relative;">
+                <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #fecaca; padding-bottom: 12px;">
+                    <h1 style="color: #be185d; margin: 0; font-size: 20px;">E-Way Bill System</h1>
+                    <h2 style="color: #be185d; margin: 6px 0; font-size: 22px; font-weight: bold;">Part - A Slip</h2>
                 </div>
-                ${qrDataUrl ? `<img src="${qrDataUrl}" style="position:absolute; top:32px; right:32px; width:100px; height:100px; border:1px solid #e2e8f0; padding:4px; background:#fff; border-radius:8px;" />` : ''}
-                ${[
-                    ['Unique No.', d.uniqueNo],
-                    ['Entered Date', d.enteredDate],
-                    ['Entered By', d.enteredBy],
-                    ['Valid From', 'Not Valid for Movement as Part B is not entered'],
-                ].map(makeRow).join('')}
-                <div style="margin-top:32px; background:#1e3a8a; color:white; padding:10px 16px; border-radius:8px; font-weight:800; font-size:12px; letter-spacing:1px;">PART - A DETAILS</div>
-                ${[
-                    ['GSTIN of Supplier', d.supplierGstin],
-                    ['Place of Dispatch', d.placeOfDispatch],
-                    ['GSTIN of Recipient', d.recipientGstin],
-                    ['Place of Delivery', d.placeOfDelivery],
-                    ['Document No.', d.documentNo],
-                    ['Document Date', d.documentDate],
-                    ['Transaction Type', d.transactionType || 'Regular'],
-                    ['Value of Goods', `₹${d.valueOfGoods?.toLocaleString('en-IN')}`],
-                    ['HSN Code', d.hsnCode],
-                    ['Reason for Transportation', d.reasonForTransportation || 'Outward - Supply'],
-                    ['Transporter', d.transporter],
-                ].map(makeRow).join('')}
-                <p style="margin-top:40px; font-size:10px; color:#64748b; text-align:center; border-top:1px dashed #cbd5e1; padding-top:16px;">
-                    Note: Information generated from official e-way bill system records.
-                </p>
+
+                <div style="position: absolute; top: 20px; right: 20px; width: 75px; height: 75px; background: #fff; border: 1px solid #fecaca; padding: 5px;">
+                    <img src="${ewayQR}" style="width: 100%; height: 100%;" />
+                </div>
+
+                <div class="eway-details-grid" style="display: grid; gap: 8px;">
+                    ${[
+                ['Unique No.', d.uniqueNo, true],
+                ['Entered Date', d.enteredDate],
+                ['Entered By', d.enteredBy],
+                ['Valid From', 'Not Valid for Movement as Part B is not entered', false, true],
+            ].map(([l, v, b, r]) => `
+                        <div style="display: flex; border-bottom: 1px solid #fecaca; padding: 6px 0;">
+                            <span style="color: #6b7280; font-weight: bold; width: 180px; font-size:10px;">${l}</span>
+                            <span style="${b ? 'font-weight:bold; font-size:13px;' : 'font-size:11px;'} ${r ? 'color:#be185d; font-style:italic;' : ''}">${v || 'N/A'}</span>
+                        </div>`).join('')}
+
+                    <div style="margin-top: 15px; background: #be185d; color: white; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size:10px; letter-spacing:1px;">PART - A DETAILS</div>
+
+                    ${[
+                ['GSTIN of Supplier', d.supplierGstin],
+                ['Place of Dispatch', d.placeOfDispatch],
+                ['GSTIN of Recipient', d.recipientGstin],
+                ['Place of Delivery', d.placeOfDelivery],
+                ['Document No.', d.documentNo, true],
+                ['Document Date', d.documentDate],
+                ['Transaction Type', d.transactionType || 'Regular'],
+                ['Value of Goods', `₹${(d.valueOfGoods || 0).toLocaleString('en-IN')}`, true],
+                ['HSN Code', d.hsnCode],
+                ['Reason for Transportation', d.reasonForTransportation || 'Outward - Supply'],
+                ['Transporter', d.transporter],
+            ].map(([l, v, b]) => `
+                        <div style="display: flex; border-bottom: 1px solid #fecaca; padding: 6px 0;">
+                            <span style="color: #6b7280; font-weight: bold; width: 180px; font-size:10px;">${l}</span>
+                            <span style="${b ? 'font-weight:bold;' : 'font-size:11px;'}">${v || 'N/A'}</span>
+                        </div>`).join('')}
+                </div>
             </div>
         </div>`;
     }
 
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8"/>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Outfit', sans-serif; font-size: 12px; color: #1e293b; background: white; line-height: 1.5; }
-        .page { padding: 40px; position: relative; }
-        table { border-collapse: collapse; width: 100%; }
-        th { background: #f8fafc; border-bottom: 2px solid #1e3a8a; border-right: 1px solid #e2e8f0; padding: 12px 8px; font-weight: 800; color: #0f172a; font-size: 10px; text-transform: uppercase; text-align: center; }
-        th:last-child { border-right: none; }
-        .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; font-weight: 900; color: rgba(30, 58, 138, 0.03); z-index: -1; white-space: nowrap; pointer-events: none; }
-    </style>
-</head>
-<body>
-    <div class="watermark">PURCHASE RECORD</div>
-    <div class="page">
-        <p style="font-size:8px; color:#94a3b8; margin-bottom:16px; font-weight:600; letter-spacing:1px;">OFFICIAL MERCHANT RECORD</p>
-
-        <div style="display:grid; grid-template-columns:1.5fr 1fr; border-bottom:4px solid #1e3a8a; padding-bottom:24px; margin-bottom:24px; align-items:center;">
-            <div style="display:flex; align-items:center; gap:20px;">
-                ${logoUrl ? `<img src="${logoUrl}" style="height:60px; max-width:180px; object-fit:contain;" />` : 
-                `<div style="width:60px; height:60px; background:#1e3a8a; border-radius:12px; display:flex; align-items:center; justify-content:center; color:white; font-size:32px; font-weight:900;">${logoInitial}</div>`}
-                <div>
-                    <h1 style="font-size:32px; font-weight:800; color:#1e3a8a; line-height:1; margin-bottom:4px;">${bill.supplierName || ''}</h1>
-                    <div style="background:#3b82f6; color:white; padding:2px 10px; border-radius:4px; font-size:10px; font-weight:800; letter-spacing:3px; display:inline-block;">PURCHASE INVOICE</div>
+    return `
+    <div class="sagar-bill-paper">
+        <div class="document-type-header">ORIGINAL FOR RECIPIENT</div>
+        <div class="bill-top-header">
+            <div class="sagar-logo">
+                <span class="logo-s">${logoInitial}</span>
+                <div class="logo-text">
+                    <h1 class="company-name">${bill.supplierName}</h1>
+                    <p class="company-subtitle">TAX INVOICE</p>
                 </div>
             </div>
-            <div style="text-align:right;">
-                <p style="font-weight:800; font-size:14px; color:#0f172a;">GSTIN: ${bill.supplierGstin || 'N/A'}</p>
-                <p style="color:#64748b; font-size:11px; max-width:280px; margin-left:auto;">${bill.supplierAddress || ''}</p>
+            <div class="bill-header-contact">
+                <p class="gstin">GSTIN : ${bill.supplierGstin || 'N/A'}</p>
+                <p class="address-line">${bill.supplierAddress || ''}</p>
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1.2fr 1fr; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; margin-bottom:24px;">
-            <div style="border-right:1px solid #e2e8f0;">
-                <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:12px 16px; display:flex; justify-content:space-between;">
-                    <span style="font-size:10px; font-weight:700; color:#64748b;">INVOICE DETAILS</span>
-                    <span style="font-weight:800; color:#1e3a8a;">#${bill.billNumber}</span>
-                </div>
-                <div style="padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                    <div>
-                        <p style="font-size:9px; font-weight:700; color:#94a3b8; text-transform:uppercase;">Invoice Date</p>
-                        <p style="font-weight:700; font-size:12px;">${formatDate(bill.billDate)}</p>
-                    </div>
-                    <div>
-                        <p style="font-size:9px; font-weight:700; color:#94a3b8; text-transform:uppercase;">Transport</p>
-                        <p style="font-weight:700; font-size:12px;">${bill.transport || 'N/A'}</p>
-                    </div>
+        <div class="bill-meta-grid">
+            <div class="meta-left">
+                <div class="meta-row"><span class="label">INV NO. :</span><span class="value highlight">${bill.billNumber}</span></div>
+                <div class="meta-row"><span class="label">DATE :</span><span class="value">${formatDateInternal(bill.billDate)}</span></div>
+                <div class="meta-row"><span class="label">TRANSPORT :</span><span class="value">${bill.transport || 'N/A'}</span></div>
+            </div>
+            <div class="meta-right">
+                <div class="meta-row"><span class="label">E-WAY NO :</span><span class="value">${bill.ewayBillNo || (bill.ewayBillDetails?.uniqueNo) || 'N/A'}</span></div>
+                <div class="meta-row"><span class="label">L R NO. :</span><span class="value">${bill.lrNo || 'N/A'}</span></div>
+                <div class="meta-row"><span class="label">BROKER :</span><span class="value">${bill.broker || 'DIRECT'}</span></div>
+            </div>
+        </div>
+
+        <div class="bill-party-grid">
+            <div class="party-box billed-to">
+                <div class="party-header">BILLED TO (BUYER)</div>
+                <div class="party-content">
+                    <p class="party-name">${settings.shopName || 'SHREE HARI DRESSES'}</p>
+                    <p class="party-add">${settings.shopAddress || 'SHOP NO. 4, VARDHAMAN MARKET, SURAT'}</p>
+                    <div class="party-meta-row"><span>CITY / DISTRICT : SURAT</span><span>STATE : GUJARAT (24)</span></div>
+                    <div class="party-meta-row"><span>GSTIN : ${settings.gstin || 'N/A'}</span><span>PAN : ${settings.pan || 'N/A'}</span></div>
                 </div>
             </div>
-            <div>
-                <div style="background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:12px 16px;">
-                    <span style="font-size:10px; font-weight:700; color:#64748b;">LOGISTICS & BROKERAGE</span>
-                </div>
-                <div style="padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                    <div>
-                        <p style="font-size:9px; font-weight:700; color:#94a3b8; text-transform:uppercase;">L R No.</p>
-                        <p style="font-weight:700; font-size:12px;">${bill.lrNo || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <p style="font-size:9px; font-weight:700; color:#94a3b8; text-transform:uppercase;">Broker</p>
-                        <p style="font-weight:700; font-size:12px;">${bill.broker || 'DIRECT'}</p>
-                    </div>
+            <div class="party-box shipped-to">
+                <div class="party-header">SHIPPED TO (CONSIGNEE)</div>
+                <div class="party-content">
+                    <p class="party-name">${settings.shopName || 'SHREE HARI DRESSES'}</p>
+                    <p class="party-add">${settings.shopAddress || 'SHOP NO. 4, VARDHAMAN MARKET, SURAT'}</p>
+                    <div class="party-meta-row"><span>CITY / DISTRICT : SURAT</span><span>STATE : GUJARAT (24)</span></div>
+                    <div class="party-meta-row"><span>GSTIN : ${settings.gstin || 'N/A'}</span><span>PAN : ${settings.pan || 'N/A'}</span></div>
                 </div>
             </div>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px;">
-            <div style="border:1px solid #e2e8f0; border-radius:12px; padding:16px; background:#f8fafc;">
-                <p style="font-size:10px; font-weight:800; color:#1e3a8a; border-bottom:2px solid #1e3a8a; display:inline-block; margin-bottom:12px; letter-spacing:1px;">BILLED TO (RECIPIENT)</p>
-                <p style="font-weight:800; font-size:14px; color:#0f172a;">${settings.shopName || 'SHREE HARI DRESSES'}</p>
-                <p style="color:#64748b; font-size:11px; margin-top:4px;">${settings.shopAddress || 'MAVDI, RAJKOT - 360 004'}</p>
-                <div style="margin-top:12px; display:flex; justify-content:space-between; font-size:10px; font-weight:700;">
-                    <span style="color:#94a3b8;">GSTIN: <span style="color:#0f172a;">${settings.gstin || 'N/A'}</span></span>
-                </div>
-            </div>
-            <div style="border:1px solid #e2e8f0; border-radius:12px; padding:16px; background:#f8fafc;">
-                <p style="font-size:10px; font-weight:800; color:#1e3a8a; border-bottom:2px solid #1e3a8a; display:inline-block; margin-bottom:12px; letter-spacing:1px;">SHIP TO (DELIVERY)</p>
-                <p style="font-weight:800; font-size:14px; color:#0f172a;">${settings.shopName || 'SHREE HARI DRESSES'}</p>
-                <p style="color:#64748b; font-size:11px; margin-top:4px;">${settings.shopAddress || 'MAVDI, RAJKOT - 360 004'}</p>
-                <div style="margin-top:12px; font-size:10px; font-weight:700; color:#94a3b8;">
-                    PLACE OF SUPPLY: <span style="color:#0f172a;">GUJARAT (24)</span>
-                </div>
-            </div>
-        </div>
-
-        <div style="border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; margin-bottom:24px;">
-            <table>
+        <div style="border: 1px solid #1e293b; margin-bottom: 10px; border-radius: 4px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                 <thead>
                     <tr>
-                        <th style="width:40px;">SR</th>
-                        <th style="text-align:left;">PRODUCT DESCRIPTION</th>
-                        <th style="width:100px;">HSN CODE</th>
-                        <th style="width:80px;">PCS</th>
-                        <th style="width:80px;">METERS</th>
-                        <th style="width:100px;">RATE</th>
-                        <th style="width:120px; text-align:right;">AMOUNT (₹)</th>
+                        <th style="width: 35px;">SR</th>
+                        <th style="text-align: left;">DESCRIPTION</th>
+                        <th style="width: 70px;">HSN</th>
+                        <th style="width: 50px;">PCS</th>
+                        <th style="width: 60px;">METERS</th>
+                        <th style="width: 70px;">RATE</th>
+                        <th style="width: 90px; text-align: right;">AMOUNT</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${itemRows}
                     ${emptyRowsHTML}
-                    <tr style="background:#f1f5f9; font-weight:800;">
-                        <td colspan="3" style="padding:12px; text-align:right; color:#1e3a8a;">TOTALS</td>
-                        <td style="padding:12px; text-align:right; color:#1e3a8a;">${totalPcs.toFixed(2)}</td>
-                        <td style="padding:12px; text-align:right; color:#1e3a8a;">${totalMeters.toFixed(2)}</td>
-                        <td style="padding:12px;"></td>
-                        <td style="padding:12px; text-align:right; color:#1e3a8a; font-size:14px;">₹${bill.subTotal.toFixed(2)}</td>
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f1f5f9; border-top: 2px solid #1e3a8a;">
+                        <td colspan="3" style="padding: 8px; text-align: right; font-weight: 800; color: #1e3a8a;">SUB TOTAL</td>
+                        <td style="padding: 8px; text-align: right; font-weight: 800; color: #1e3a8a;">${totalPcs.toFixed(2)}</td>
+                        <td style="padding: 8px; text-align: right; font-weight: 800; color: #1e3a8a;">${totalMeters.toFixed(2)}</td>
+                        <td></td>
+                        <td style="padding: 8px; text-align: right; font-weight: 900; color: #1e3a8a; font-size: 13px;">₹${(bill.subTotal || 0).toFixed(2)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div style="flex-grow: 1;"></div> <!-- This spacer pushes the footer to the bottom -->
+
+        <div class="bill-bottom-grid">
+            <div class="bottom-left">
+                <div class="remarks-section"><span class="label">REMARKS :</span><p class="value" style="margin:0">${bill.remarks || 'N/A'}</p></div>
+                <div class="bank-details-box">
+                    <div class="bank-header">MERCHANT CONTACT INFO</div>
+                    <div style="margin-top: 5px;">
+                        <p style="color: #1e3a8a; font-weight:bold; margin:0; font-size: 11px;">${bill.supplierName}</p>
+                        <p style="margin:0; font-size: 9px;">GSTIN: ${bill.supplierGstin || 'N/A'}</p>
+                        ${bill.supplierPan ? `<p style="margin:0; font-size: 9px;">PAN: ${bill.supplierPan}</p>` : ''}
+                        <p style="margin:0; font-size: 9px;">ADDR: ${bill.supplierAddress || 'N/A'}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bottom-right">
+                <div class="qr-section">
+                    <img src="${invoiceQR}" class="qr-image" />
+                </div>
+                <div class="tax-totals-box">
+                    ${(bill.cgst > 0 || bill.sgst > 0) ? `
+                        <div class="tax-row"><span>CGST (2.5%)</span><span>₹${(bill.cgst || 0).toFixed(2)}</span></div>
+                        <div class="tax-row"><span>SGST (2.5%)</span><span>₹${(bill.sgst || 0).toFixed(2)}</span></div>
+                    ` : `
+                        <div class="tax-row"><span>IGST (5%)</span><span>₹${(bill.igst || 0).toFixed(2)}</span></div>
+                    `}
+                    <div class="tax-row"><span>ROUND OFF</span><span>₹${(bill.roundOff || 0).toFixed(2)}</span></div>
+                    <div class="grand-total-row">
+                        <span style="font-size:9px;">TOTAL</span><span class="amount">₹${(bill.totalAmount || 0).toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="amount-words">
+            <span class="label">WORDS:</span>
+            <span class="words">${numberToWords(bill.totalAmount || 0)} ONLY</span>
+        </div>
+
+        <div class="tax-summary-table">
+            <table>
+                <thead>
+                    <tr style="background: #1e3a8a; color: white;">
+                        <th>TAXABLE</th><th>CGST</th><th>SGST</th><th>IGST</th><th style="background:#0f172a">TOTAL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #f8fafc;">
+                        <td style="font-weight:bold">₹${(bill.subTotal || 0).toFixed(2)}</td>
+                        <td>₹${(bill.cgst || 0).toFixed(2)}</td>
+                        <td>₹${(bill.sgst || 0).toFixed(2)}</td>
+                        <td>₹${(bill.igst || 0).toFixed(2)}</td>
+                        <td style="font-weight:900; color:#1e3a8a; font-size:13px; background:#f1f5f9">₹${(bill.totalAmount || 0).toFixed(2)}</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:32px;">
-            <div style="border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
-                <p style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:8px;">REMARKS & NOTES</p>
-                <p style="color:#1e293b; font-size:12px;">${bill.remarks || 'No special instructions recorded.'}</p>
-                
-                <div style="margin-top:24px; padding-top:16px; border-top:1px dashed #e2e8f0;">
-                    <p style="font-size:10px; font-weight:800; color:#1e3a8a; text-transform:uppercase; margin-bottom:4px;">Amount in Words</p>
-                    <p style="font-weight:700; color:#0f172a; text-transform:uppercase; font-size:11px;">${numberToWords(bill.totalAmount || 0)} ONLY</p>
-                </div>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                ${taxBlock}
-                <div style="display:flex; justify-content:space-between; padding:8px 14px; color:#64748b; font-weight:600;">
-                    <span>ROUND OFF</span><span>₹${(bill.roundOff || 0).toFixed(2)}</span>
-                </div>
-                <div style="background:#1e3a8a; color:white; border-radius:12px; padding:20px; display:flex; justify-content:space-between; align-items:center; margin-top:12px; box-shadow:0 10px 15px -3px rgba(30, 58, 138, 0.2);">
-                    <div>
-                        <p style="font-size:9px; text-transform:uppercase; opacity:0.8; letter-spacing:1px;">GRAND TOTAL</p>
-                        <p style="font-size:13px; font-weight:800;">NET PAYABLE</p>
-                    </div>
-                    <span style="font-size:28px; font-weight:800;">₹${bill.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
-            </div>
-        </div>
-
-        <div style="margin-top:48px; display:flex; justify-content:space-between; align-items:flex-end;">
-            <div style="font-size:10px; color:#94a3b8; max-width:300px;">
-                <p style="font-weight:700; color:#64748b; margin-bottom:4px;">DECLARATION</p>
-                <p>We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.</p>
-            </div>
-            <div style="text-align:right;">
-                <p style="font-size:11px; font-weight:800; color:#1e3a8a; margin-bottom:40px;">For ${bill.supplierName || ''}</p>
-                <div style="border-top:1px solid #1e3a8a; width:180px; margin-left:auto; padding-top:8px;">
-                    <p style="font-size:9px; font-weight:700; color:#1e3a8a;">Authorized Signatory</p>
-                </div>
-            </div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px;">
+            <div class="terms-section"><p class="terms-title">NOTES</p><li>Certified correct.</li></div>
+            <div class="signature-box"><div style="height: 30px;"></div><p>For ${bill.supplierName}</p></div>
         </div>
     </div>
-    ${ewaySection}
-</body>
-</html>`;
+    ${ewayPage}
+`;
 };
 
 const generatePurchaseReportPdf = async (bills, month, year) => {
     const settings = await Settings.findOne().lean() || {};
 
-    const browser = await puppeteer.launch({
-        executablePath: CHROME_PATH,
-        headless: 'shell',
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-    });
-
+    const launchOptions = await getBrowserOptions();
+    console.log('Launching browser with path:', launchOptions.executablePath);
+    const browser = await puppeteer.launch(launchOptions);
     try {
         const page = await browser.newPage();
-        
-        let combinedHTML = '';
+
+        const styles = `
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
+        body { font-family: 'Inter', sans-serif; font-size: 10px; color: #1e293b; background: white; margin: 0; padding: 0; }
+        .sagar-bill-paper {
+            background: white;
+            padding: 20px 30px;
+            width: 800px;
+            min-height: 1100px;
+            margin: 0 auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        .document-type-header { text-align: center; border: 1px solid #1e293b; border-bottom: none; padding: 4px; font-weight: 800; font-size: 8px; letter-spacing: 2px; background: #f8fafc; }
+        .bill-top-header { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #1e293b; border-bottom: 3px solid #1e3a8a; padding: 10px 15px; align-items: center; }
+        .sagar-logo { display: flex; align-items: center; gap: 10px; }
+        .logo-s { font-size: 50px; font-weight: 900; color: #1e3a8a; line-height: 1; }
+        .company-name { font-size: 24px; font-weight: 900; color: #1e3a8a; line-height: 1; margin: 0; }
+        .company-subtitle { font-size: 12px; font-weight: 700; color: #3b82f6; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
+        .bill-header-contact { text-align: right; }
+        .gstin { font-weight: 800; font-size: 12px; color: #0f172a; margin-bottom: 2px !important; }
+        .address-line { color: #475569; font-size: 9px; margin: 0; }
+        .bill-meta-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #1e293b; border-top: none; }
+        .meta-left { border-right: 1px solid #1e293b; }
+        .meta-row { padding: 5px 10px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; }
+        .meta-row:last-child { border-bottom: none; }
+        .label { font-weight: 700; width: 100px; color: #64748b; font-size: 8px; text-transform: uppercase; }
+        .value { font-weight: 600; color: #0f172a; font-size: 10px; }
+        .value.highlight { font-weight: 800; color: #1e3a8a; font-size: 11px; }
+        .bill-party-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #1e293b; border-top: none; margin-bottom: 10px; }
+        .billed-to { border-right: 1px solid #1e293b; }
+        .party-header { background: #1e3a8a; color: white; text-align: center; padding: 4px; font-weight: 800; letter-spacing: 2px; font-size: 9px; }
+        .party-content { padding: 8px 12px; background: #f8fafc; min-height: 90px; }
+        .party-name { font-weight: 800; font-size: 12px; margin-bottom: 4px; color: #1e3a8a; text-transform: uppercase; margin: 0; }
+        .party-add { margin-bottom: 6px; line-height: 1.4; color: #475569; font-weight: 500; margin: 0; font-size: 9px; }
+        .party-meta-row { display: flex; justify-content: space-between; margin-top: 4px; border-top: 1px solid #e2e8f0; padding-top: 2px; font-size: 9px; color: #64748b; }
+        .bill-bottom-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; border: 1px solid #1e293b; margin-bottom: 10px; }
+        .bottom-left { border-right: 1px solid #1e293b; }
+        .remarks-section { padding: 8px; border-bottom: 1px solid #e2e8f0; min-height: 45px; }
+        .bank-details-box { padding: 8px; background: #f8fafc; }
+        .bank-header { color: #1e3a8a; font-weight: 800; margin-bottom: 4px; font-size: 10px; border-bottom: 2px solid #1e3a8a; display: inline-block; }
+        .bottom-right { display: grid; grid-template-columns: 100px 1fr; }
+        .qr-section { border-right: 1px solid #e2e8f0; padding: 8px; display: flex; align-items: center; justify-content: center; }
+        .qr-image { width: 90px; height: 90px; }
+        .tax-row { display: flex; justify-content: space-between; padding: 5px 12px; border-bottom: 1px solid #f1f5f9; font-weight: 600; color: #64748b; }
+        .grand-total-row { background: #1e3a8a; padding: 12px 12px; display: flex; justify-content: space-between; align-items: center; color: white; }
+        .grand-total-row .amount { font-size: 20px; font-weight: 900; }
+        .amount-words { padding: 8px 15px; border: 1px solid #1e293b; margin-bottom: 10px; display: flex; gap: 12px; background: #f8fafc; font-size: 11px; }
+        .amount-words .words { font-weight: 800; color: #1e3a8a; text-transform: uppercase; }
+        .tax-summary-table table { width: 100%; border-collapse: collapse; border: 1px solid #1e293b; margin-bottom: 10px; text-align: center; }
+        .tax-summary-table th { background: #f1f5f9; color: #1e3a8a; font-weight: 800; padding: 6px; }
+        .tax-summary-table td { padding: 6px; border: 1px solid #e2e8f0; font-weight: 600; }
+        .terms-section { font-size: 9px; color: #64748b; line-height: 1.5; }
+        .terms-title { font-weight: 800; color: #1e3a8a; margin-bottom: 4px; font-size: 10px; }
+        .signature-box { text-align: center; width: 180px; border-top: 2px solid #1e3a8a; padding-top: 8px; margin-left: auto; }
+        .signature-box p { font-weight: 800; color: #1e3a8a; text-transform: uppercase; font-size: 10px; margin: 0; }
+        th { background: #f1f5f9; border-bottom: 2px solid #1e3a8a; border-right: 1px solid #1e293b; padding: 8px 8px; font-weight: 800; color: #0f172a; font-size: 10px; text-transform: uppercase; text-align: center; }
+        .eway-second-page {
+            page-break-before: always;
+            background: #fff1f2;
+            padding: 25px;
+            margin-top: 0;
+            min-height: 1100px;
+            width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>`;
+
+        let combinedHTML = `<!DOCTYPE html><html><head><meta charset="UTF-8">${styles}</head><body>`;
         for (const bill of bills) {
             const html = await buildBillHTML(bill, settings);
             combinedHTML += `<div style="page-break-after: always;">${html}</div>`;
         }
+        combinedHTML += '</body></html>';
 
         await page.setContent(combinedHTML, { waitUntil: 'networkidle0' });
-        
+
         const finalPdf = await page.pdf({
             format: 'A4',
             printBackground: true,

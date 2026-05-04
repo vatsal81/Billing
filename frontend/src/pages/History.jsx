@@ -113,11 +113,21 @@ export default function History() {
       : bill._id.substring(bill._id.length - 4).toUpperCase();
       
     let match = true;
-    if (searchTerm && 
-        !billNo.includes(searchTerm) && 
-        !(bill.customerName || '').toLowerCase().includes(searchTerm.toLowerCase()) &&
-        !(bill.customerPhone || '').includes(searchTerm)) {
-        match = false;
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase().trim();
+      const rawSearch = searchTerm.trim(); // For case-sensitive invoice numbers
+      const name = (bill.customerName || '').toLowerCase();
+      const nameGu = (bill.customerNameGujarati || '');
+      const phone = (bill.customerPhone || '');
+      const amount = String(bill.actualTotal);
+      
+      if (!billNo.includes(rawSearch) && 
+          !name.includes(search) && 
+          !nameGu.includes(search) &&
+          !phone.includes(search) &&
+          !amount.includes(search)) {
+          match = false;
+      }
     }
     const bDate = new Date(bill.createdAt);
     if (startDate && bDate < new Date(startDate)) match = false;
@@ -179,12 +189,23 @@ export default function History() {
 
       {/* Bill Book Downloads */}
       {getAvailableBooks().length > 0 && (
-        <div className="glass-panel" style={{padding: '20px', marginBottom: '40px', border: '1px solid var(--accent-primary)'}}>
-          <h4 style={{marginBottom: '15px', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '10px'}}>
-            <Download size={20} /> Download Complete Bill Books (100 Bills/Book)
-          </h4>
-          <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
-            {getAvailableBooks().map(bookNum => {
+        <div style={{marginBottom: '40px'}}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ background: 'var(--accent-gradient)', color: 'white', padding: '8px', borderRadius: '10px' }}>
+              <Download size={20} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)' }}>Download Complete Bill Books</h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>(100 Bills per Book)</p>
+            </div>
+          </div>
+          
+          <div style={{
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', 
+            gap: '16px'
+          }}>
+            {getAvailableBooks().map((bookNum, index) => {
               const productionBackend = "https://billing-8ffn.onrender.com";
               const backendBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : productionBackend);
               const downloadUrl = `${backendBaseUrl}/api/bills/book/${bookNum}/pdf`;
@@ -192,11 +213,38 @@ export default function History() {
               return (
                 <button 
                   key={bookNum}
-                  className="btn btn-secondary" 
                   onClick={() => window.open(downloadUrl, '_blank')}
-                  style={{borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)', padding: '8px 16px'}}
+                  className="glass-panel hover-lift"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-color)',
+                    padding: '20px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    borderRadius: 'var(--radius-lg)',
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.03)',
+                    animation: `fadeInUp 0.4s ease-out forwards`,
+                    animationDelay: `${Math.min(index * 0.05, 0.4)}s`,
+                    opacity: 0,
+                    transform: 'translateY(10px)'
+                  }}
                 >
-                  Book {String(bookNum).padStart(2, '0')} (PDF)
+                  <div style={{
+                    width: '44px', height: '44px', borderRadius: '12px', 
+                    background: 'rgba(3, 105, 161, 0.1)', color: 'var(--accent-primary)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    marginBottom: '4px'
+                  }}>
+                    <FileText size={24} strokeWidth={2} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                    <span style={{ fontWeight: '800', color: 'var(--text-primary)', fontSize: '1.05rem', letterSpacing: '-0.3px' }}>Book {String(bookNum).padStart(2, '0')}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: '700', background: 'rgba(3, 105, 161, 0.1)', padding: '2px 8px', borderRadius: '12px' }}>PDF</span>
+                  </div>
                 </button>
               );
             })}
@@ -205,35 +253,43 @@ export default function History() {
       )}
 
       {/* Analytics Board */}
-      <div className="stats-grid" style={{marginBottom: '40px'}}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+        gap: '16px', 
+        marginBottom: '32px' 
+      }}>
         
-        <div className="glass-panel" style={{padding: '24px', display: 'flex', alignItems: 'center', gap: '20px'}}>
-          <div style={{background: 'rgba(16, 185, 129, 0.1)', padding: '16px', borderRadius: '16px', color: 'var(--success)'}}>
-            <Banknote size={32} />
+        <div className="glass-panel hover-lift" style={{padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', position: 'relative', overflow: 'hidden'}}>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: 'var(--success)' }}></div>
+          <div style={{background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--success)'}}>
+            <Banknote size={24} />
           </div>
           <div>
-            <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '4px'}}>{t('totalRevenue')}</p>
-            <h3 style={{fontSize: '1.8rem'}}>₹{totalRevenue.toLocaleString('en-IN')}</h3>
+            <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>{t('totalRevenue')}</p>
+            <h3 style={{fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px'}}>₹{totalRevenue.toLocaleString('en-IN')}</h3>
           </div>
         </div>
 
-        <div className="glass-panel" style={{padding: '24px', display: 'flex', alignItems: 'center', gap: '20px'}}>
-          <div style={{background: 'rgba(99, 102, 241, 0.1)', padding: '16px', borderRadius: '16px', color: 'var(--accent-primary)'}}>
-            <FileText size={32} />
+        <div className="glass-panel hover-lift" style={{padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', position: 'relative', overflow: 'hidden'}}>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: 'var(--accent-primary)' }}></div>
+          <div style={{background: 'rgba(3, 105, 161, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--accent-primary)'}}>
+            <FileText size={24} />
           </div>
           <div>
-            <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '4px'}}>{t('totalInvoices')}</p>
-            <h3 style={{fontSize: '1.8rem'}}>{totalInvoices}</h3>
+            <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>{t('totalInvoices')}</p>
+            <h3 style={{fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px'}}>{totalInvoices}</h3>
           </div>
         </div>
 
-        <div className="glass-panel" style={{padding: '24px', display: 'flex', alignItems: 'center', gap: '20px'}}>
-          <div style={{background: 'rgba(239, 68, 68, 0.1)', padding: '16px', borderRadius: '16px', color: 'var(--danger)'}}>
-            <TrendingUp size={32} />
+        <div className="glass-panel hover-lift" style={{padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', position: 'relative', overflow: 'hidden'}}>
+          <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: netProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}></div>
+          <div style={{background: netProfit >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '12px', color: netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}}>
+            <TrendingUp size={24} />
           </div>
           <div>
-            <p style={{color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '4px'}}>Net Profit</p>
-            <h3 style={{fontSize: '1.8rem', color: netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}}>₹{netProfit.toLocaleString('en-IN')}</h3>
+            <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>Net Profit</p>
+            <h3 style={{fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px', color: netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}}>₹{netProfit.toLocaleString('en-IN')}</h3>
           </div>
         </div>
       </div>
@@ -342,80 +398,84 @@ export default function History() {
         {loading ? (
           <div className="animate-pulse" style={{color: 'var(--text-secondary)'}}>Loading ledger data...</div>
         ) : (
-          <div className="table-container">
-            <table style={{width: '100%', borderCollapse: 'collapse', textAlign: 'left'}}>
-              <thead>
-                <tr style={{borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)'}}>
-                  <th style={{padding: '16px 8px'}}>{t('dateCol')}</th>
-                  <th style={{padding: '16px 8px'}}>{t('invoiceNumCol')}</th>
-                  <th style={{padding: '16px 8px'}}>{t('customerCol')}</th>
-                  <th style={{padding: '16px 8px'}}>{t('taxesGstCol')}</th>
-                  <th style={{padding: '16px 8px', textAlign: 'right'}}>{t('totalPaidCol')}</th>
-                  <th style={{padding: '16px 8px', textAlign: 'center'}}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredBills.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" style={{padding: '32px 8px', textAlign: 'center', color: 'var(--text-secondary)'}}>
-                      {bills.length === 0 ? t('noInvoices') : "No matching bills found"}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredBills.map(bill => {
-                    const totalTaxes = bill.cgst + bill.sgst;
-                    const dateObj = new Date(bill.createdAt);
-                    return (
-                      <tr key={bill._id} style={{borderBottom: '1px solid rgba(255,255,255,0.05)', opacity: bill.status === 'void' ? 0.6 : 1, textDecoration: bill.status === 'void' ? 'line-through' : 'none'}}>
-                        <td style={{padding: '16px 8px'}}>{dateObj.toLocaleDateString('en-IN')} {dateObj.toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}</td>
-                        <td style={{padding: '16px 8px', fontFamily: 'monospace'}}>
-                          {bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase()}
-                        </td>
-                        <td style={{padding: '16px 8px'}}>{bill.customerName || <span style={{color: 'var(--text-secondary)', fontStyle: 'italic'}}>{t('walkInCash')}</span>} {bill.status === 'void' && <span style={{color: 'var(--danger)', fontSize: '0.8rem', marginLeft: '8px', textDecoration: 'none', display: 'inline-block'}}>(VOID)</span>}</td>
-                        <td style={{padding: '16px 8px', color: 'var(--text-secondary)'}}>+ ₹{totalTaxes.toFixed(2)}</td>
-                        <td style={{padding: '16px 8px', textAlign: 'right', fontWeight: 'bold', color: bill.status === 'void' ? 'var(--text-secondary)' : 'var(--success)'}}>
-                          ₹{bill.actualTotal.toLocaleString('en-IN')}
-                        </td>
-                        <td style={{padding: '16px 8px', textAlign: 'center', display: 'flex', gap: '8px', justifyContent: 'center'}}>
-                          <button 
-                            onClick={() => setSelectedBill(bill)}
-                            style={{background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'}}
-                            title="View"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          <button 
-                            onClick={() => handleWhatsApp(bill)}
-                            style={{background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'}}
-                            title="Send WhatsApp"
-                          >
-                            <MessageCircle size={16} />
-                          </button>
-                          {bill.status !== 'void' && (
-                            <button 
-                              onClick={() => handleVoid(bill._id)}
-                              style={{background: 'rgba(251, 191, 36, 0.1)', color: '#f59e0b', padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'}}
-                              title="Void Bill"
-                            >
-                              <Ban size={16} />
-                            </button>
-                          )}
-                          <button 
-                            onClick={() => handleDelete(bill._id)}
-                            style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '6px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px'}}
-                            title="Permanent Delete"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {filteredBills.length === 0 ? (
+              <div style={{padding: '32px 8px', textAlign: 'center', color: 'var(--text-secondary)'}}>
+                {bills.length === 0 ? t('noInvoices') : "No matching bills found"}
+              </div>
+            ) : (
+              filteredBills.map((bill, index) => {
+                const totalTaxes = bill.cgst + bill.sgst;
+                const dateObj = new Date(bill.createdAt);
+                const isVoid = bill.status === 'void';
+                const invNumber = bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase();
+                
+                return (
+                  <div key={bill._id} className="glass-panel hover-lift receipt-card" style={{
+                    padding: '16px', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    opacity: isVoid ? 0.6 : 1,
+                    borderLeft: `5px solid ${isVoid ? 'var(--text-secondary)' : 'var(--accent-primary)'}`,
+                    animation: `fadeInUp 0.4s ease-out forwards`,
+                    animationDelay: `${Math.min(index * 0.05, 0.4)}s`,
+                  }}>
+                    
+                    {/* Left Details */}
+                    <div className="receipt-left" style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 auto' }}>
+                      <div style={{
+                        width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
+                        background: isVoid ? 'rgba(0,0,0,0.05)' : 'rgba(3, 105, 161, 0.1)', 
+                        color: isVoid ? 'var(--text-secondary)' : 'var(--accent-primary)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }} className="hide-on-mobile-small">
+                        <FileText size={22} strokeWidth={2.5} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                        <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)', textDecoration: isVoid ? 'line-through' : 'none', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                          {bill.customerName || <span style={{fontStyle: 'italic'}}>{t('walkInCash')}</span>}
+                          {isVoid && <span style={{color: 'var(--danger)', fontSize: '0.75rem', marginLeft: '8px', textDecoration: 'none', padding: '2px 8px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px'}}>VOID</span>}
+                        </h4>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                          Inv #{invNumber} • {dateObj.toLocaleDateString('en-IN')} {dateObj.toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                      </div>
+                    </div>
 
+                    {/* Middle: Actions */}
+                    <div className="receipt-actions" style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={() => setSelectedBill(bill)} className="action-btn-hover" style={{background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="View">
+                        <Eye size={18} /> <span className="hide-on-mobile">View</span>
+                      </button>
+                      <button onClick={() => handleWhatsApp(bill)} className="action-btn-hover" style={{background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="WhatsApp">
+                        <MessageCircle size={18} /> <span className="hide-on-mobile">Share</span>
+                      </button>
+                      {!isVoid && (
+                        <button onClick={() => handleVoid(bill._id)} className="action-btn-hover" style={{background: 'rgba(251, 191, 36, 0.1)', color: '#f59e0b', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Void">
+                          <Ban size={18} /> <span className="hide-on-mobile">Void</span>
+                        </button>
+                      )}
+                      <button onClick={() => handleDelete(bill._id)} className="action-btn-hover" style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Delete">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
 
-                        </td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
+                    {/* Right: Amount */}
+                    <div className="receipt-right" style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '900', letterSpacing: '-0.5px', color: isVoid ? 'var(--text-secondary)' : 'var(--success)' }}>
+                        ₹{bill.actualTotal.toLocaleString('en-IN')}
+                      </h3>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                        Incl. ₹{totalTaxes.toFixed(2)} Tax
+                      </span>
+                    </div>
+
+                  </div>
+                )
+              })
+            )}
           </div>
         )}
       </div>

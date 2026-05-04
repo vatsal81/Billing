@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchProducts, generateManualBill, searchCustomers, createCustomer, transliterateText, getFrontendUrl } from '../utils/api';
-import { ShoppingCart, User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save } from 'lucide-react';
+import { ShoppingCart, User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save, Check } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import GujaratiInput from '../components/GujaratiInput';
 import PrintableBill from '../components/PrintableBill';
@@ -27,6 +27,16 @@ const ManualPos = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' });
+  const [animatingItems, setAnimatingItems] = useState({});
+
+  const handleAddClick = (p, e) => {
+    if (e) e.stopPropagation();
+    addToCart(p);
+    setAnimatingItems(prev => ({ ...prev, [p._id]: true }));
+    setTimeout(() => {
+      setAnimatingItems(prev => ({ ...prev, [p._id]: false }));
+    }, 500); // Checkmark displays for 500ms
+  };
 
   useEffect(() => {
     loadProducts();
@@ -211,38 +221,67 @@ const ManualPos = () => {
         {/* Left Side: Product Selection */}
         <div className="glass-panel" style={{ padding: 'min(4vw, 20px)' }}>
           <h3 style={{ marginBottom: '16px', fontSize: '1.2rem' }}>{t('stockList')}</h3>
-          <div className="stats-grid" style={{ 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', 
-            gap: 'min(3vw, 16px)' 
+          <div style={{ 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+            gap: '16px' 
           }}>
-            {products.map(p => (
+            {products.map((p, index) => (
               <div key={p._id}
                 style={{
-                  padding: '12px',
-                  background: 'rgba(255,255,255,0.03)',
-                  borderRadius: '12px',
+                  background: 'var(--bg-primary)',
+                  borderRadius: 'var(--radius-xl)',
                   border: '1px solid var(--border-color)',
-                  textAlign: 'center',
-                  transition: 'var(--transition)',
+                  padding: '16px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '4px'
-                }} className="product-card">
-                <h4 style={{ fontSize: '0.9rem', fontWeight: '600', margin: 0 }}>
-                  {p.name}
-                </h4>
-                {p.nameEnglish && <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>({p.nameEnglish})</span>}
-                <p style={{ color: 'var(--success)', fontWeight: 'bold', fontSize: '1.1rem', margin: '4px 0' }}>₹{p.price}</p>
-                <button 
-                  className="btn btn-primary" 
-                  style={{ padding: '6px 10px', fontSize: '0.75rem', marginTop: 'auto', width: '100%', borderRadius: '8px' }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    addToCart(p);
-                  }}
-                >
-                  {t('addBtn')}
-                </button>
+                  gap: '12px',
+                  transition: 'var(--transition)',
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.02)',
+                  position: 'relative',
+                  animation: `fadeInUp 0.5s ease-out forwards`,
+                  animationDelay: `${index * 0.05}s`,
+                  opacity: 0,
+                  transform: 'translateY(10px)'
+                }} 
+              >
+                {/* Minimalist Top Layout */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <h4 style={{ fontSize: '1.15rem', fontWeight: '800', margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
+                    {p.name}
+                  </h4>
+                  {p.nameEnglish && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '500'}}>{p.nameEnglish}</span>}
+                </div>
+                
+                <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', opacity: 0.3, margin: '4px 0' }}></div>
+                
+                {/* Bottom Action Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                  <span style={{ color: 'var(--accent-primary)', fontWeight: '900', fontSize: '1.25rem', letterSpacing: '-0.5px' }}>₹{p.price}</span>
+                  
+                  <button 
+                    type="button"
+                    onClick={(e) => handleAddClick(p, e)}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: 'var(--radius-md)',
+                      background: animatingItems[p._id] ? 'var(--success)' : 'var(--accent-gradient)',
+                      color: 'white',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: animatingItems[p._id] ? '0 4px 12px rgba(5, 150, 105, 0.4)' : '0 4px 12px rgba(3, 105, 161, 0.2)',
+                      transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                      cursor: 'pointer',
+                      transform: animatingItems[p._id] ? 'scale(1.15)' : 'scale(1)'
+                    }} 
+                    className="action-btn-hover"
+                  >
+                    {animatingItems[p._id] ? <Check size={20} strokeWidth={3} /> : <Plus size={20} strokeWidth={3} />}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -387,7 +426,39 @@ const ManualPos = () => {
                   <h3 style={{ fontSize: '1.2rem' }}>{t('total')} (incl. GST)</h3>
                   <h3 style={{ fontSize: '1.5rem', color: 'var(--accent-primary)' }}>₹{calculateTotal().toLocaleString('en-IN')}</h3>
                 </div>
-                <button className="btn btn-primary" style={{ width: '100%', marginTop: '20px' }} onClick={handleCheckout} disabled={loading}>{loading ? t('processing') : t('checkoutBtn')}</button>
+                <button 
+                  className="btn btn-primary hover-lift" 
+                  style={{ 
+                    width: '100%', 
+                    marginTop: '24px',
+                    padding: '18px',
+                    fontSize: '1.15rem',
+                    fontWeight: '800',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '12px',
+                    background: 'var(--accent-gradient)',
+                    borderRadius: 'var(--radius-lg)',
+                    boxShadow: '0 8px 20px rgba(3, 105, 161, 0.3)',
+                    border: 'none',
+                    letterSpacing: '0.5px'
+                  }} 
+                  onClick={handleCheckout} 
+                  disabled={loading || cart.length === 0}
+                >
+                  {loading ? (
+                    <>
+                      <div style={{ width: '22px', height: '22px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                      {t('calculating') || 'Processing...'}
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart size={22} strokeWidth={2.5} />
+                      {t('checkoutBtn')}
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>

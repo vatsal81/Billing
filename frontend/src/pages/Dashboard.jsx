@@ -387,7 +387,7 @@ export default function Dashboard() {
             </div>
             <div className="header-actions">
               <button className="btn btn-secondary" onClick={clearForm}>
-                <History size={18} /> {t('newBillBtn')}
+                <Plus size={18} /> {t('newBillBtn')}
               </button>
               <button className="btn" style={{background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', gap: '8px'}} onClick={handleWhatsApp} disabled={loading}>
                 <MessageCircle size={18} /> {loading ? 'Sharing...' : 'WhatsApp'}

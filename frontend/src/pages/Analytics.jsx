@@ -35,7 +35,7 @@ const Analytics = () => {
         }));
     };
 
-    if (loading && !stats) return <div className="loader-container"><div className="loader"></div></div>;
+    if (loading && !stats) return <div style={{ padding: '50px', textAlign: 'center', color: 'var(--text-secondary)' }}>Loading Dashboard...</div>;
 
     const statCards = [
         { title: 'Total Sales', value: stats?.totalSales || 0, icon: <TrendingUp size={24} />, color: 'var(--success)', bg: 'rgba(5, 150, 105, 0.1)' },
@@ -58,20 +58,35 @@ const Analytics = () => {
                     <h1 className="text-gradient">Business Analytics</h1>
                     <p className="text-secondary">Comprehensive overview of your business performance</p>
                 </div>
-                <div className="header-actions">
-                    <div className="period-selector" style={{ display: 'flex', gap: '8px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <div className="header-actions" style={{ maxWidth: '100%' }}>
+                    <div className="period-selector hide-scrollbar" style={{ 
+                        display: 'flex', 
+                        gap: '6px', 
+                        background: 'var(--bg-secondary)', 
+                        padding: '4px', 
+                        borderRadius: '12px', 
+                        border: '1px solid var(--border-color)',
+                        overflowX: 'auto',
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'none',
+                        maxWidth: '100%'
+                    }}>
                         {periodOptions.map(option => (
                             <button 
                                 key={option.value}
                                 onClick={() => setPeriod(option.value)}
                                 className={`btn btn-sm ${period === option.value ? 'btn-primary' : 'btn-secondary'}`}
                                 style={{ 
-                                    padding: '6px 12px', 
-                                    fontSize: '0.8rem', 
+                                    padding: '8px 14px', 
+                                    fontSize: '0.85rem', 
+                                    fontWeight: '600',
                                     borderRadius: '8px',
                                     border: 'none',
-                                    background: period === option.value ? 'var(--accent-primary)' : 'transparent',
-                                    color: period === option.value ? 'white' : 'var(--text-secondary)'
+                                    background: period === option.value ? 'var(--accent-gradient)' : 'transparent',
+                                    color: period === option.value ? 'white' : 'var(--text-secondary)',
+                                    whiteSpace: 'nowrap',
+                                    flexShrink: 0,
+                                    transition: 'all 0.2s ease'
                                 }}
                             >
                                 {option.label}
@@ -81,15 +96,33 @@ const Analytics = () => {
                 </div>
             </header>
 
-            <div className="stats-grid" style={{ marginBottom: '32px' }}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+              gap: '16px', 
+              marginBottom: '32px' 
+            }}>
                 {statCards.map((card, index) => (
-                    <div key={index} className="premium-card stat-card" style={{ padding: '24px', display: 'flex', alignItems: 'center', gap: '20px', transition: 'transform 0.2s' }}>
+                    <div key={index} className="glass-panel hover-lift" style={{ 
+                        padding: '20px', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        alignItems: 'flex-start', 
+                        gap: '12px', 
+                        position: 'relative', 
+                        overflow: 'hidden',
+                        animation: `fadeInUp 0.4s ease-out forwards`,
+                        animationDelay: `${index * 0.05}s`,
+                        opacity: 0,
+                        transform: 'translateY(10px)'
+                    }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: card.color }}></div>
                         <div style={{ padding: '12px', borderRadius: '12px', background: card.bg, color: card.color }}>
                             {card.icon}
                         </div>
                         <div>
-                            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{card.title}</p>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: '700', color: card.title === 'Net Profit' ? (card.value >= 0 ? 'var(--success)' : 'var(--danger)') : 'inherit' }}>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>{card.title}</p>
+                            <h2 style={{ fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px', color: card.title === 'Net Profit' ? (card.value >= 0 ? 'var(--success)' : 'var(--danger)') : 'inherit' }}>
                                 ₹{card.value.toLocaleString('en-IN')}
                             </h2>
                         </div>

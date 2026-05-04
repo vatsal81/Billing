@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Printer, Download, CheckCircle, ShieldCheck } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { numberToWords } from '../utils/numberToWords';
 import { getBackendUrl } from '../utils/api';
 import './PurchaseBillView.css';
@@ -38,6 +39,25 @@ const PurchaseBillView = ({ bill, onClose }) => {
         }
     };
 
+    const [scale, setScale] = React.useState(1);
+
+    React.useLayoutEffect(() => {
+        const updateScale = () => {
+            const padding = window.innerWidth < 768 ? 20 : 40;
+            const availableWidth = window.innerWidth - padding;
+            const targetWidth = 1000;
+            if (availableWidth < targetWidth) {
+                setScale(availableWidth / targetWidth);
+            } else {
+                setScale(1);
+            }
+        };
+
+        window.addEventListener('resize', updateScale);
+        updateScale();
+        return () => window.removeEventListener('resize', updateScale);
+    }, []);
+
     const totalPcs = bill.items.reduce((acc, item) => acc + (item.pcs || 0), 0);
     const totalMeters = bill.items.reduce((acc, item) => acc + (item.meters || 0), 0);
 
@@ -46,15 +66,26 @@ const PurchaseBillView = ({ bill, onClose }) => {
             <div className="bill-view-container">
                 <div className="bill-view-header no-print">
                     <div className="header-left">
-                        <button className="btn btn-secondary" onClick={onClose}><X size={18} /> Close</button>
+                        <button className="btn btn-secondary" onClick={onClose}><X size={18} /> <span>Close</span></button>
                     </div>
                     <div className="header-right">
-                        <button className="btn btn-secondary" onClick={handlePrint}><Printer size={18} /> Print</button>
-                        <button className="btn btn-primary" onClick={handleDownloadPdf}><Download size={18} /> Download PDF</button>
+                        <button className="btn btn-secondary" onClick={handlePrint}><Printer size={18} /> <span>Print</span></button>
+                        <button className="btn btn-primary" onClick={handleDownloadPdf}><Download size={18} /> <span>Download PDF</span></button>
                     </div>
                 </div>
 
-                <div className="sagar-bill-paper" id="printable-bill">
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center', overflow: 'visible' }}>
+                    <div className="bill-scale-wrapper" style={{ 
+                        width: '1000px',
+                        // Primary scaling via zoom (adjusts layout height correctly)
+                        zoom: scale,
+                        WebkitZoom: scale,
+                        // Fallback for browsers that don't support zoom (like Firefox)
+                        transform: !('zoom' in document.body.style) ? `scale(${scale})` : 'none',
+                        transformOrigin: 'top center',
+                        transition: 'zoom 0.2s ease-out, transform 0.2s ease-out'
+                    }}>
+                        <div className="sagar-bill-paper" id="printable-bill">
                     {/* Document Type Header */}
                     <div className="document-type-header">
                         <span>ORIGINAL FOR RECIPIENT</span>
@@ -236,7 +267,11 @@ const PurchaseBillView = ({ bill, onClose }) => {
                         </div>
                         <div className="bottom-right">
                             <div className="qr-section">
-                                <div className="qr-box"></div>
+                                <QRCodeCanvas 
+                                    value={`Invoice: ${bill.billNumber}\nDate: ${formatDate(bill.billDate)}\nSupplier: ${bill.supplierName}\nAmount: ₹${bill.totalAmount}`}
+                                    size={95}
+                                    level="H"
+                                />
                             </div>
                             <div className="tax-totals-box">
                                 {(bill.cgst > 0 || bill.sgst > 0) ? (
@@ -330,8 +365,11 @@ const PurchaseBillView = ({ bill, onClose }) => {
                             </div>
 
                             <div style={{ position: 'absolute', top: '30px', right: '30px', width: '100px', height: '100px', background: '#fff', border: '1px solid #fecaca', padding: '5px' }}>
-                                {/* QR Code Placeholder or SVG can go here */}
-                                <div style={{ width: '100%', height: '100%', border: '1px dashed #fecaca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#fecaca' }}>QR CODE</div>
+                                <QRCodeCanvas 
+                                    value={`E-Way Bill: ${bill.ewayBillDetails.uniqueNo}`}
+                                    size={90}
+                                    level="H"
+                                />
                             </div>
 
                             <div className="eway-details-grid" style={{ display: 'grid', gap: '15px' }}>
@@ -406,6 +444,8 @@ const PurchaseBillView = ({ bill, onClose }) => {
                         </div>
                     </div>
                 )}
+                </div>
+                </div>
             </div>
         </div>
     );

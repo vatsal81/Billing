@@ -38,6 +38,8 @@ const translations = {
     addBtn: "Add",
     cartEmpty: "Cart is empty",
     generateBillBtn: "Generate Bill",
+    checkoutBtn: "Checkout & Generate Bill",
+    searchCustPlaceholder: "Search customer by name or phone...",
     errLoading: "Error loading data.",
 
     // Auto POS
@@ -143,6 +145,8 @@ const translations = {
     addBtn: "ઉમેરો (Add)",
     cartEmpty: "કાર્ટ ખાલી છે",
     generateBillBtn: "બિલ બનાવો (Generate)",
+    checkoutBtn: "ચેકઆઉટ અને બિલ બનાવો",
+    searchCustPlaceholder: "ગ્રાહકનું નામ અથવા નંબર સર્ચ કરો...",
     errLoading: "માહિતી મળવામાં ભૂલ.",
 
     // Auto POS
