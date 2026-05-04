@@ -57,7 +57,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/items', require('./routes/productRoutes'));
 app.use('/api/bills', require('./routes/billRoutes'));
-app.use('/api/settings', protect, require('./routes/settingsRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/customers', protect, require('./routes/customerRoutes'));
 app.use('/api/expenses', protect, require('./routes/expenseRoutes'));
 app.use('/api/purchase', protect, require('./routes/purchaseRoutes'));
