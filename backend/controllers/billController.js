@@ -41,6 +41,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
                 product: p._id,
                 name: fullName,
                 price: p.price,
+                hsnCode: p.hsnCode,
                 quantity: 1
             };
             selectedProducts.push(p);

@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const fs = require('fs');
 const path = require('path');
 
@@ -40,6 +40,7 @@ const getBillStyles = () => `
         font-family: Arial, sans-serif; 
         background: #fff;
         padding: 0;
+        -webkit-print-color-adjust: exact;
     }
     .bill-wrapper {
         width: 210mm;
@@ -52,14 +53,21 @@ const getBillStyles = () => `
     }
     .bill-container {
         width: 190mm;
-        min-height: 277mm;
+        min-height: 275mm;
         background: #eedd82;
         color: black;
         padding: 15px;
-        border: 2px solid #000;
+        border: none;
         display: flex;
         flex-direction: column;
         margin: 0 auto;
+    }
+    .bill-inner-border {
+        border: 2px solid #000;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        min-height: 265mm;
     }
     .header-section { display: flex; border-bottom: 2px solid #000; }
     .header-left { width: 35%; border-right: 2px solid #000; padding: 8px; font-size: 13px; line-height: 1.4; }
@@ -80,13 +88,13 @@ const getBillStyles = () => `
     .items-table { width: 100%; border-collapse: collapse; flex-grow: 1; display: flex; flex-direction: column; }
     .items-table thead tr { border-bottom: 2px solid #000; font-size: 14px; font-weight: bold; display: flex; width: 100%; font-family: 'Gujarati', sans-serif; }
     .items-table tbody { flex-grow: 1; display: flex; flex-direction: column; width: 100%; }
-    .footer-section { display: flex; border-top: 2px solid #000; margin-top: auto; height: 300px; }
+    .footer-section { display: flex; border-top: 2px solid #000; margin-top: auto; min-height: 210px; }
     .footer-left { width: 68%; border-right: 2px solid #000; padding: 8px; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
     .footer-right { width: 32%; }
     .total-row { display: flex; border-bottom: 1px solid #000; padding: 4px 8px; font-size: 13px; font-family: 'Gujarati', sans-serif; }
     .gpay-text { position: absolute; top: 10px; left: 20px; font-family: 'Kalam', cursive; font-size: 28px; color: #0f3c88; opacity: 0.8; transform: rotate(-15deg); }
-    .stamp-area { border-top: 2px solid #000; padding: 8px; text-align: center; position: relative; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
-    .stamp { position: absolute; top: 5px; color: #0f3c88; border: 2px dotted #0f3c88; border-radius: 8px; padding: 5px 8px; transform: rotate(-5deg); opacity: 0.9; background: rgba(238, 221, 130, 0.5); font-weight: bold; font-size: 12px; font-family: 'Gujarati', sans-serif; }
+    .stamp-area { border-top: 2px solid #000; padding: 8px; text-align: center; position: relative; min-height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
+    .stamp { color: #0f3c88; border: 2px dotted #0f3c88; border-radius: 8px; padding: 5px 8px; transform: rotate(-5deg); opacity: 0.9; background: rgba(238, 221, 130, 0.5); font-weight: bold; font-size: 12px; font-family: 'Gujarati', sans-serif; margin-top: 5px; }
     .gujarati-text { font-family: 'Gujarati', sans-serif; }
     .kalam-text { font-family: 'Kalam', 'Gujarati', cursive; }
 `;
@@ -107,7 +115,7 @@ const buildSingleBillHTML = (bill, settings = {}) => {
         return String(num).padStart(3, '0');
     };
 
-    const finalTotal = bill.actualTotal || 0;
+    const finalTotal = bill.actualTotal || bill.targetAmount || 0;
 
     const emptyRowsHTML = Array.from({length: Math.max(1, 10 - bill.items.length)}).map((_, i) => `
         <tr style="display: flex; width: 100%; ${i === 0 ? 'flex-grow: 1;' : ''}">
@@ -122,7 +130,8 @@ const buildSingleBillHTML = (bill, settings = {}) => {
     return `
     <div class="bill-wrapper">
         <div class="bill-container">
-            <div class="header-section">
+            <div class="bill-inner-border">
+                <div class="header-section">
                 <div class="header-left">
                     <div style="text-align: center; font-weight: bold; margin-bottom: 8px;">TAX INVOICE<br/>CASH / DEBIT</div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
@@ -185,7 +194,7 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                     ${bill.items.map((item, idx) => `
                         <tr style="display: flex; width: 100%; font-family: 'Kalam', 'Gujarati', cursive; color: #0f3c88; font-size: 18px;">
                             <td style="padding: 6px 8px; border-right: 1px solid #000; width: 45%; text-align: left;">${item.name}</td>
-                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 15%;"></td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 15%; text-align: center;">${item.hsnCode || ''}</td>
                             <td style="padding: 6px 8px; border-right: 1px solid #000; width: 10%; text-align: center;">${item.quantity}</td>
                             <td style="padding: 6px 8px; border-right: 2px solid #000; width: 12%; text-align: right;">${item.price.toFixed(0)}</td>
                             <td style="padding: 6px 8px; width: 18%; text-align: right;">${(item.price * item.quantity).toFixed(0)}</td>
@@ -236,9 +245,78 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                     </div>
                 </div>
             </div>
+            </div>
         </div>
     </div>
     `;
+};
+
+// Auto-detect Chrome/Chromium path for both Local and Deployment (Render)
+const getBrowserOptions = async () => {
+    const isWindows = process.platform === 'win32';
+    let chromium;
+
+    if (!isWindows) {
+        try {
+            chromium = require('@sparticuz/chromium');
+        } catch (e) {
+            console.log('@sparticuz/chromium not found, falling back to puppeteer-core');
+        }
+    }
+
+    const launchOptions = {
+        args: chromium ? chromium.args : [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--no-zygote',
+            '--single-process'
+        ],
+        defaultViewport: chromium ? chromium.defaultViewport : null,
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
+        headless: chromium ? chromium.headless : 'shell',
+    };
+
+    if (!launchOptions.executablePath) {
+        if (chromium) {
+            launchOptions.executablePath = await chromium.executablePath();
+        } else if (isWindows) {
+            const commonPaths = [
+                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe')
+            ];
+            for (const p of commonPaths) {
+                if (fs.existsSync(p)) {
+                    launchOptions.executablePath = p;
+                    break;
+                }
+            }
+        }
+        
+        // If still not found, check local cache (installed by scripts/install-chrome.js)
+        if (!launchOptions.executablePath) {
+            const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
+            const findChrome = (dir) => {
+                if (!fs.existsSync(dir)) return null;
+                const files = fs.readdirSync(dir);
+                for (const file of files) {
+                    const fullPath = path.join(dir, file);
+                    if (fs.statSync(fullPath).isDirectory()) {
+                        const found = findChrome(fullPath);
+                        if (found) return found;
+                    } else if (file === 'chrome' || file === 'chrome.exe') {
+                        return fullPath;
+                    }
+                }
+                return null;
+            };
+            launchOptions.executablePath = findChrome(cacheDir);
+        }
+    }
+
+    return launchOptions;
 };
 
 const buildBillHTML = (billOrBills, settings = {}) => {
@@ -265,92 +343,10 @@ const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
     
-    let puppeteer;
-    let chromium;
     const isWindows = process.platform === 'win32';
-
-    // Try to load puppeteer (full) first on Windows, otherwise puppeteer-core
-    try {
-        if (isWindows) {
-            puppeteer = require('puppeteer');
-        } else {
-            puppeteer = require('puppeteer-core');
-            try {
-                chromium = require('@sparticuz/chromium');
-            } catch (e) {
-                console.log('@sparticuz/chromium not found');
-            }
-        }
-    } catch (e) {
-        puppeteer = require('puppeteer-core');
-    }
-
-    const launchOptions = {
-        args: chromium ? chromium.args : [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--no-zygote',
-            '--single-process',
-            '--font-render-hinting=none' // Help with font rendering on Linux
-        ],
-        defaultViewport: chromium ? chromium.defaultViewport : null,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
-        headless: chromium ? chromium.headless : 'new'
-    };
-
+    const launchOptions = await getBrowserOptions();
     console.log('--- PDF SYSTEM DIAGNOSTICS ---');
     console.log('Platform:', process.platform);
-    
-    // Auto-detect browser path if not provided
-    if (!launchOptions.executablePath) {
-        if (chromium) {
-            try {
-                launchOptions.executablePath = await chromium.executablePath();
-            } catch (e) {
-                console.log('Sparticuz failed to get path:', e.message);
-            }
-        }
-
-        // If still no path, try local cache detection
-        if (!launchOptions.executablePath) {
-            const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
-            const findChrome = (dir) => {
-                try {
-                    if (!fs.existsSync(dir)) return null;
-                    const files = fs.readdirSync(dir);
-                    for (const file of files) {
-                        const fullPath = path.join(dir, file);
-                        if (fs.statSync(fullPath).isDirectory()) {
-                            const found = findChrome(fullPath);
-                            if (found) return found;
-                        } else if (file === 'chrome' || file === 'chrome.exe') {
-                            return fullPath;
-                        }
-                    }
-                } catch (e) {}
-                return null;
-            };
-            launchOptions.executablePath = findChrome(cacheDir);
-        }
-
-        // Final fallbacks for Windows
-        if (!launchOptions.executablePath && isWindows) {
-            const commonPaths = [
-                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-                path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe')
-            ];
-            for (const p of commonPaths) {
-                if (fs.existsSync(p)) {
-                    launchOptions.executablePath = p;
-                    break;
-                }
-            }
-        }
-    }
-
     console.log('Using Browser Path:', launchOptions.executablePath || 'BUNDLED');
     
     let browser;

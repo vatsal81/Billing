@@ -20,7 +20,7 @@ async function download() {
         const result = await install({
             browser: 'chrome',
             cacheDir: cacheDir,
-            buildId: '124.0.6367.201', // Using a specific stable version
+            buildId: '133.0.6943.126', // Updated to match Puppeteer 24.x requirements
             unpack: true
         });
         

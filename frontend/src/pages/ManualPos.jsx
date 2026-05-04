@@ -28,6 +28,8 @@ const ManualPos = () => {
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' });
   const [animatingItems, setAnimatingItems] = useState({});
+  const [isSharingProcess, setIsSharingProcess] = useState(false);
+  const [sharingBillNo, setSharingBillNo] = useState('');
 
   const handleAddClick = (p, e) => {
     if (e) e.stopPropagation();
@@ -59,7 +61,7 @@ const ManualPos = () => {
       ));
     } else {
       const fullName = product.nameEnglish ? `${product.name} (${product.nameEnglish})` : product.name;
-      setCart([...cart, { product: product._id, name: fullName, price: product.price, quantity: 1 }]);
+      setCart([...cart, { product: product._id, name: fullName, price: product.price, hsnCode: product.hsnCode, quantity: 1 }]);
     }
   };
 
@@ -110,10 +112,48 @@ const ManualPos = () => {
         alert("No phone number recorded for this customer.");
         return;
     }
+
+    const invNumber = bill.serialNumber 
+      ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') 
+      : bill._id.substring(bill._id.length - 4).toUpperCase();
+
+    setSharingBillNo(invNumber);
+    setIsSharingProcess(true);
+    
+    // Professional 2.5s delay for WhatsApp animation
+    await new Promise(resolve => setTimeout(resolve, 2500));
+
     const viewLink = `${getFrontendUrl()}/view-bill/${bill._id}`;
-    const text = `નમસ્તે ${customerName || 'ગ્રાહક મિત્ર'},\n\nશ્રી હરિ ડ્રેસીસ & કટપીસમાં પધારવા બદલ આભાર! 🛍️\n\nબિલ વિગતો:\n📅 તારીખ: ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\n🧾 બિલ નં: ${bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase()}\n💰 કુલ રકમ: ₹${bill.actualTotal.toLocaleString('en-IN')}\n\nતમારું બિલ જોવા અથવા ડાઉનલોડ કરવા માટે નીચેની લિંક પર ક્લિક કરો:\n${viewLink}\n\nફરી પધારજો! આપનો દિવસ શુભ રહે. 😊\n\n------------------\n\nHello ${customerName || 'Valued Customer'},\n\nThank you for shopping at Shree Hari! 🛍️\n\nYour Online Bill: ${viewLink}\n\nHave a great day!`;
+    
+    // Determine Customer Type
+    let type = 'FIRST_TIME';
+    const totalAmount = bill.actualTotal || 0;
+    if (totalAmount >= 18000) type = 'VIP';
+    // Note: In ManualPos, we might not have the full customer object with totalSpent easily accessible in the same way, 
+    // but we can check if customerId was provided to assume they are at least known.
+    else if (customerId) type = 'REGULAR';
+
+    let emotionalOpening = 'It Is A Pleasure To Welcome You To Our Brand Family. We Are Honored To Have Been Part Of Your First Experience With Us.';
+    let quote = 'Elegance Is The Only Beauty That Never Fades.';
+    let closing = 'We Look Forward To Curating Your Next Masterpiece.';
+
+    if (type === 'VIP') {
+      emotionalOpening = 'Your Exceptional Taste And Loyalty Place You Among Our Most Valued Guests. It Is A Privilege To Serve Someone With Your Discerning Style.';
+      quote = 'Luxury Must Be Comfortable, Otherwise It Is Not Luxury.';
+      closing = 'We Are Dedicated To Providing You With The Absolute Best In Quality And Service.';
+    } else if (type === 'REGULAR') {
+      emotionalOpening = 'It Is A Joy To See You Again. We Deeply Value Your Continued Trust And The Relationship We Have Built Together.';
+      quote = 'Fashion Fades, Only Style Remains The Same.';
+      closing = 'May Your New Attire Bring You Endless Confidence And Joy.';
+    }
+
+    const text = `\u2728 SHREE HARI DRESSES & CUTPIECE \u2728\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n\uD83E\uDDFE Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : \u20B9${totalAmount.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n\uD83D\uDD17 View Your Invoice:\n${viewLink}\n\n\uD83D\uDCAC "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting \uD83D\uDE09\n━━━━━━━━━━━━━━━━━━━━━━━`;
+
     const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
+    
+    setIsSharingProcess(false);
+    setSharingBillNo('');
   };
 
   const clearForm = () => {
@@ -517,6 +557,30 @@ const ManualPos = () => {
         </div>
       )}
 
+      {/* Premium WhatsApp Share Loader */}
+      {isSharingProcess && (
+        <div className="modal-overlay" style={{ zIndex: 13000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(15px)' }}>
+            <div style={{ textAlign: 'center' }}>
+                <div className="whatsapp-anim-container">
+                    <div className="wa-circle-pulse"></div>
+                    <div className="wa-icon-wrapper">
+                        <MessageCircle size={60} color="white" fill="#25D366" />
+                    </div>
+                    <div className="wa-particles">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+                <h2 className="loader-title" style={{ color: '#075E54', marginTop: '30px' }}>Sharing Bill #{sharingBillNo}...</h2>
+                <p className="loader-subtitle" style={{ color: '#128C7E', fontWeight: '600' }}>
+                    Encrypting bill details and connecting to WhatsApp Secure Gateway.
+                </p>
+                <div className="wa-progress-line">
+                    <div className="wa-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+      )}
+
       {/* Add Customer Modal */}
       {showAddModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }} onClick={e => e.target === e.currentTarget && setShowAddModal(false)}>
@@ -570,6 +634,72 @@ const ManualPos = () => {
         </div>
       )}
 
+      <style>{`
+        /* WhatsApp Premium Animation */
+        .whatsapp-anim-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .wa-circle-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid #25D366;
+            border-radius: 50%;
+            animation: waPulse 1.5s infinite ease-out;
+        }
+        @keyframes waPulse {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+        .wa-icon-wrapper {
+            position: relative;
+            z-index: 2;
+            animation: waFloat 2s infinite ease-in-out;
+        }
+        @keyframes waFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .wa-particles span {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #25D366;
+            border-radius: 50%;
+            animation: waParticle 2s infinite linear;
+        }
+        @keyframes waParticle {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tw-tx, 40px), var(--tw-ty, -40px)) scale(0); opacity: 0; }
+        }
+        .wa-particles span:nth-child(1) { --tw-tx: 50px; --tw-ty: -30px; animation-delay: 0.2s; }
+        .wa-particles span:nth-child(2) { --tw-tx: -40px; --tw-ty: -50px; animation-delay: 0.6s; }
+        .wa-particles span:nth-child(3) { --tw-tx: 30px; --tw-ty: 40px; animation-delay: 1s; }
+
+        .wa-progress-line {
+            width: 200px;
+            height: 4px;
+            background: #DCF8C6;
+            border-radius: 10px;
+            margin: 20px auto 0;
+            overflow: hidden;
+        }
+        .wa-progress-fill {
+            width: 0%;
+            height: 100%;
+            background: #25D366;
+            animation: waFill 2.5s forwards linear;
+        }
+        @keyframes waFill {
+            to { width: 100%; }
+        }
+      `}</style>
     </div>
   );
 };

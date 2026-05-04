@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchBills, voidBill, deleteBill, fetchExpenses, getFrontendUrl, getBackendUrl } from '../utils/api';
 
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
-import { TrendingUp, FileText, Banknote, RefreshCw, Eye, X, Printer, Search, Download, Ban, MessageCircle, Share2, Trash2 } from 'lucide-react';
+import { TrendingUp, FileText, Banknote, RefreshCw, Eye, X, Printer, Search, Download, Ban, MessageCircle, Share2, Trash2, CheckCircle2 } from 'lucide-react';
 
 import { useLanguage } from '../utils/LanguageContext';
 import PrintableBill from '../components/PrintableBill';
@@ -19,6 +19,14 @@ export default function History() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [generatingPdfBill, setGeneratingPdfBill] = useState(null);
+  const [billToDelete, setBillToDelete] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingProcess, setIsDeletingProcess] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [isViewingProcess, setIsViewingProcess] = useState(false);
+  const [viewingBillNo, setViewingBillNo] = useState('');
+  const [isSharingProcess, setIsSharingProcess] = useState(false);
+  const [sharingBillNo, setSharingBillNo] = useState('');
 
   const handleVoid = async (id) => {
     if(!window.confirm("Are you sure you want to void this bill? It will be removed from your revenue total but keep its serial sequence.")) return;
@@ -31,14 +39,57 @@ export default function History() {
   };
 
 
-  const handleDelete = async (id) => {
-    if(!window.confirm("WARNING: This will PERMANENTLY DELETE this bill from the database. This cannot be undone. Are you sure?")) return;
+  const handleDelete = (bill) => {
+    setBillToDelete(bill);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!billToDelete) return;
+    
+    const invNumber = billToDelete.serialNumber 
+      ? String(((billToDelete.serialNumber - 1) % 100) + 1).padStart(3, '0') 
+      : billToDelete._id.substring(billToDelete._id.length - 4).toUpperCase();
+
+    setShowDeleteConfirm(false);
+    setIsDeletingProcess(true);
+    
     try {
-      await deleteBill(id);
+      // Professional 2.5s delay for shredder animation
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      
+      await deleteBill(billToDelete._id);
+      
+      setIsDeletingProcess(false);
+      setDeleteSuccess(true);
+      
+      // Show success for 1.5s
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      setDeleteSuccess(false);
+      setBillToDelete(null);
       loadData();
     } catch(e) {
+      setIsDeletingProcess(false);
+      setBillToDelete(null);
       setError(e.response?.data?.message || e.message);
     }
+  };
+
+  const handleViewBill = async (bill) => {
+    const invNumber = bill.serialNumber 
+      ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') 
+      : bill._id.substring(bill._id.length - 4).toUpperCase();
+    
+    setViewingBillNo(invNumber);
+    setIsViewingProcess(true);
+    
+    // Professional 2.5s delay for magnifier animation
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    
+    setIsViewingProcess(false);
+    setSelectedBill(bill);
+    setViewingBillNo('');
   };
 
 
@@ -48,16 +99,46 @@ export default function History() {
         return;
     }
 
+    const invNumber = b.serialNumber 
+      ? String(((b.serialNumber - 1) % 100) + 1).padStart(3, '0') 
+      : b._id.substring(b._id.length - 4).toUpperCase();
+
+    setSharingBillNo(invNumber);
+    setIsSharingProcess(true);
+    
+    // Professional 2.5s delay for WhatsApp animation
+    await new Promise(resolve => setTimeout(resolve, 2500));
+
     // Always use the Render URL for the PDF link to ensure it works on mobile/whatsapp
     const viewLink = `${getFrontendUrl()}/view-bill/${b._id}`;
     
-    const text = `નમસ્તે ${b.customerName || 'ગ્રાહક મિત્ર'},\n\nશ્રી હરિ ડ્રેસીસ & કટપીસમાં પધારવા બદલ આભાર! 🛍️\n\nબિલ વિગતો:\n📅 તારીખ: ${new Date(b.createdAt).toLocaleDateString('en-IN')}\n🧾 બિલ નં: ${b.serialNumber ? String(((b.serialNumber - 1) % 100) + 1).padStart(3, '0') : b._id.substring(b._id.length - 4).toUpperCase()}\n💰 કુલ રકમ: ₹${b.actualTotal.toLocaleString('en-IN')}\n\nતમારું બિલ જોવા અથવા ડાઉનલોડ કરવા માટે નીચેની લિંક પર ક્લિક કરો:\n${viewLink}\n\nફરી પધારજો! આપનો દિવસ શુભ રહે. 😊\n\n------------------\n\nHello ${b.customerName || 'Valued Customer'},\n\nThank you for shopping at Shree Hari! 🛍️\n\nYour Online Bill: ${viewLink}\n\nHave a great day!`;
+    // Determine Customer Type
+    let type = 'FIRST_TIME';
+    if (b.actualTotal >= 18000) type = 'VIP';
+    else if (b.customerId && b.customerId.totalSpent > b.actualTotal) type = 'REGULAR';
+
+    let emotionalOpening = 'It Is A Pleasure To Welcome You To Our Brand Family. We Are Honored To Have Been Part Of Your First Experience With Us.';
+    let quote = 'Elegance Is The Only Beauty That Never Fades.';
+    let closing = 'We Look Forward To Curating Your Next Masterpiece.';
+
+    if (type === 'VIP') {
+      emotionalOpening = 'Your Exceptional Taste And Loyalty Place You Among Our Most Valued Guests. It Is A Privilege To Serve Someone With Your Discerning Style.';
+      quote = 'Luxury Must Be Comfortable, Otherwise It Is Not Luxury.';
+      closing = 'We Are Dedicated To Providing You With The Absolute Best In Quality And Service.';
+    } else if (type === 'REGULAR') {
+      emotionalOpening = 'It Is A Joy To See You Again. We Deeply Value Your Continued Trust And The Relationship We Have Built Together.';
+      quote = 'Fashion Fades, Only Style Remains The Same.';
+      closing = 'May Your New Attire Bring You Endless Confidence And Joy.';
+    }
+
+    const text = `\u2728 SHREE HARI DRESSES & CUTPIECE \u2728\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${b.customerName}*,\n\n${emotionalOpening}\n\n\uD83E\uDDFE Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(b.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : \u20B9${b.actualTotal.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n\uD83D\uDD17 View Your Invoice:\n${viewLink}\n\n\uD83D\uDCAC "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting \uD83D\uDE09\n━━━━━━━━━━━━━━━━━━━━━━━`;
 
     
     const waUrl = `https://wa.me/91${b.customerPhone}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
     
-    setLoading(false);
+    setIsSharingProcess(false);
+    setSharingBillNo('');
   };
 
   const loadData = async () => {
@@ -446,7 +527,7 @@ export default function History() {
 
                     {/* Middle: Actions */}
                     <div className="receipt-actions" style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => setSelectedBill(bill)} className="action-btn-hover" style={{background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="View">
+                      <button onClick={() => handleViewBill(bill)} className="action-btn-hover" style={{background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="View">
                         <Eye size={18} /> <span className="hide-on-mobile">View</span>
                       </button>
                       <button onClick={() => handleWhatsApp(bill)} className="action-btn-hover" style={{background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="WhatsApp">
@@ -457,7 +538,7 @@ export default function History() {
                           <Ban size={18} /> <span className="hide-on-mobile">Void</span>
                         </button>
                       )}
-                      <button onClick={() => handleDelete(bill._id)} className="action-btn-hover" style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Delete">
+                      <button onClick={() => handleDelete(bill)} className="action-btn-hover" style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Delete">
                         <Trash2 size={18} />
                       </button>
                     </div>
@@ -479,6 +560,51 @@ export default function History() {
           </div>
         )}
       </div>
+
+      {/* Premium Magnifier View Loader */}
+      {isViewingProcess && (
+        <div className="modal-overlay" style={{ zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)' }}>
+            <div style={{ textAlign: 'center' }}>
+                <div className="premium-search-loader" style={{ padding: '40px', borderRadius: '32px' }}>
+                    <div className="magnifier-animation-wrapper">
+                        <FileText size={60} className="base-bill-icon" />
+                        <div className="magnifier-lens">
+                            <Search size={30} color="white" />
+                        </div>
+                        <div className="scan-line"></div>
+                    </div>
+                </div>
+                <h2 className="loader-title" style={{ color: 'var(--accent-primary)', marginTop: '20px' }}>Retrieving Bill #{viewingBillNo}...</h2>
+                <p className="loader-subtitle" style={{ color: 'var(--text-secondary)' }}>
+                    Accessing secure records and generating high-fidelity preview.
+                </p>
+            </div>
+        </div>
+      )}
+
+      {/* Premium WhatsApp Share Loader */}
+      {isSharingProcess && (
+        <div className="modal-overlay" style={{ zIndex: 13000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(15px)' }}>
+            <div style={{ textAlign: 'center' }}>
+                <div className="whatsapp-anim-container">
+                    <div className="wa-circle-pulse"></div>
+                    <div className="wa-icon-wrapper">
+                        <MessageCircle size={60} color="white" fill="#25D366" />
+                    </div>
+                    <div className="wa-particles">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+                <h2 className="loader-title" style={{ color: '#075E54', marginTop: '30px' }}>Sharing Bill #{sharingBillNo}...</h2>
+                <p className="loader-subtitle" style={{ color: '#128C7E', fontWeight: '600' }}>
+                    Encrypting bill details and connecting to WhatsApp Secure Gateway.
+                </p>
+                <div className="wa-progress-line">
+                    <div className="wa-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+      )}
 
       {/* Bill View Modal */}
       {selectedBill && (
@@ -506,6 +632,371 @@ export default function History() {
           {generatingPdfBill && <PrintableBill bill={generatingPdfBill} />}
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(2, 6, 23, 0.7)', backdropFilter: 'blur(8px)' }}>
+            <div style={{ 
+                background: 'white', 
+                padding: '40px', 
+                borderRadius: '32px', 
+                maxWidth: '400px', 
+                width: '90%', 
+                textAlign: 'center',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                animation: 'modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+            }}>
+                <div style={{ 
+                    width: '80px', 
+                    height: '80px', 
+                    background: 'rgba(239, 68, 68, 0.1)', 
+                    borderRadius: '50%', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    margin: '0 auto 24px',
+                    color: '#ef4444'
+                }}>
+                    <Trash2 size={40} className="shake-animation" />
+                </div>
+                <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>Delete Invoice?</h3>
+                <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '32px' }}>
+                    Are you sure you want to delete <strong style={{ color: '#1e293b' }}>#{billToDelete?.serialNumber ? String(((billToDelete.serialNumber - 1) % 100) + 1).padStart(3, '0') : billToDelete?._id.substring(billToDelete._id.length - 4).toUpperCase()}</strong>? This action is permanent and cannot be undone.
+                </p>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                    <button onClick={() => setShowDeleteConfirm(false)} style={{ 
+                        flex: 1, 
+                        padding: '14px', 
+                        borderRadius: '16px', 
+                        border: '1px solid #e2e8f0', 
+                        background: 'white', 
+                        color: '#64748b', 
+                        fontWeight: 700, 
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}>Cancel</button>
+                    <button onClick={confirmDelete} style={{ 
+                        flex: 1, 
+                        padding: '14px', 
+                        borderRadius: '16px', 
+                        border: 'none', 
+                        background: '#ef4444', 
+                        color: 'white', 
+                        fontWeight: 700, 
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                        transition: 'all 0.2s'
+                    }}>Delete Now</button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Premium Shredder Deletion Loader */}
+      {isDeletingProcess && (
+        <div className="modal-overlay" style={{ zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#020617' }}>
+            <div style={{ textAlign: 'center', position: 'relative' }}>
+                <div className="shredder-container">
+                    <div className="paper-particles">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <FileText size={64} className="shredding-bill-pro" />
+                    <div className="shredder-mouth">
+                        <div className="shredder-glow"></div>
+                    </div>
+                </div>
+                
+                <h3 className="purging-text">PURGING RECORD...</h3>
+                
+                <div className="optimum-progress">
+                    <div className="optimum-bar">
+                        <div className="bar-shine"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Success Animation Overlay */}
+      {deleteSuccess && (
+        <div className="modal-overlay" style={{ zIndex: 12000, background: 'rgba(16, 185, 129, 0.98)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div className="success-icon-container" style={{ marginBottom: '20px' }}>
+              <CheckCircle2 size={80} color="white" className="animate-bounce" />
+            </div>
+            <h2 className="loader-title" style={{ color: 'white', fontSize: '2.2rem' }}>Bill Deleted Successfully!</h2>
+            <p className="loader-subtitle" style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.1rem' }}>
+              Inventory and serial numbers have been synchronized.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes modalSlideUp {
+            from { opacity: 0; transform: translateY(40px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        
+        .shredder-container {
+            position: relative;
+            width: 120px;
+            height: 140px;
+            margin: 0 auto;
+        }
+        .shredding-bill-pro {
+            color: rgba(255,255,255,0.7);
+            animation: proShred 2.5s infinite cubic-bezier(0.45, 0, 0.55, 1);
+            position: relative;
+            z-index: 1;
+        }
+        @keyframes proShred {
+            0% { transform: translateY(-20px); opacity: 0; }
+            20% { transform: translateY(0); opacity: 1; }
+            80% { transform: translateY(30px); opacity: 0.5; clip-path: inset(0 0 40% 0); }
+            100% { transform: translateY(45px); opacity: 0; clip-path: inset(0 0 100% 0); }
+        }
+        .shredder-mouth {
+            width: 80px;
+            height: 10px;
+            background: #1e293b;
+            border: 2px solid #ef4444;
+            margin: -10px auto 0;
+            border-radius: 4px;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+            animation: vibrate 0.1s infinite;
+        }
+        @keyframes vibrate {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(1px); }
+            75% { transform: translateX(-1px); }
+            100% { transform: translateX(0); }
+        }
+        .shredder-glow {
+            position: absolute;
+            inset: -5px;
+            background: #ef4444;
+            filter: blur(10px);
+            opacity: 0.4;
+            border-radius: 4px;
+            animation: glowPulse 1.5s infinite ease-in-out;
+        }
+        @keyframes glowPulse {
+            0%, 100% { opacity: 0.2; transform: scaleX(1); }
+            50% { opacity: 0.6; transform: scaleX(1.1); }
+        }
+        .paper-particles {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 40px;
+        }
+        .paper-particles span {
+            position: absolute;
+            width: 4px;
+            height: 8px;
+            background: rgba(255,255,255,0.4);
+            top: 10px;
+            animation: fall 1s infinite linear;
+        }
+        .paper-particles span:nth-child(1) { left: 10%; animation-delay: 0.2s; }
+        .paper-particles span:nth-child(2) { left: 30%; animation-delay: 0.5s; }
+        .paper-particles span:nth-child(3) { left: 50%; animation-delay: 0.1s; }
+        .paper-particles span:nth-child(4) { left: 70%; animation-delay: 0.7s; }
+        .paper-particles span:nth-child(5) { left: 90%; animation-delay: 0.4s; }
+        
+        @keyframes fall {
+            to { transform: translateY(40px) rotate(360deg); opacity: 0; }
+        }
+        
+        .purging-text {
+            color: white;
+            margin-top: 40px;
+            font-weight: 900;
+            letter-spacing: 0.3em;
+            font-size: 1rem;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #fff, #ef4444, #fff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textShine 3s linear infinite;
+        }
+        @keyframes textShine {
+            to { background-position: 200% center; }
+        }
+        
+        .optimum-progress {
+            width: 240px;
+            height: 6px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            margin: 25px auto 0;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .optimum-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #b91c1c, #ef4444);
+            position: relative;
+            animation: optimumFill 2.5s forwards cubic-bezier(0.65, 0, 0.35, 1);
+        }
+        @keyframes optimumFill {
+            to { width: 100%; }
+        }
+        .bar-shine {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50px;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shineMove 1.5s infinite;
+        }
+        @keyframes shineMove {
+            0% { left: -50px; }
+            100% { left: 100%; }
+        }
+        
+        .shake-animation {
+            animation: shake 0.5s infinite ease-in-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+
+        .premium-search-loader {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 32px;
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+        .magnifier-animation-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .base-bill-icon {
+            color: #cbd5e1;
+            animation: billPulse 2s infinite ease-in-out;
+        }
+        @keyframes billPulse {
+            0%, 100% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+        }
+        .magnifier-lens {
+            position: absolute;
+            width: 64px;
+            height: 64px;
+            background: var(--accent-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 15px 35px rgba(3, 105, 161, 0.4);
+            border: 3px solid white;
+            animation: lensMove 4s infinite ease-in-out;
+            z-index: 2;
+        }
+        @keyframes lensMove {
+            0% { transform: translate(-35px, -35px); }
+            25% { transform: translate(35px, -25px); }
+            50% { transform: translate(30px, 35px); }
+            75% { transform: translate(-40px, 30px); }
+            100% { transform: translate(-35px, -35px); }
+        }
+        .scan-line {
+            position: absolute;
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+            z-index: 1;
+            animation: scanVertical 2.5s infinite ease-in-out;
+            box-shadow: 0 0 15px var(--accent-primary);
+        }
+        @keyframes scanVertical {
+            0% { transform: translateY(-45px); opacity: 0; }
+            20% { opacity: 0.8; }
+            80% { opacity: 0.8; }
+            100% { transform: translateY(45px); opacity: 0; }
+        }
+
+        /* WhatsApp Premium Animation */
+        .whatsapp-anim-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .wa-circle-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 4px solid #25D366;
+            border-radius: 50%;
+            animation: waPulse 1.5s infinite ease-out;
+        }
+        @keyframes waPulse {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+        .wa-icon-wrapper {
+            position: relative;
+            z-index: 2;
+            animation: waFloat 2s infinite ease-in-out;
+        }
+        @keyframes waFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .wa-particles span {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #25D366;
+            border-radius: 50%;
+            animation: waParticle 2s infinite linear;
+        }
+        @keyframes waParticle {
+            0% { transform: translate(0, 0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--tw-tx, 40px), var(--tw-ty, -40px)) scale(0); opacity: 0; }
+        }
+        .wa-particles span:nth-child(1) { --tw-tx: 50px; --tw-ty: -30px; animation-delay: 0.2s; }
+        .wa-particles span:nth-child(2) { --tw-tx: -40px; --tw-ty: -50px; animation-delay: 0.6s; }
+        .wa-particles span:nth-child(3) { --tw-tx: 30px; --tw-ty: 40px; animation-delay: 1s; }
+
+        .wa-progress-line {
+            width: 200px;
+            height: 4px;
+            background: #DCF8C6;
+            border-radius: 10px;
+            margin: 20px auto 0;
+            overflow: hidden;
+        }
+        .wa-progress-fill {
+            width: 0%;
+            height: 100%;
+            background: #25D366;
+            animation: waFill 2.5s forwards linear;
+        }
+        @keyframes waFill {
+            to { width: 100%; }
+        }
+      `}</style>
 
     </div>
   );

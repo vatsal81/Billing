@@ -41,7 +41,29 @@ export default function Dashboard() {
     // Always use the Render URL for the PDF link to ensure it works on mobile/whatsapp
     const viewLink = `${getFrontendUrl()}/view-bill/${bill._id}`;
     
-    const text = `નમસ્તે ${customerName || 'ગ્રાહક મિત્ર'},\n\nશ્રી હરિ ડ્રેસીસ & કટપીસમાં પધારવા બદલ આભાર! 🛍️\n\nબિલ વિગતો:\n📅 તારીખ: ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\n🧾 બિલ નં: ${bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase()}\n💰 કુલ રકમ: ₹${bill.actualTotal.toLocaleString('en-IN')}\n\nતમારું બિલ જોવા અથવા ડાઉનલોડ કરવા માટે નીચેની લિંક પર ક્લિક કરો:\n${viewLink}\n\nફરી પધારજો! આપનો દિવસ શુભ રહે. 😊\n\n------------------\n\nHello ${customerName || 'Valued Customer'},\n\nThank you for shopping at Shree Hari! 🛍️\n\nYour Online Bill: ${viewLink}\n\nHave a great day!`;
+    const billNo = bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase();
+    
+    // Determine Customer Type
+    let type = 'FIRST_TIME';
+    if (bill.actualTotal >= 18000) type = 'VIP';
+    // Dashboard smart billing usually happens with known customers
+    else type = 'REGULAR';
+
+    let emotionalOpening = 'It Is A Pleasure To Welcome You To Our Brand Family. We Are Honored To Have Been Part Of Your First Experience With Us.';
+    let quote = 'Elegance Is The Only Beauty That Never Fades.';
+    let closing = 'We Look Forward To Curating Your Next Masterpiece.';
+
+    if (type === 'VIP') {
+      emotionalOpening = 'Your Exceptional Taste And Loyalty Place You Among Our Most Valued Guests. It Is A Privilege To Serve Someone With Your Discerning Style.';
+      quote = 'Luxury Must Be Comfortable, Otherwise It Is Not Luxury.';
+      closing = 'We Are Dedicated To Providing You With The Absolute Best In Quality And Service.';
+    } else if (type === 'REGULAR') {
+      emotionalOpening = 'It Is A Joy To See You Again. We Deeply Value Your Continued Trust And The Relationship We Have Built Together.';
+      quote = 'Fashion Fades, Only Style Remains The Same.';
+      closing = 'May Your New Attire Bring You Endless Confidence And Joy.';
+    }
+
+    const text = `\u2728 SHREE HARI DRESSES & CUTPIECE \u2728\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n\uD83E\uDDFE Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${billNo}\nAmount : \u20B9${bill.actualTotal.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n\uD83D\uDD17 View Your Invoice:\n${viewLink}\n\n\uD83D\uDCAC "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting \uD83D\uDE09\n━━━━━━━━━━━━━━━━━━━━━━━`;
 
     
     const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;

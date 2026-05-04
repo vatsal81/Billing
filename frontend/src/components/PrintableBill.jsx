@@ -145,7 +145,7 @@ export default function PrintableBill({ bill }) {
               {bill.items.map((item, idx) => (
                 <tr key={idx} style={{display: 'flex', width: '100%', fontSize: '16px', fontFamily: '"Kalam", cursive', color: '#0f3c88'}}>
                   <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '45%', textAlign: 'left'}}>{item.name}</td>
-                  <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '15%'}}></td>
+                  <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '15%', textAlign: 'center'}}>{item.hsnCode || ''}</td>
                   <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '10%'}}>{item.quantity}</td>
                   <td style={{padding: '6px 8px', borderRight: '2px solid #000', width: '12%', textAlign: 'right'}}>{item.price.toFixed(0)}</td>
                   <td style={{padding: '6px 8px', width: '18%', textAlign: 'right'}}>{(item.price * item.quantity).toFixed(0)}</td>
