@@ -620,12 +620,62 @@ export default function History() {
           background: 'rgba(0,0,0,0.85)', zIndex: 1000,
           display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px', overflowY: 'auto'
         }}>
-          <div className="no-print" style={{width: '100%', maxWidth: '800px', display: 'flex', justifyContent: 'flex-end', gap: '16px', marginBottom: '20px'}}>
-            <button className="btn" style={{background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', gap: '8px'}} onClick={() => handleWhatsApp(selectedBill)}>
-              <MessageCircle size={18} /> Send WhatsApp
+          <div className="no-print" style={{
+            width: '100%', 
+            maxWidth: '500px', 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
+            gap: '8px', 
+            marginBottom: '16px'
+          }}>
+            <button 
+              className="btn" 
+              style={{
+                background: 'rgba(34, 197, 94, 0.1)', 
+                color: '#22c55e', 
+                border: '1px solid #22c55e', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 4px',
+                fontSize: '0.8rem',
+                fontWeight: '700'
+              }} 
+              onClick={() => handleWhatsApp(selectedBill)}
+            >
+              <MessageCircle size={14} /> WhatsApp
             </button>
-            <button className="btn btn-primary" onClick={() => window.print()}><Printer size={18} /> Print</button>
-            <button className="btn btn-secondary" onClick={() => setSelectedBill(null)}><X size={18} /> Close</button>
+            <button 
+              className="btn btn-primary" 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 4px',
+                fontSize: '0.8rem',
+                fontWeight: '700'
+              }} 
+              onClick={() => window.print()}
+            >
+              <Printer size={14} /> Print
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 4px',
+                fontSize: '0.8rem',
+                fontWeight: '700'
+              }} 
+              onClick={() => setSelectedBill(null)}
+            >
+              <X size={14} /> Close
+            </button>
           </div>
           <div style={{borderRadius: '8px', width: '100%', maxWidth: '800px'}}>
              <PrintableBill bill={selectedBill} />

@@ -577,16 +577,60 @@ const ManualPos = () => {
         }}>
           <div className="no-print" style={{ 
             width: '100%', 
-            maxWidth: '800px', 
-            display: 'flex', 
-            justifyContent: 'center', 
-            gap: '12px', 
-            marginBottom: '20px',
-            flexWrap: 'wrap'
+            maxWidth: '500px', 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
+            gap: '8px', 
+            marginBottom: '16px'
           }}>
-            <button className="btn" style={{ background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid #22c55e', flex: 1, minWidth: '120px' }} onClick={() => handleWhatsApp(bill)}>WhatsApp</button>
-            <button className="btn btn-primary" style={{ flex: 1, minWidth: '120px' }} onClick={() => window.print()}>Print</button>
-            <button className="btn btn-secondary" style={{ flex: 1, minWidth: '120px' }} onClick={clearForm}>Close</button>
+            <button 
+              className="btn" 
+              style={{ 
+                background: 'rgba(34, 197, 94, 0.1)', 
+                color: '#22c55e', 
+                border: '1px solid #22c55e', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 4px',
+                fontSize: '0.8rem',
+                fontWeight: '700'
+              }} 
+              onClick={() => handleWhatsApp(bill)}
+            >
+              <MessageCircle size={14} /> WhatsApp
+            </button>
+            <button 
+              className="btn btn-primary" 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 4px',
+                fontSize: '0.8rem',
+                fontWeight: '700'
+              }} 
+              onClick={() => window.print()}
+            >
+              <Printer size={14} /> Print
+            </button>
+            <button 
+              className="btn btn-secondary" 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '10px 4px',
+                fontSize: '0.8rem',
+                fontWeight: '700'
+              }} 
+              onClick={clearForm}
+            >
+              <X size={14} /> Close
+            </button>
           </div>
           <div style={{ width: '100%', maxWidth: '800px', display: 'flex', justifyContent: 'center' }}><PrintableBill bill={bill} /></div>
         </div>

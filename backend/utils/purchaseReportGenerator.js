@@ -79,6 +79,22 @@ const formatDate = (date) => date
     ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
     : 'N/A';
 
+// Load fonts as Base64 to ensure they are available in Puppeteer (especially on Render)
+const loadFontAsBase64 = (fontName) => {
+    try {
+        const fontPath = path.join(__dirname, fontName);
+        if (fs.existsSync(fontPath)) {
+            const base64 = fs.readFileSync(fontPath).toString('base64');
+            return base64;
+        }
+    } catch (e) {
+        console.error(`Error loading font ${fontName}:`, e.message);
+    }
+    return '';
+};
+
+const gujaratiBase64 = loadFontAsBase64('NotoSansGujarati-Regular.ttf');
+
 const buildBillHTML = async (bill, settings = {}) => {
     const totalPcs = bill.items.reduce((a, i) => a + (i.pcs || 0), 0);
     const totalMeters = bill.items.reduce((a, i) => a + (i.meters || 0), 0);
@@ -210,7 +226,7 @@ const buildBillHTML = async (bill, settings = {}) => {
         <div class="bill-party-grid">
             <div class="party-box billed-to">
                 <div class="party-header">BILLED TO (BUYER)</div>
-                <div class="party-content">
+                <div class="party-content gujarati-text">
                     <p class="party-name">${settings.shopName || 'SHREE HARI DRESSES'}</p>
                     <p class="party-add">${settings.shopAddress || 'SHOP NO. 4, VARDHAMAN MARKET, SURAT'}</p>
                     <div class="party-meta-row"><span>CITY / DISTRICT : SURAT</span><span>STATE : GUJARAT (24)</span></div>
@@ -219,7 +235,7 @@ const buildBillHTML = async (bill, settings = {}) => {
             </div>
             <div class="party-box shipped-to">
                 <div class="party-header">SHIPPED TO (CONSIGNEE)</div>
-                <div class="party-content">
+                <div class="party-content gujarati-text">
                     <p class="party-name">${settings.shopName || 'SHREE HARI DRESSES'}</p>
                     <p class="party-add">${settings.shopAddress || 'SHOP NO. 4, VARDHAMAN MARKET, SURAT'}</p>
                     <div class="party-meta-row"><span>CITY / DISTRICT : SURAT</span><span>STATE : GUJARAT (24)</span></div>
@@ -336,8 +352,15 @@ const generatePurchaseReportPdf = async (bills, month, year) => {
         const styles = `
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'Gujarati';
+            src: url(data:font/ttf;charset=utf-8;base64,${gujaratiBase64}) format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
         body { font-family: 'Inter', sans-serif; font-size: 10px; color: #1e293b; background: white; margin: 0; padding: 0; }
+        .gujarati-text { font-family: 'Gujarati', sans-serif; }
         .sagar-bill-paper {
             background: white;
             padding: 20px 30px;
@@ -412,6 +435,9 @@ const generatePurchaseReportPdf = async (bills, month, year) => {
         combinedHTML += '</body></html>';
 
         await page.setContent(combinedHTML, { waitUntil: 'networkidle0' });
+        
+        // Wait for fonts to be ready
+        await page.evaluateHandle('document.fonts.ready');
 
         const finalPdf = await page.pdf({
             format: 'A4',
