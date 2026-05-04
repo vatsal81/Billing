@@ -625,12 +625,13 @@ const ManualPos = () => {
           right: 0, 
           bottom: 0, 
           background: 'rgba(0,0,0,0.6)', 
-          zIndex: 5000, 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          padding: '20px',
-          paddingBottom: '100px' // Extra space for bottom nav
+          zIndex: 9000, 
+          padding: '16px',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+          paddingTop: window.innerWidth < 768 ? '60px' : '20px',
+          overflowY: 'auto'
         }} onClick={e => e.target === e.currentTarget && setShowAddModal(false)}>
           <div className="modal-content" style={{ 
             maxWidth: '360px', // Ultra-compact professional width
