@@ -54,13 +54,7 @@ function App() {
         {/* Protected Routes - Need Login */}
         <Route path="/*" element={
           !user ? <Login /> : (
-            <div className="app-container" style={{ 
-              height: '100dvh', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              overflow: 'hidden',
-              position: 'relative'
-            }}>
+            <div className="app-container">
               {/* Mobile Header */}
               <header className="mobile-header no-print">
                 <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
@@ -166,14 +160,7 @@ function App() {
               </aside>
 
               {/* Main Content Area */}
-              <main className="main-content" style={{ 
-                flex: 1, 
-                overflowY: 'auto', 
-                padding: window.innerWidth < 768 ? '70px 16px 85px' : '40px',
-                background: 'var(--bg-primary)',
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
+              <main className="main-content">
                 <Routes>
                     <Route path="/" element={<Analytics />} />
                     <Route path="/analytics" element={<Analytics />} />

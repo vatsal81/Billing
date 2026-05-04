@@ -25,13 +25,7 @@ const ModalOverlay = ({ onClose, onSubmit, header, children, footer, maxWidth })
         <span className="s-float s-f5">💼</span>
         <span className="s-float s-f6">₹</span>
 
-        <div className="s-modal" style={{ 
-            ...(maxWidth ? { maxWidth } : {}),
-            marginTop: window.innerWidth < 768 ? '0' : 'auto',
-            marginBottom: window.innerWidth < 768 ? '40px' : 'auto',
-            width: window.innerWidth < 768 ? '100%' : 'auto',
-            padding: window.innerWidth < 768 ? '12px' : '20px'
-        }}>
+        <div className="s-modal" style={maxWidth ? { maxWidth } : {}}>
             <div className="s-modal-accent" />
             {onSubmit ? (
                 <form onSubmit={onSubmit} className="s-modal-inner">
@@ -116,155 +110,122 @@ const CustomerList = ({ searchTerm, setSearchTerm, loading, filtered, selectedCu
                 <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                     <User size={40} style={{ marginBottom: '8px', opacity: 0.4 }} /><p>No customers found.</p>
                 </div>
-            ) : filtered.map(c => (
-                <div key={c._id}>
-                    <div onClick={() => {
-                        if (window.innerWidth < 768) {
-                            setExpandedId(expandedId === c._id ? null : c._id);
-                            if (selectedCustomer?._id !== c._id) selectCustomer(c);
-                        } else {
-                            selectCustomer(c);
-                        }
-                    }}
-                        style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', transition: 'background 0.15s', background: selectedCustomer?._id === c._id ? 'rgba(99, 102, 241, 0.06)' : 'transparent', borderLeft: selectedCustomer?._id === c._id ? '3px solid var(--accent-primary)' : '3px solid transparent' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
-                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{c.phone || 'No Phone'}</p>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ textAlign: 'right' }}>
-                                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Outstanding</p>
-                                <p style={{ fontWeight: 700, fontSize: '0.9rem', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>₹{c.balance?.toLocaleString('en-IN') || 0}</p>
-                            </div>
-                            <div className="desktop-only" style={{ display: 'flex', gap: '4px' }}>
-                                <button className="s-icon-btn s-edit" title="Edit" onClick={e => { e.stopPropagation(); setEditCustomer({ ...c }); setActiveModal('edit'); }}><Pencil size={14} /></button>
-                                <button className="s-icon-btn s-del" title="Delete" onClick={e => { e.stopPropagation(); setSelected(c); setActiveModal('delete'); }}><Trash2 size={14} /></button>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Mobile Accordion Content */}
-                    <div className="mobile-only" style={{ 
-                        maxHeight: expandedId === c._id ? '1500px' : '0',
-                        overflow: 'hidden',
-                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                        background: '#f8fafc',
-                        borderBottom: expandedId === c._id ? '1px solid var(--border-color)' : 'none'
-                    }}>
-                        <div style={{ padding: '12px' }}>
-                            {/* Contact Shortcuts */}
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                <div style={{ flex: 1, padding: '8px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Phone size={12}/></div>
-                                    <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{c.phone || 'No Phone'}</div>
-                                </div>
-                                <button 
-                                    onClick={() => {
-                                        const balance = c.balance || 0;
-                                        const paymentLink = `${getFrontendUrl()}/pay/${c._id}/${balance}`;
-
-                                        if (balance <= 0) {
-                                            window.open(`https://wa.me/91${c.phone}?text=${encodeURIComponent(`Hello *${c.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! \u2728\n\nYour account is all clear. We look forward to seeing you again! \ud83d\ude0a`)}`, '_blank');
-                                            return;
-                                        }
-                                        
-                                        const message = `*PAYMENT REMINDER* \ud83d\udcc4\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${c.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! \u2728\n\nThis is a friendly reminder regarding your outstanding balance.\n\n\ud83d\udcb0 *Pending Amount: \u20b9${balance.toLocaleString('en-IN')}*\n\n\ud83d\udcf1 *View & Pay Online:*\n${paymentLink}\n\nKindly clear your dues at your earliest convenience.\n\nThank you for your continued trust! \ud83d\ude4f\n\n━━━━━━━━━━━━━━━━━━━━━━━\n*SHREE HARI DRESSES & CUTPIECE*`;
-                                        window.open(`https://wa.me/91${c.phone}?text=${encodeURIComponent(message)}`, '_blank');
-                                    }}
-                                    disabled={!c.phone}
-                                    style={{ padding: '8px 12px', background: '#25D366', color: 'white', borderRadius: '10px', border: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, opacity: c.phone ? 1 : 0.5 }}
-                                >
-                                    <MessageCircle size={14} /> WhatsApp
-                                </button>
-                            </div>
-
-                            {/* Detailed Balance Summary */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
-                                <div style={{ padding: '8px 10px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', marginBottom: '2px', textTransform: 'uppercase' }}>Purchased</div>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1e293b' }}>₹{ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN')}</div>
-                                </div>
-                                <div style={{ padding: '8px 10px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)', marginBottom: '2px', textTransform: 'uppercase' }}>Received</div>
-                                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#10b981' }}>₹{ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN')}</div>
+            ) : (
+                <div className="customer-list-items">
+                    {filtered.map(c => {
+                        const isSelected = selectedCustomer?._id === c._id;
+                        return (
+                            <div key={c._id} style={{ borderBottom: '1px solid var(--border-color)', background: isSelected ? 'rgba(99, 102, 241, 0.06)' : 'transparent', borderLeft: isSelected ? '3px solid var(--accent-primary)' : '3px solid transparent' }}>
+                                <div onClick={() => {
+                                    const newSelected = isSelected ? null : c;
+                                    selectCustomer(newSelected);
+                                    if (newSelected && window.innerWidth < 1024) {
+                                        setTimeout(() => {
+                                            document.getElementById('ledger-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        }, 100);
+                                    }
+                                }}
+                                    style={{ padding: '14px 18px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', transition: 'background 0.15s' }}>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                                        <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{c.phone || 'No Phone'}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Outstanding</p>
+                                        <p style={{ fontWeight: 700, fontSize: '0.9rem', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>₹{c.balance?.toLocaleString('en-IN') || 0}</p>
+                                    </div>
                                 </div>
                             </div>
-
-                            {/* Mini History */}
-                            <div style={{ marginBottom: '12px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                    <h4 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>Activity</h4>
-                                    <span style={{ fontSize: '0.65rem', color: 'var(--accent-primary)', fontWeight: 600 }}>Last 3</span>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    {ledger.slice(0, 3).length === 0 ? (
-                                        <div style={{ padding: '12px', textAlign: 'center', background: 'white', borderRadius: '10px', border: '1px dashed #cbd5e1', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>No entries</div>
-                                    ) : ledger.slice(0, 3).map(entry => (
-                                        <div key={entry._id} style={{ padding: '8px 10px', background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: entry.type === 'debit' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: entry.type === 'debit' ? '#ef4444' : '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    {entry.type === 'debit' ? <ArrowUpRight size={10} /> : <ArrowDownLeft size={10} />}
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '0.75rem', fontWeight: 600 }}>{entry.description}</div>
-                                                    <div style={{ fontSize: '0.6rem', color: 'var(--text-secondary)' }}>{new Date(entry.date).toLocaleDateString('en-IN')}</div>
-                                                </div>
-                                            </div>
-                                            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: entry.type === 'debit' ? '#ef4444' : '#10b981' }}>
-                                                ₹{entry.amount.toLocaleString('en-IN')}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
-                                <button className="btn btn-secondary" style={{ height: '36px', fontSize: '0.78rem', padding: '0' }} onClick={() => { setEditCustomer({ ...c }); setActiveModal('edit'); }}>
-                                    <Pencil size={12} /> Edit Profile
-                                </button>
-                                <button className="btn s-danger-btn" style={{ height: '36px', fontSize: '0.78rem', padding: '0' }} onClick={() => { setSelected(c); setActiveModal('delete'); }}>
-                                    <Trash2 size={12} /> Delete
-                                </button>
-                            </div>
-                            <button className="btn btn-primary" style={{ width: '100%', height: '40px', fontSize: '0.85rem' }} onClick={() => { selectCustomer(c); setActiveModal('payment'); }}>
-                                <Wallet size={16} /> Receive New Payment
-                            </button>
-                        </div>
-                    </div>
+                        );
+                    })}
                 </div>
-            ))}
+            )}
         </div>
     </div>
 );
 
-const CustomerLedger = ({ selectedCustomer, ledger, setEditCustomer, setActiveModal, handleViewBill }) => (
+const CustomerLedger = ({ selectedCustomer, ledger, setEditCustomer, setActiveModal, handleViewBill, waLoading, onWhatsApp }) => (
     <div className="premium-card" style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                    <div style={{ padding: '7px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', borderRadius: '8px' }}><User size={18} /></div>
-                    <h2 style={{ fontSize: '1.3rem', fontWeight: 700 }}>{selectedCustomer.name}</h2>
+        <div style={{ 
+            padding: window.innerWidth < 768 ? '16px' : '20px 24px', 
+            borderBottom: '1px solid var(--border-color)', 
+            display: 'flex', 
+            flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+            justifyContent: 'space-between', 
+            alignItems: window.innerWidth < 768 ? 'stretch' : 'flex-start',
+            gap: '16px'
+        }}>
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: window.innerWidth < 768 ? 'center' : 'flex-start',
+                textAlign: window.innerWidth < 768 ? 'center' : 'left'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', justifyContent: window.innerWidth < 768 ? 'center' : 'flex-start' }}>
+                    <div style={{ padding: '6px', background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', borderRadius: '6px' }}><User size={16} /></div>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{selectedCustomer.name}</h2>
                 </div>
-                <div style={{ display: 'flex', gap: '15px' }}>
+                <div style={{ display: 'flex', gap: '15px', justifyContent: window.innerWidth < 768 ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
                     {selectedCustomer.phone && <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><Phone size={14}/> {selectedCustomer.phone}</p>}
                     {selectedCustomer.address && <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14}/> {selectedCustomer.address}</p>}
                 </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <button className="btn btn-secondary s-sm" onClick={() => { setEditCustomer({ ...selectedCustomer }); setActiveModal('edit'); }}><Pencil size={14} /> Edit</button>
-                <button className="btn s-sm s-danger-btn" onClick={() => setActiveModal('delete')}><Trash2 size={14} /> Delete</button>
-                <button className="btn btn-primary" onClick={() => setActiveModal('payment')}><Wallet size={16} /> Receive Payment</button>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, 1fr)', 
+                gap: '10px', 
+                width: window.innerWidth < 768 ? '100%' : 'auto',
+                maxWidth: window.innerWidth < 768 ? '280px' : 'none',
+                margin: window.innerWidth < 768 ? '0 auto' : '0',
+                justifyContent: 'center'
+            }}>
+                <button 
+                    className="btn" 
+                    style={{ 
+                        background: waLoading === selectedCustomer._id ? '#128C7E' : '#25D366', 
+                        color: 'white', 
+                        gap: '6px', 
+                        fontSize: '0.8rem', 
+                        padding: '10px', 
+                        width: '100%',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    }}
+                    onClick={() => onWhatsApp(selectedCustomer)}
+                    disabled={!selectedCustomer.phone || waLoading === selectedCustomer._id}
+                >
+                    {waLoading === selectedCustomer._id ? (
+                        <>
+                            <div className="spinner-s" style={{ width: '14px', height: '14px', border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                            Sending...
+                        </>
+                    ) : (
+                        <><MessageCircle size={14} /> WhatsApp</>
+                    )}
+                </button>
+                <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '10px', width: '100%' }} onClick={() => setActiveModal('payment')}><Wallet size={14} /> Payment</button>
+                <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '10px', width: '100%' }} onClick={() => { setEditCustomer({ ...selectedCustomer }); setActiveModal('edit'); }}><Pencil size={14} /> Edit</button>
+                <button className="btn s-danger-btn" style={{ fontSize: '0.8rem', padding: '10px', width: '100%' }} onClick={() => setActiveModal('delete')}><Trash2 size={14} /> Delete</button>
             </div>
         </div>
 
-        <div className="stats-grid" style={{ borderBottom: '1px solid var(--border-color)', gap: 0 }}>
+        <div className="stats-grid" style={{ 
+            borderBottom: '1px solid var(--border-color)', 
+            gap: 0,
+            gridTemplateColumns: window.innerWidth < 768 ? 'repeat(3, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))'
+        }}>
             {[
-                { label: 'Total Udhaar (Bills)', val: '₹' + ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'), color: '#ef4444' },
-                { label: 'Total Jama (Received)', val: '₹' + ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'),  color: '#10b981' },
-                { label: 'Net Balance Due',       val: '₹' + (selectedCustomer.balance?.toLocaleString('en-IN') || 0), color: selectedCustomer.balance > 0 ? '#ef4444' : '#10b981' },
+                { label: 'Udhaar', val: '₹' + ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'), color: '#ef4444' },
+                { label: 'Jama', val: '₹' + ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'),  color: '#10b981' },
+                { label: 'Balance',       val: '₹' + (selectedCustomer.balance?.toLocaleString('en-IN') || 0), color: selectedCustomer.balance > 0 ? '#ef4444' : '#10b981' },
             ].map(({ label, val, color }, idx) => (
-                <div key={label} style={{ padding: '16px', textAlign: 'center', borderRight: idx < 2 ? '1px solid var(--border-color)' : 'none' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{label}</p>
-                    <p style={{ fontSize: '1.1rem', fontWeight: 700, color }}>{val}</p>
+                <div key={label} style={{ 
+                    padding: window.innerWidth < 768 ? '10px 4px' : '16px', 
+                    textAlign: 'center', 
+                    borderRight: idx < 2 ? '1px solid var(--border-color)' : 'none' 
+                }}>
+                    <p style={{ fontSize: window.innerWidth < 768 ? '0.6rem' : '0.75rem', color: 'var(--text-secondary)', marginBottom: '2px', textTransform: 'uppercase' }}>{label}</p>
+                    <p style={{ fontSize: window.innerWidth < 768 ? '0.85rem' : '1.1rem', fontWeight: 800, color }}>{val}</p>
                 </div>
             ))}
         </div>
@@ -293,8 +254,24 @@ const CustomerLedger = ({ selectedCustomer, ledger, setEditCustomer, setActiveMo
                                                 {entry.type === 'debit' ? <ArrowUpRight size={13} style={{ color: '#ef4444' }} /> : <ArrowDownLeft size={13} style={{ color: '#10b981' }} />}
                                                 {entry.description}
                                                 {entry.referenceId && entry.type === 'debit' && (
-                                                    <button onClick={() => handleViewBill(entry.referenceId)} style={{background: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)', padding: '2px 6px', borderRadius: '4px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', marginLeft: '8px'}} title="View Bill">
-                                                        <Eye size={12} /> View Bill
+                                                    <button onClick={() => handleViewBill(entry.referenceId)} 
+                                                        style={{
+                                                            background: 'rgba(99, 102, 241, 0.08)', 
+                                                            color: 'var(--accent-primary)', 
+                                                            padding: '5px 12px', 
+                                                            borderRadius: '8px', 
+                                                            border: '1px solid rgba(99, 102, 241, 0.2)', 
+                                                            cursor: 'pointer', 
+                                                            display: 'inline-flex', 
+                                                            alignItems: 'center', 
+                                                            gap: '6px', 
+                                                            fontSize: '0.78rem', 
+                                                            marginLeft: '12px',
+                                                            fontWeight: 600,
+                                                            transition: 'all 0.2s'
+                                                        }} 
+                                                        title="View Bill">
+                                                        <Eye size={14} /> View Bill
                                                     </button>
                                                 )}
                                             </td>
@@ -422,6 +399,23 @@ const Customers = () => {
     const [newCustomer, setNewCustomer]       = useState(emptyCustomer);
     const [editCustomer, setEditCustomer]     = useState(emptyCustomer);
     const [payment, setPayment]               = useState({ amount: '', description: '', date: new Date().toISOString().split('T')[0] });
+    const [waLoading, setWaLoading]           = useState(null);
+
+    const handleWhatsApp = (customer) => {
+        setWaLoading(customer._id);
+        setTimeout(() => {
+            const balance = customer.balance || 0;
+            const paymentLink = `${getFrontendUrl()}/pay/${customer._id}/${balance}`;
+            let message = '';
+            if (balance <= 0) {
+                message = `Hello *${customer.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! ✨\n\nYour account is all clear. We look forward to seeing you again! 😊`;
+            } else {
+                message = `*PAYMENT REMINDER* 🧾\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customer.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! ✨\n\nThis is a friendly reminder regarding your outstanding balance.\n\n💰 *Pending Amount: ₹${balance.toLocaleString('en-IN')}*\n\n📱 *View & Pay Online:*\n${paymentLink}\n\nKindly clear your dues at your earliest convenience.\n\nThank you for your continued trust! 🙏\n\n━━━━━━━━━━━━━━━━━━━━━━━\n*SHREE HARI DRESSES & CUTPIECE*`;
+            }
+            window.open(`https://wa.me/91${customer.phone}?text=${encodeURIComponent(message)}`, '_blank');
+            setWaLoading(null);
+        }, 3000);
+    };
 
     useEffect(() => { loadCustomers(); }, []);
 
@@ -436,7 +430,11 @@ const Customers = () => {
         catch (e) { console.error(e); }
     };
 
-    const selectCustomer = c => { setSelected(c); loadLedger(c._id); };
+    const selectCustomer = c => { 
+        setSelected(c); 
+        if (c) loadLedger(c._id); 
+        else setLedger([]);
+    };
 
     // Auto-transliterate English fields to Gujarati for Add/Edit
     useEffect(() => {
@@ -535,13 +533,9 @@ const Customers = () => {
     return (
         <div className="page-container animate-fade-in">
             <style>{`
-                @media (max-width: 768px) {
-                    .desktop-only { display: none !important; }
-                    .mobile-only { display: block !important; }
-                }
-                @media (min-width: 769px) {
-                    .desktop-only { display: block !important; }
-                    .mobile-only { display: none !important; }
+                @media (max-width: 1024px) {
+                    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; margin: 0 -4px; padding: 0 4px; }
+                    .premium-table { min-width: 600px; }
                 }
             `}</style>
             <header className="page-header">
@@ -573,7 +567,7 @@ const Customers = () => {
             </header>
 
             <div className="charts-grid" style={{ 
-                gridTemplateColumns: selectedCustomer && window.innerWidth >= 768 ? '1fr 1.5fr' : '1fr', 
+                gridTemplateColumns: selectedCustomer && window.innerWidth >= 1024 ? '1fr 1.5fr' : '1fr', 
                 transition: 'all 0.3s ease' 
             }}>
                 <CustomerList 
@@ -586,13 +580,15 @@ const Customers = () => {
                 />
 
                 {selectedCustomer && (
-                    <div className="desktop-only">
-                        <CustomerLedger
-                            selectedCustomer={selectedCustomer}
-                            ledger={ledger}
-                            setEditCustomer={setEditCustomer}
+                    <div id="ledger-panel" className="animate-fade-in">
+                        <CustomerLedger 
+                            selectedCustomer={selectedCustomer} 
+                            ledger={ledger} 
+                            setEditCustomer={setEditCustomer} 
                             setActiveModal={setActiveModal}
                             handleViewBill={handleViewBill}
+                            waLoading={waLoading}
+                            onWhatsApp={handleWhatsApp}
                         />
                     </div>
                 )}

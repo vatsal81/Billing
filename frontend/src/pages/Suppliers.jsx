@@ -7,7 +7,9 @@ const emptySupplier = { name: '', gstin: '', pan: '', phone: '', email: '', addr
 
 /* ── Animated Modal Overlay ── */
 const ModalOverlay = ({ onClose, onSubmit, header, children, footer, maxWidth }) => (
-    <div className="s-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="s-overlay" 
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+        onClick={e => e.target === e.currentTarget && onClose()}>
         <span className="s-float s-f1">₹</span>
         <span className="s-float s-f2">📦</span>
         <span className="s-float s-f3">🏢</span>
@@ -38,146 +40,177 @@ const ModalOverlay = ({ onClose, onSubmit, header, children, footer, maxWidth })
 /* ── Supplier Form Fields ── */
 const SupplierFormFields = ({ data, onChange }) => (
     <>
-        {/* Section: Basic Info */}
-        <div className="s-section-label">Basic Info</div>
-        <div className="s-form-grid" style={{ marginBottom: '20px' }}>
-            <div className="s-field s-span2">
-                <label>Business Name <span style={{color:'#ef4444'}}>*</span></label>
-                <input type="text" required placeholder="e.g. Sagar Textiles"
+        <div style={{ marginBottom: '6px', gap: '4px', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+            <div className="s-field" style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>Business Name *</label>
+                <input type="text" required placeholder="Name" style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.name} onChange={e => onChange({ ...data, name: e.target.value })} />
             </div>
             <div className="s-field">
-                <label>GSTIN Number</label>
-                <input type="text" placeholder="24AAAAA0000A1Z5"
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>GSTIN</label>
+                <input type="text" placeholder="24AA..." style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.gstin} onChange={e => onChange({ ...data, gstin: e.target.value })} />
             </div>
             <div className="s-field">
-                <label>PAN Number</label>
-                <input type="text" placeholder="AAAAA0000A"
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>PAN</label>
+                <input type="text" placeholder="AAAA..." style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.pan} onChange={e => onChange({ ...data, pan: e.target.value })} />
             </div>
-        </div>
-
-        {/* Section: Contact Details */}
-        <div className="s-section-label">Contact Details</div>
-        <div className="s-form-grid" style={{ marginBottom: '20px' }}>
             <div className="s-field">
-                <label>Phone / Mobile</label>
-                <input type="text" placeholder="e.g. 9898088844"
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>Phone</label>
+                <input type="text" placeholder="9898..." style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.phone || ''} onChange={e => onChange({ ...data, phone: e.target.value })} />
             </div>
             <div className="s-field">
-                <label>Email Address</label>
-                <input type="email" placeholder="e.g. supplier@gmail.com"
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>Email</label>
+                <input type="email" placeholder="Email" style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.email || ''} onChange={e => onChange({ ...data, email: e.target.value })} />
             </div>
-            <div className="s-field s-span2">
-                <label>Address</label>
-                <textarea rows="2" placeholder="Shop / office address..."
+            <div className="s-field" style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>Address</label>
+                <input type="text" placeholder="Address" style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.address} onChange={e => onChange({ ...data, address: e.target.value })} />
             </div>
             <div className="s-field">
-                <label>City</label>
-                <input type="text" placeholder="e.g. Surat"
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>City</label>
+                <input type="text" placeholder="City" style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.city} onChange={e => onChange({ ...data, city: e.target.value })} />
             </div>
             <div className="s-field">
-                <label>State</label>
-                <input type="text" placeholder="e.g. Gujarat"
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>State</label>
+                <input type="text" placeholder="State" style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.state} onChange={e => onChange({ ...data, state: e.target.value })} />
             </div>
-        </div>
-
-        {/* Section: Banking */}
-        <div className="s-section-label">Banking Details</div>
-        <div className="s-form-grid">
             <div className="s-field">
-                <label>Bank Name</label>
-                <input type="text" placeholder="e.g. HDFC Bank"
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>Bank</label>
+                <input type="text" placeholder="Bank" style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.bankName} onChange={e => onChange({ ...data, bankName: e.target.value })} />
             </div>
             <div className="s-field">
-                <label>Branch Name</label>
-                <input type="text" placeholder="e.g. Shahibaug"
-                    value={data.branch || ''} onChange={e => onChange({ ...data, branch: e.target.value })} />
-            </div>
-            <div className="s-field">
-                <label>Account Number</label>
-                <input type="text" placeholder="0000000000"
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>A/C No</label>
+                <input type="text" placeholder="A/C No" style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.accountNo} onChange={e => onChange({ ...data, accountNo: e.target.value })} />
-            </div>
-            <div className="s-field">
-                <label>IFSC Code</label>
-                <input type="text" placeholder="HDFC0001234"
-                    value={data.ifsc} onChange={e => onChange({ ...data, ifsc: e.target.value })} />
             </div>
         </div>
     </>
 );
 
-const SupplierList = ({ searchTerm, setSearchTerm, loading, filtered, selectedSupplier, selectSupplier, setEditSupplier, setActiveModal, setSelected }) => (
-    <div className="premium-card" style={{ height: 'fit-content' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
-            <div style={{ position: 'relative' }}>
-                <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                <input type="text" className="input-field" placeholder="Search suppliers by name or GSTIN..."
-                    style={{ paddingLeft: '38px' }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+const SupplierList = ({ searchTerm, setSearchTerm, loading, filtered, selectedSupplier, selectSupplier, setEditSupplier, setActiveModal, setSelected, ledger }) => {
+    const [expandedId, setExpandedId] = useState(null);
+
+    const toggleExpand = (e, s) => {
+        e.stopPropagation();
+        if (expandedId === s._id) {
+            setExpandedId(null);
+        } else {
+            setExpandedId(s._id);
+            selectSupplier(s);
+        }
+    };
+
+    return (
+        <div className="premium-card" style={{ height: 'fit-content' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
+                <div style={{ position: 'relative' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                    <input type="text" className="input-field" placeholder="Search suppliers..."
+                        style={{ paddingLeft: '38px' }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                </div>
+            </div>
+            <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
+                {loading ? (
+                    <div style={{ padding: '40px', textAlign: 'center' }}><div className="loader" /></div>
+                ) : filtered.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                        <Building size={40} style={{ marginBottom: '8px', opacity: 0.4 }} /><p>No suppliers found.</p>
+                    </div>
+                ) : filtered.map(s => (
+                    <div key={s._id} style={{ borderBottom: '1px solid var(--border-color)', background: selectedSupplier?._id === s._id ? 'rgba(3,105,161,0.03)' : 'transparent' }}>
+                        <div onClick={() => {
+                            const newSelected = selectedSupplier?._id === s._id ? null : s;
+                            setSelected(newSelected);
+                            if (newSelected && window.innerWidth < 1024) {
+                                setTimeout(() => {
+                                    document.getElementById('ledger-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }, 100);
+                            }
+                        }}
+                            style={{ padding: '12px 16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <p style={{ fontWeight: 600, fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{s.gstin || 'No GSTIN'}</p>
+                            </div>
+                            <div style={{ textAlign: 'right', minWidth: '100px' }}>
+                                <p style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Balance</p>
+                                <p style={{ fontWeight: 800, fontSize: '0.9rem', color: s.balance > 0 ? '#ef4444' : '#10b981', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    ₹{(s.balance || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
-        <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
-            {loading ? (
-                <div style={{ padding: '40px', textAlign: 'center' }}><div className="loader" /></div>
-            ) : filtered.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    <Building size={40} style={{ marginBottom: '8px', opacity: 0.4 }} /><p>No suppliers found.</p>
-                </div>
-            ) : filtered.map(s => (
-                <div key={s._id} onClick={() => selectSupplier(s)}
-                    style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', transition: 'background 0.15s', background: selectedSupplier?._id === s._id ? 'rgba(3,105,161,0.06)' : 'transparent', borderLeft: selectedSupplier?._id === s._id ? '3px solid var(--accent-primary)' : '3px solid transparent' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontWeight: 600, marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
-                        <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{s.gstin || 'No GSTIN'}</p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ textAlign: 'right' }}>
-                            <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Outstanding</p>
-                            <p style={{ fontWeight: 700, fontSize: '0.9rem', color: s.balance > 0 ? '#ef4444' : '#10b981' }}>₹{s.balance?.toLocaleString('en-IN') || 0}</p>
-                        </div>
-                        <button className="s-icon-btn s-edit" title="Edit" onClick={e => { e.stopPropagation(); setEditSupplier({ ...s }); setActiveModal('edit'); }}><Pencil size={14} /></button>
-                        <button className="s-icon-btn s-del" title="Delete" onClick={e => { e.stopPropagation(); setSelected(s); setActiveModal('delete'); }}><Trash2 size={14} /></button>
-                    </div>
-                </div>
-            ))}
-        </div>
-    </div>
-);
+    );
+};
 
 const SupplierLedger = ({ selectedSupplier, ledger, setEditSupplier, setActiveModal }) => (
     <div className="premium-card" style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                    <div style={{ padding: '7px', background: 'rgba(3,105,161,0.1)', color: 'var(--accent-primary)', borderRadius: '8px' }}><Building size={18} /></div>
-                    <h2 style={{ fontSize: '1.3rem', fontWeight: 700 }}>{selectedSupplier.name}</h2>
+        <div style={{ 
+            padding: window.innerWidth < 768 ? '16px' : '20px 24px', 
+            borderBottom: '1px solid var(--border-color)', 
+            display: 'flex', 
+            flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+            justifyContent: 'space-between', 
+            alignItems: window.innerWidth < 768 ? 'stretch' : 'flex-start',
+            gap: '16px'
+        }}>
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column',
+                alignItems: window.innerWidth < 768 ? 'center' : 'flex-start',
+                textAlign: window.innerWidth < 768 ? 'center' : 'left'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', justifyContent: window.innerWidth < 768 ? 'center' : 'flex-start' }}>
+                    <div style={{ padding: '6px', background: 'rgba(3,105,161,0.1)', color: 'var(--accent-primary)', borderRadius: '6px' }}><Building size={16} /></div>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{selectedSupplier.name}</h2>
                 </div>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', paddingLeft: '2px' }}>{selectedSupplier.address} {selectedSupplier.city}</p>
+                <div style={{ display: 'flex', gap: '15px', justifyContent: window.innerWidth < 768 ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}><MapPin size={14}/> {selectedSupplier.address} {selectedSupplier.city}</p>
+                </div>
             </div>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <button className="btn btn-secondary s-sm" onClick={() => { setEditSupplier({ ...selectedSupplier }); setActiveModal('edit'); }}><Pencil size={14} /> Edit</button>
-                <button className="btn s-sm s-danger-btn" onClick={() => setActiveModal('delete')}><Trash2 size={14} /> Delete</button>
-                <button className="btn btn-primary" onClick={() => setActiveModal('payment')}><Wallet size={16} /> Record Payment</button>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, 1fr)', 
+                gap: '10px', 
+                width: window.innerWidth < 768 ? '100%' : 'auto',
+                maxWidth: window.innerWidth < 768 ? '280px' : 'none',
+                margin: window.innerWidth < 768 ? '0 auto' : '0',
+                justifyContent: 'center'
+            }}>
+                <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '10px', width: '100%' }} onClick={() => setActiveModal('payment')}><Wallet size={14} /> Payment</button>
+                <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '10px', width: '100%' }} onClick={() => { setEditSupplier({ ...selectedSupplier }); setActiveModal('edit'); }}><Pencil size={14} /> Edit</button>
+                <button className="btn s-danger-btn" style={{ fontSize: '0.8rem', padding: '10px', width: '100%' }} onClick={() => setActiveModal('delete')}><Trash2 size={14} /> Delete</button>
             </div>
         </div>
 
-        <div className="stats-grid" style={{ borderBottom: '1px solid var(--border-color)', gap: 0 }}>
+        <div className="stats-grid" style={{ 
+            borderBottom: '1px solid var(--border-color)', 
+            gap: 0,
+            gridTemplateColumns: window.innerWidth < 768 ? 'repeat(3, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))'
+        }}>
             {[
-                { label: 'Total Udhaar (Purchased)', val: '₹' + ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'), color: '#ef4444' },
-                { label: 'Total Jama (Paid)',      val: '₹' + ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'),  color: '#10b981' },
-                { label: 'Net Balance Due',     val: '₹' + (selectedSupplier.balance?.toLocaleString('en-IN') || 0), color: selectedSupplier.balance > 0 ? '#ef4444' : '#10b981' },
+                { label: 'Purchased', val: '₹' + ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'), color: '#ef4444' },
+                { label: 'Paid', val: '₹' + ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'),  color: '#10b981' },
+                { label: 'Balance',   val: '₹' + (selectedSupplier.balance?.toLocaleString('en-IN') || 0), color: selectedSupplier.balance > 0 ? '#ef4444' : '#10b981' },
             ].map(({ label, val, color }, idx) => (
-                <div key={label} style={{ padding: '16px', textAlign: 'center', borderRight: idx < 2 ? '1px solid var(--border-color)' : 'none' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>{label}</p>
-                    <p style={{ fontSize: '1.1rem', fontWeight: 700, color }}>{val}</p>
+                <div key={label} style={{ 
+                    padding: window.innerWidth < 768 ? '10px 4px' : '16px', 
+                    textAlign: 'center', 
+                    borderRight: idx < 2 ? '1px solid var(--border-color)' : 'none' 
+                }}>
+                    <p style={{ fontSize: window.innerWidth < 768 ? '0.6rem' : '0.75rem', color: 'var(--text-secondary)', marginBottom: '2px', textTransform: 'uppercase' }}>{label}</p>
+                    <p style={{ fontSize: window.innerWidth < 768 ? '0.85rem' : '1.1rem', fontWeight: 800, color }}>{val}</p>
                 </div>
             ))}
         </div>
@@ -239,15 +272,19 @@ const SupplierModals = ({
         {activeModal === 'add' && (
             <ModalOverlay onClose={() => setActiveModal(null)} onSubmit={handleAdd}
                 header={
-                    <div className="modal-header">
-                        <div><h2>Add New Supplier</h2><p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '2px' }}>Register a new merchant / vendor</p></div>
-                        <button type="button" className="close-btn" onClick={() => setActiveModal(null)}><X size={15} /></button>
+                    <div className="modal-header" style={{ position: 'relative', padding: '8px 40px 6px 12px', minHeight: 'auto' }}>
+                        <div>
+                            <h2 style={{ fontSize: '0.9rem', marginBottom: '0', whiteSpace: 'nowrap' }}>Add New Supplier</h2>
+                        </div>
+                        <button type="button" className="close-btn" style={{ position: 'absolute', right: '8px', top: '8px' }} onClick={() => setActiveModal(null)}><X size={13} /></button>
                     </div>
                 }
-                footer={<>
-                    <button type="button" className="btn btn-secondary" onClick={() => setActiveModal(null)}>Cancel</button>
-                    <button type="submit" className="btn btn-primary" disabled={saving}><Save size={15} /> {saving ? 'Saving…' : 'Save Supplier'}</button>
-                </>}>
+                footer={<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', width: '100%' }}>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '8px', fontSize: '0.85rem' }} onClick={() => setActiveModal(null)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ padding: '8px', fontSize: '0.85rem', whiteSpace: 'nowrap' }} disabled={saving}>
+                        <Save size={14} /> {saving ? 'Saving…' : 'Save'}
+                    </button>
+                </div>}>
                 <SupplierFormFields data={newSupplier} onChange={setNewSupplier} />
             </ModalOverlay>
         )}
@@ -256,15 +293,19 @@ const SupplierModals = ({
         {activeModal === 'edit' && (
             <ModalOverlay onClose={() => setActiveModal(null)} onSubmit={handleEdit}
                 header={
-                    <div className="modal-header">
-                        <div><h2>Edit Supplier</h2><p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '2px' }}>Updating <strong style={{ color: '#0f172a' }}>{editSupplier.name}</strong></p></div>
-                        <button type="button" className="close-btn" onClick={() => setActiveModal(null)}><X size={15} /></button>
+                    <div className="modal-header" style={{ position: 'relative', padding: '8px 40px 6px 12px', minHeight: 'auto' }}>
+                        <div>
+                            <h2 style={{ fontSize: '0.9rem', marginBottom: '0', whiteSpace: 'nowrap' }}>Edit Supplier</h2>
+                        </div>
+                        <button type="button" className="close-btn" style={{ position: 'absolute', right: '8px', top: '8px' }} onClick={() => setActiveModal(null)}><X size={13} /></button>
                     </div>
                 }
-                footer={<>
-                    <button type="button" className="btn btn-secondary" onClick={() => setActiveModal(null)}>Cancel</button>
-                    <button type="submit" className="btn btn-primary" disabled={saving}><Save size={15} /> {saving ? 'Saving…' : 'Update Supplier'}</button>
-                </>}>
+                footer={<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', width: '100%' }}>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '8px', fontSize: '0.85rem' }} onClick={() => setActiveModal(null)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ padding: '8px', fontSize: '0.85rem', whiteSpace: 'nowrap' }} disabled={saving}>
+                        <Save size={14} /> {saving ? 'Update' : 'Update'}
+                    </button>
+                </div>}>
                 <SupplierFormFields data={editSupplier} onChange={setEditSupplier} />
             </ModalOverlay>
         )}
@@ -299,10 +340,12 @@ const SupplierModals = ({
                         <button type="button" className="close-btn" onClick={() => setActiveModal(null)}><X size={15} /></button>
                     </div>
                 }
-                footer={<>
-                    <button type="button" className="btn btn-secondary" onClick={() => setActiveModal(null)}>Cancel</button>
-                    <button type="submit" className="btn btn-primary"><Save size={15} /> Confirm Payment</button>
-                </>}>
+                footer={<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', width: '100%' }}>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '8px', fontSize: '0.85rem' }} onClick={() => setActiveModal(null)}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ padding: '8px', fontSize: '0.85rem', whiteSpace: 'nowrap' }} disabled={saving}>
+                        <Save size={14} /> {saving ? 'Saving…' : 'Save'}
+                    </button>
+                </div>}>
                 <div className="s-field"><label>Payment Amount (₹)</label><input type="number" required placeholder="0.00" autoFocus value={payment.amount} onChange={e => setPayment({ ...payment, amount: e.target.value })} /></div>
                 <div className="s-field"><label>Description / Note</label><input type="text" placeholder="e.g. Paid via GPay" value={payment.description} onChange={e => setPayment({ ...payment, description: e.target.value })} /></div>
                 <div className="s-field"><label>Payment Date</label><input type="date" required value={payment.date} onChange={e => setPayment({ ...payment, date: e.target.value })} /></div>
@@ -336,7 +379,11 @@ const Suppliers = () => {
         catch (e) { console.error(e); }
     };
 
-    const selectSupplier = s => { setSelected(s); loadLedger(s._id); };
+    const selectSupplier = s => { 
+        setSelected(s); 
+        if (s) loadLedger(s._id); 
+        else setLedger([]);
+    };
 
     const handleAdd = async e => {
         e.preventDefault(); setSaving(true);
@@ -388,24 +435,29 @@ const Suppliers = () => {
                 </div>
             </header>
 
-            <div className="charts-grid" style={{ gridTemplateColumns: selectedSupplier ? '1fr 1.5fr' : '1fr', transition: 'all 0.3s ease' }}>
-
-                {/* Supplier List */}
+            <div className="charts-grid" style={{ 
+                gridTemplateColumns: selectedSupplier && window.innerWidth >= 1024 ? '1fr 1.5fr' : '1fr', 
+                transition: 'all 0.3s ease' 
+            }}>
+                {/* Supplier List - Always Visible */}
                 <SupplierList 
                     searchTerm={searchTerm} setSearchTerm={setSearchTerm} 
                     loading={loading} filtered={filtered} 
                     selectedSupplier={selectedSupplier} selectSupplier={selectSupplier} 
                     setEditSupplier={setEditSupplier} setActiveModal={setActiveModal} setSelected={setSelected} 
+                    ledger={ledger}
                 />
 
-                {/* Ledger Panel */}
+                {/* Ledger Panel - Fully Responsive (Visible on Mobile when selected) */}
                 {selectedSupplier && (
-                    <SupplierLedger
-                        selectedSupplier={selectedSupplier}
-                        ledger={ledger}
-                        setEditSupplier={setEditSupplier}
-                        setActiveModal={setActiveModal}
-                    />
+                    <div id="ledger-panel" className="animate-fade-in">
+                        <SupplierLedger
+                            selectedSupplier={selectedSupplier}
+                            ledger={ledger}
+                            setEditSupplier={setEditSupplier}
+                            setActiveModal={setActiveModal}
+                        />
+                    </div>
                 )}
             </div>
 

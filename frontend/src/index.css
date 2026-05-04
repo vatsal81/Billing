@@ -422,7 +422,12 @@ h3 {
 /* Layout */
 .app-container {
   display: flex;
-  min-height: 100vh;
+  flex-direction: row; /* Desktop first */
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
 }
 
 .sidebar {
@@ -433,6 +438,8 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 32px;
+  flex-shrink: 0;
+  height: 100%;
 }
 
 .main-content {
@@ -559,13 +566,16 @@ h3 {
     color: var(--danger);
   }
 
+  .app-container {
+    flex-direction: column;
+  }
+
   .main-content {
     padding: 16px;
-    padding-top: 80px;
-    /* Space for mobile header */
-    padding-bottom: 90px;
-    /* Space for bottom nav */
-    background: #f8fafc; /* Lighter background for better card contrast */
+    padding-top: 80px; /* Space for mobile header */
+    padding-bottom: 90px; /* Space for bottom nav */
+    background: #f8fafc;
+    height: 100%;
   }
 
   .mobile-header {
@@ -2085,3 +2095,121 @@ table {
 @keyframes feedShredder { 0% { transform: translateY(0); opacity: 0; } 20% { transform: translateY(20px); opacity: 1; height: 50px; } 50% { transform: translateY(60px); opacity: 1; height: 50px; } 65% { transform: translateY(70px); opacity: 0; height: 10px; } 100% { transform: translateY(70px); opacity: 0; } }
 @keyframes dropShred { 0%, 55% { transform: translateY(-40px); opacity: 0; } 60% { opacity: 1; } 90% { transform: translateY(50px); opacity: 0; } 100% { transform: translateY(50px); opacity: 0; } }
 
+/* ── Deep Responsive Modal System ── */
+.s-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 10000;
+  overflow-y: auto;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.s-modal {
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-color);
+  width: 100%;
+  max-width: 540px;
+  margin: auto;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.s-modal-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: 90vh;
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-color);
+  background: white;
+  z-index: 10;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  background: white;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* ── Mobile Atomic Pass (Deep Responsive) ── */
+@media (max-width: 767px) {
+  .s-overlay {
+    padding: 12px;
+    align-items: flex-start; /* Better for long forms on small phones */
+  }
+
+  .s-modal {
+    max-width: 360px;
+    border-radius: 20px;
+  }
+
+  .s-modal-inner {
+    max-height: 85vh;
+  }
+
+  .modal-header {
+    padding: 12px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* Compact Input Atomic Pass */
+  .s-field label {
+    font-size: 0.65rem !important;
+    margin-bottom: 2px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .s-field input, .s-field textarea {
+    height: 32px !important;
+    font-size: 0.85rem !important;
+    padding: 0 10px !important;
+  }
+
+  .s-field textarea {
+    min-height: 48px !important;
+    padding: 6px 10px !important;
+  }
+}
+
+/* ── Tablet & iPad Specific ── */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .s-modal {
+    max-width: 480px;
+  }
+}
