@@ -8,6 +8,8 @@ const { protect } = require('./middleware/authMiddleware');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 const path = require('path');
+const keepAlive = require('./utils/keepAlive');
+
 
 dotenv.config();
 connectDB();
@@ -81,6 +83,12 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
+// Health check route for pinger
+app.get('/ping', (req, res) => {
+    res.status(200).send('pong');
+});
+
+
 // Error Handling
 app.use(notFound);
 app.use(errorHandler);
@@ -89,4 +97,15 @@ app.use(errorHandler);
 
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    
+    // Start the pinger to keep the server awake (for free hosting like Render)
+    if (process.env.NODE_ENV === 'production') {
+        const APP_URL = process.env.RENDER_EXTERNAL_URL || 'https://billing-system-qa1a.onrender.com';
+        keepAlive(`${APP_URL}/ping`);
+    }
+});
+
+
+
