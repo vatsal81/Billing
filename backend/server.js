@@ -33,7 +33,7 @@ app.use(helmet({
 app.use(cors({
     origin: [
         'https://billing-pi-seven.vercel.app',
-        'https://billing-system-qa1a.onrender.com/',
+        'https://billing-i1lc.onrender.com',
 
         'http://localhost:5173', // For local development
         'http://localhost:5000'
@@ -102,9 +102,10 @@ app.listen(PORT, () => {
     
     // Start the pinger to keep the server awake (for free hosting like Render)
     if (process.env.NODE_ENV === 'production') {
-        const APP_URL = process.env.RENDER_EXTERNAL_URL || 'https://billing-system-qa1a.onrender.com';
+        const APP_URL = process.env.RENDER_EXTERNAL_URL || 'https://billing-i1lc.onrender.com';
         keepAlive(`${APP_URL}/ping`);
     }
+
 });
 
 
