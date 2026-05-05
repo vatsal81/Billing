@@ -68,20 +68,11 @@ app.use('/api/suppliers', protect, require('./routes/supplierRoutes'));
 app.use('/api/analytics', protect, require('./routes/analyticsRoutes'));
 app.use('/api/ledger', protect, require('./routes/ledgerRoutes'));
 
-// Serve Frontend in Production
-if (process.env.NODE_ENV === 'production') {
-    const frontendDistPath = path.join(__dirname, '../frontend/dist');
-    app.use(express.static(frontendDistPath));
+// Base Route
+app.get('/', (req, res) => {
+    res.send('Billing System API is running...');
+});
 
-    app.get(/.*/, (req, res) => {
-        res.sendFile(path.resolve(frontendDistPath, 'index.html'));
-    });
-} else {
-    // Base Route for dev
-    app.get('/', (req, res) => {
-        res.send('API is running...');
-    });
-}
 
 // Health check route for pinger
 app.get('/ping', (req, res) => {
