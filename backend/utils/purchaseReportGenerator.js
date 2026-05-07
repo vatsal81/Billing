@@ -122,7 +122,7 @@ const buildBillHTML = async (bill, settings = {}) => {
     const emptyRows = Math.max(0, 13 - bill.items.length);
     const itemRows = bill.items.map((item, idx) => {
         const description = item.nameEnglish && item.name && item.nameEnglish !== item.name
-            ? `${item.nameEnglish} / ${item.name}`
+            ? `${item.nameEnglish}( ${item.name} )`
             : (item.name || item.nameEnglish || '');
             
         return `

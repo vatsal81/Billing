@@ -217,7 +217,7 @@ const PurchaseBillView = ({ bill, onClose }) => {
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#0f172a' }}>
                                             {item.nameEnglish && item.name && item.nameEnglish !== item.name 
-                                                ? `${item.nameEnglish} / ${item.name}` 
+                                                ? `${item.nameEnglish}( ${item.name} )` 
                                                 : (item.name || item.nameEnglish || 'N/A')}
                                         </td>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{item.hsnCode}</td>
