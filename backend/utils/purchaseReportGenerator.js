@@ -120,16 +120,22 @@ const buildBillHTML = async (bill, settings = {}) => {
 
     // Reduced to 10 rows to ensure footer fits on the first page
     const emptyRows = Math.max(0, 13 - bill.items.length);
-    const itemRows = bill.items.map((item, idx) => `
+    const itemRows = bill.items.map((item, idx) => {
+        const description = item.nameEnglish && item.name && item.nameEnglish !== item.name
+            ? `${item.nameEnglish} / ${item.name}`
+            : (item.name || item.nameEnglish || '');
+            
+        return `
         <tr>
             <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:center;color:#64748b;">${idx + 1}</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:left;font-weight:700;color:#0f172a;">${item.name || ''}</td>
+            <td class="gujarati-text" style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:left;font-weight:700;color:#0f172a;">${description}</td>
             <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:center;color:#64748b;">${item.hsnCode || ''}</td>
             <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.pcs || 0).toFixed(2)}</td>
             <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.meters || 0).toFixed(2)}</td>
             <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#64748b;">${(item.rate || 0).toFixed(2)}</td>
             <td style="border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;font-weight:800;color:#1e3a8a;background:#f8fafc;">${(item.amount || 0).toFixed(2)}</td>
-        </tr>`).join('');
+        </tr>`;
+    }).join('');
 
     const emptyRowsHTML = Array.from({ length: emptyRows }).map(() => `
         <tr>
@@ -277,8 +283,8 @@ const buildBillHTML = async (bill, settings = {}) => {
 
         <div class="bill-bottom-grid">
             <div class="bottom-left">
-                <div class="remarks-section"><span class="label">REMARKS :</span><p class="value" style="margin:0">${bill.remarks || 'N/A'}</p></div>
-                <div class="bank-details-box">
+                <div class="remarks-section gujarati-text"><span class="label">REMARKS :</span><p class="value" style="margin:0">${bill.remarks || 'N/A'}</p></div>
+                <div class="bank-details-box gujarati-text">
                     <div class="bank-header">MERCHANT CONTACT INFO</div>
                     <div style="margin-top: 5px;">
                         <p style="color: #1e3a8a; font-weight:bold; margin:0; font-size: 11px;">${bill.supplierName}</p>

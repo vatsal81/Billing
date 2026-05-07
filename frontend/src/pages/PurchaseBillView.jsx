@@ -215,7 +215,11 @@ const PurchaseBillView = ({ bill, onClose }) => {
                                 {bill.items.map((item, idx) => (
                                     <tr key={idx}>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
-                                        <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#0f172a' }}>{item.name}</td>
+                                        <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#0f172a' }}>
+                                            {item.nameEnglish && item.name && item.nameEnglish !== item.name 
+                                                ? `${item.nameEnglish} / ${item.name}` 
+                                                : (item.name || item.nameEnglish || 'N/A')}
+                                        </td>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{item.hsnCode}</td>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '500' }}>{item.pcs ? item.pcs.toFixed(2) : '0.00'}</td>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '500' }}>{item.meters ? item.meters.toFixed(2) : '0.00'}</td>
@@ -253,7 +257,7 @@ const PurchaseBillView = ({ bill, onClose }) => {
                         <div className="bottom-left">
                             <div className="remarks-section">
                                 <span className="label">REMARKS :</span>
-                                <p className="value">{bill.remarks || 'No special remarks.'}</p>
+                                <p className="value" style={{ margin: 0 }}>{bill.remarks || 'N/A'}</p>
                             </div>
                             <div className="watermark"></div>
 
