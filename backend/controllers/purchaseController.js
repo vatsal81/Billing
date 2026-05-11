@@ -213,7 +213,125 @@ const deletePurchaseBill = async (req, res) => {
     }
 };
 
+const updatePurchaseBill = async (req, res) => {
+    try {
+        const oldBill = await PurchaseBill.findById(req.params.id);
+        if (!oldBill) {
+            return res.status(404).json({ message: 'Bill not found' });
+        }
+
+        let body = req.body;
+        
+        // Handle JSON fields if they come as strings
+        const items = typeof body.items === 'string' ? JSON.parse(body.items) : body.items;
+        const ewayBillDetails = typeof body.ewayBillDetails === 'string' ? JSON.parse(body.ewayBillDetails) : body.ewayBillDetails;
+        
+        const {
+            billNumber, supplierId, supplierName, supplierGstin, supplierPan, supplierAddress,
+            billDate, ewayBillNo,
+            transport, lrNo, broker,
+            subTotal, igst, cgst, sgst, roundOff, totalAmount, remarks
+        } = body;
+
+        // Get file paths from multer
+        const billImage = req.files?.['billImage']?.[0]?.path || oldBill.billImage;
+        const ewayBillImage = req.files?.['ewayBillImage']?.[0]?.path || oldBill.ewayBillImage;
+
+        // 1. Reverse old stock
+        for (const item of oldBill.items) {
+            let product = await Product.findOne({ hsnCode: item.hsnCode });
+            if (!product) product = await Product.findOne({ name: item.name });
+
+            if (product) {
+                product.stockAmount -= (Number(item.meters) || Number(item.pcs) || 0);
+                await product.save();
+            }
+        }
+
+        // 2. Reverse old supplier balance
+        const supplier = await Supplier.findById(oldBill.supplier);
+        if (supplier) {
+            supplier.balance -= oldBill.totalAmount;
+            await supplier.save();
+        }
+
+        // 3. Update bill fields
+        oldBill.billNumber = billNumber || oldBill.billNumber;
+        oldBill.supplierName = supplierName || oldBill.supplierName;
+        oldBill.supplierGstin = supplierGstin || oldBill.supplierGstin;
+        oldBill.supplierPan = supplierPan || oldBill.supplierPan;
+        oldBill.supplierAddress = supplierAddress || oldBill.supplierAddress;
+        oldBill.billDate = billDate || oldBill.billDate;
+        oldBill.ewayBillNo = ewayBillNo || oldBill.ewayBillNo;
+        oldBill.ewayBillDetails = ewayBillDetails || oldBill.ewayBillDetails;
+        oldBill.transport = transport || oldBill.transport;
+        oldBill.lrNo = lrNo || oldBill.lrNo;
+        oldBill.broker = broker || oldBill.broker;
+        oldBill.items = items || oldBill.items;
+        oldBill.subTotal = subTotal || oldBill.subTotal;
+        oldBill.igst = igst || oldBill.igst;
+        oldBill.cgst = cgst || oldBill.cgst;
+        oldBill.sgst = sgst || oldBill.sgst;
+        oldBill.roundOff = roundOff || oldBill.roundOff;
+        oldBill.totalAmount = totalAmount || oldBill.totalAmount;
+        oldBill.remarks = remarks || oldBill.remarks;
+        oldBill.billImage = billImage;
+        oldBill.ewayBillImage = ewayBillImage;
+
+        await oldBill.save();
+
+        // 4. Apply new stock
+        const unpricedProducts = [];
+        for (const item of items) {
+            let product = await Product.findOne({ hsnCode: item.hsnCode });
+            if (!product) product = await Product.findOne({ name: item.name });
+
+            if (product) {
+                product.stockAmount += (Number(item.meters) || Number(item.pcs) || 0);
+                product.purchaseRate = item.rate;
+                if (!product.nameEnglish && item.nameEnglish) {
+                    product.nameEnglish = item.nameEnglish;
+                }
+                await product.save();
+                if (!product.price || product.price === 0) unpricedProducts.push(product);
+            } else {
+                const newProduct = await Product.create({
+                    name: item.name,
+                    nameEnglish: item.nameEnglish || '',
+                    hsnCode: item.hsnCode,
+                    price: 0,
+                    purchaseRate: item.rate,
+                    stockAmount: (Number(item.meters) || Number(item.pcs) || 0)
+                });
+                unpricedProducts.push(newProduct);
+            }
+        }
+
+        // 5. Apply new supplier balance
+        if (supplier) {
+            supplier.balance += Number(totalAmount);
+            await supplier.save();
+        }
+
+        // 6. Update Ledger Entry
+        await LedgerEntry.findOneAndUpdate(
+            { referenceId: oldBill._id, type: 'credit' },
+            {
+                partyName: supplierName,
+                amount: totalAmount,
+                description: `Purchase Bill No: ${billNumber} (Updated)`,
+                balanceAfter: supplier ? supplier.balance : 0
+            }
+        );
+
+        res.json({ purchaseBill: oldBill, unpricedProducts });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 const getSingleBillPdf = async (req, res) => {
+
     try {
         const bill = await PurchaseBill.findById(req.params.id);
         if (!bill) return res.status(404).json({ message: 'Bill not found' });
@@ -234,5 +352,6 @@ module.exports = {
     getPurchaseBills,
     getMonthlyReport,
     getSingleBillPdf,
-    deletePurchaseBill
+    deletePurchaseBill,
+    updatePurchaseBill
 };
