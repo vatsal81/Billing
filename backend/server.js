@@ -44,7 +44,7 @@ app.use(cors({
 // Rate Limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 1000, // Limit each IP to 1000 requests per windowMs
     message: 'Too many requests from this IP, please try again after 15 minutes',
 });
 app.use('/api/', limiter);
@@ -54,7 +54,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Static Folders
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
@@ -66,6 +65,7 @@ app.use('/api/expenses', protect, require('./routes/expenseRoutes'));
 app.use('/api/purchase', protect, require('./routes/purchaseRoutes'));
 app.use('/api/suppliers', protect, require('./routes/supplierRoutes'));
 app.use('/api/analytics', protect, require('./routes/analyticsRoutes'));
+console.log('[DEBUG] Registering /api/ledger route');
 app.use('/api/ledger', protect, require('./routes/ledgerRoutes'));
 
 // Base Route

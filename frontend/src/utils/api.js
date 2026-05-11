@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API = axios.create({ 
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api' 
+const API = axios.create({
+  baseURL: 'http://localhost:5000/api'
 });
 
 export const getBackendUrl = () => {
@@ -165,6 +165,11 @@ export const updatePurchaseBill = async (id, billData) => {
   return data;
 };
 
+export const fetchPurchaseBill = async (id) => {
+  const { data } = await API.get(`/purchase/details/${id}`);
+  return data;
+};
+
 export const downloadPurchaseReport = async (month, year) => {
   const response = await API.get(`/purchase/monthly-pdf?month=${month}&year=${year}`, {
     responseType: 'blob'
@@ -213,7 +218,7 @@ export const fetchAnalyticsStats = async (period = '30d') => {
 
 // Ledger
 export const fetchLedgerEntries = async (partyId) => {
-  const { data } = await API.get(`/ledger/${partyId}`);
+  const { data } = await API.get(`/ledger/${partyId}?cb=${Date.now()}`);
   return data;
 };
 

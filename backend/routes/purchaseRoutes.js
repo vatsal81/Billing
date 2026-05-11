@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { addPurchaseBill, getPurchaseBills, getMonthlyReport, getSingleBillPdf, deletePurchaseBill, updatePurchaseBill } = require('../controllers/purchaseController');
+const { addPurchaseBill, getPurchaseBills, getMonthlyReport, getSingleBillPdf, deletePurchaseBill, updatePurchaseBill, getPurchaseBill } = require('../controllers/purchaseController');
 
 const upload = require('../middleware/upload');
 
+router.get('/details/:id', getPurchaseBill);
 router.post('/', upload.fields([{ name: 'billImage', maxCount: 1 }, { name: 'ewayBillImage', maxCount: 1 }]), addPurchaseBill);
 router.put('/:id', upload.fields([{ name: 'billImage', maxCount: 1 }, { name: 'ewayBillImage', maxCount: 1 }]), updatePurchaseBill);
 router.get('/', getPurchaseBills);

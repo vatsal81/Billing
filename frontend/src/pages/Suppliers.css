@@ -1,0 +1,579 @@
+/* Suppliers.css - Premium Animations & Styling */
+
+/* Layout Classes */
+.suppliers-page-wrapper {
+    height: calc(100vh - 100px);
+    overflow: hidden;
+}
+
+.suppliers-grid-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 100%;
+    height: calc(100% - 80px);
+}
+
+.main-ledger-content {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+    max-height: 100%;
+    padding-right: 4px;
+}
+
+.mobile-label {
+    display: none;
+}
+
+.suppliers-container {
+    animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.supplier-sidebar-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.supplier-sidebar-card:hover {
+    background: rgba(3, 105, 161, 0.04) !important;
+    transform: translateX(4px);
+}
+
+.supplier-sidebar-card.selected {
+    background: linear-gradient(135deg, rgba(3, 105, 161, 0.08) 0%, rgba(3, 105, 161, 0.02) 100%) !important;
+    border-left: 4px solid var(--accent-primary) !important;
+    box-shadow: inset 4px 0 10px rgba(3, 105, 161, 0.05);
+}
+
+.ledger-row {
+    animation: slideInRow 0.4s ease-out both;
+}
+
+@keyframes slideInRow {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.premium-stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.05);
+    border-color: var(--accent-primary);
+}
+
+.premium-stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--accent-primary);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.premium-stat-card:hover::after {
+    opacity: 1;
+}
+
+.btn-premium {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.btn-premium:active {
+    transform: scale(0.95);
+}
+
+.loading-shimmer {
+    background: linear-gradient(90deg, #f0f0f0 25%, #f8f8f8 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.table-container {
+    overflow-x: auto;
+    width: 100%;
+    border-radius: 0 0 16px 16px;
+}
+
+.premium-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.premium-table th,
+.premium-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.premium-table th {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: #f8fafc;
+}
+
+.premium-table .right {
+    text-align: right !important;
+}
+
+.premium-table .center {
+    text-align: center !important;
+}
+
+/* Explicit widths for desktop */
+.premium-table th:nth-child(1) {
+    width: 120px;
+}
+
+/* Date */
+.premium-table th:nth-child(2) {
+    width: auto;
+}
+
+/* Description */
+.premium-table th:nth-child(3) {
+    width: 140px;
+}
+
+/* Udhaar */
+.premium-table th:nth-child(4) {
+    width: 140px;
+}
+
+/* Jama */
+.premium-table th:nth-child(5) {
+    width: 140px;
+}
+
+/* Balance */
+.premium-table th:nth-child(6) {
+    width: 220px;
+}
+
+/* Action */
+
+/* Scrollbar Hiding but keeping functionality */
+.custom-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.custom-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.table-container::-webkit-scrollbar {
+    display: none;
+}
+
+.table-container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Responsive Description Cell */
+.ledger-description {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.desc-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.desc-no {
+    font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .suppliers-page-wrapper {
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .suppliers-grid-layout {
+        grid-template-columns: 1fr !important;
+        height: auto !important;
+    }
+
+    .main-ledger-content {
+        max-height: none !important;
+        overflow-y: visible !important;
+        padding-right: 0 !important;
+    }
+
+    .sidebar-container {
+        position: static !important;
+        max-height: 300px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .merged-detail-card {
+        position: relative;
+        right: 0 !important;
+        margin: 16px auto !important;
+        width: 94% !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+        border: 1px solid var(--border-color) !important;
+    }
+
+    .suppliers-grid {
+        padding: 0 10px !important;
+        gap: 16px !important;
+    }
+
+    .sidebar-container {
+        max-height: none !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .sidebar-container>div:first-child {
+        padding: 0 !important;
+        border: none !important;
+        margin-bottom: 12px;
+    }
+
+    /* Horizontal Merchant List on Mobile */
+    .merchant-list-container {
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        gap: 12px !important;
+        padding: 4px 2px 12px 2px !important;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .supplier-sidebar-card {
+        flex: 0 0 200px !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: 12px !important;
+        background: white !important;
+        scroll-snap-align: start;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        height: 80px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+    }
+
+    .supplier-sidebar-card.selected {
+        border-left: 1px solid var(--accent-primary) !important;
+        border-bottom: 3px solid var(--accent-primary) !important;
+    }
+
+    .premium-stat-card {
+        padding: 12px !important;
+    }
+
+    .premium-stat-card p:first-child {
+        font-size: 0.65rem !important;
+    }
+
+    .premium-stat-card p:last-child {
+        font-size: 1rem !important;
+    }
+
+    .merchant-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 16px !important;
+    }
+
+    .header-actions {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 6px !important;
+        margin-top: 8px;
+    }
+
+    .header-actions button {
+        flex: 1 !important;
+        padding: 8px 4px !important;
+        font-size: 0.7rem !important;
+        height: 42px !important;
+        min-width: 0 !important;
+        white-space: nowrap !important;
+    }
+
+    .merchant-list-container {
+        padding: 4px 16px 12px 16px !important;
+        margin: 0 -16px !important;
+        width: calc(100% + 32px) !important;
+        display: flex !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        gap: 12px !important;
+    }
+
+    .table-container {
+        margin-top: 32px !important;
+        width: 100% !important;
+        padding: 0 !important;
+        background: white !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+    }
+
+    /* Mobile Card Layout for Ledger */
+    .premium-table thead {
+        display: none !important;
+    }
+
+    .premium-table,
+    .premium-table tbody,
+    .premium-table tr,
+    .premium-table td {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    .premium-table tr {
+        background: transparent !important;
+        border-radius: 0 !important;
+        margin-bottom: 0 !important;
+        padding: 14px 18px !important; /* Matches header padding */
+        border: none !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        box-shadow: none !important;
+    }
+
+    .premium-table tr:last-child {
+        border-bottom: none !important;
+    }
+
+    .premium-table td {
+        border: none !important;
+        padding: 6px 0 !important;
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        width: 100% !important;
+        gap: 8px !important;
+    }
+
+    .mobile-label {
+        display: inline-block !important;
+        font-weight: 700 !important;
+        color: #64748b !important;
+        font-size: 0.7rem !important;
+        text-transform: uppercase !important;
+        text-align: left !important;
+        min-width: 100px !important; /* Increased for perfect vertical alignment */
+        letter-spacing: 0.03em !important;
+    }
+
+    .mobile-label::after {
+        content: ':';
+    }
+
+    .ledger-value {
+
+        text-align: left !important;
+        word-break: break-word !important;
+        font-size: 0.85rem !important;
+        flex: 1 !important;
+        /* Allows text to wrap instead of cutting off */
+    }
+
+    .td-content {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        width: 100% !important;
+        gap: 8px !important;
+    }
+
+    .ledger-description {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 2px !important;
+    }
+
+    .desc-main {
+        font-size: 0.75rem !important;
+        color: var(--text-secondary) !important;
+    }
+
+    .desc-no {
+        font-weight: 700 !important;
+        color: #334155 !important;
+        font-size: 0.85rem !important;
+    }
+
+    .premium-table td div.ledger-value {
+        justify-content: flex-start !important;
+    }
+
+    .merged-detail-card {
+        position: relative;
+        right: 0 !important;
+        margin: 12px auto 40px !important; /* Added bottom margin for breathing room */
+        width: 95% !important;
+        padding: 20px 16px !important; /* Reduced side padding slightly for better fit */
+        border-radius: 16px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+        border: 1px solid var(--border-color) !important;
+    }
+
+    .merchant-details-inner {
+        padding: 0 !important; /* Let parent handle padding */
+    }
+
+    .merchant-header {
+        margin-bottom: 20px !important;
+        padding: 0 4px !important;
+    }
+
+    .merchant-header h2 {
+        font-size: 1.2rem !important;
+        font-weight: 800 !important;
+        color: #1e293b !important;
+    }
+
+    .merchant-header p {
+        font-size: 0.75rem !important;
+    }
+
+    .header-actions {
+        margin-top: 12px !important;
+        gap: 4px !important;
+    }
+
+    .header-actions button {
+        height: 34px !important;
+        padding: 4px 8px !important;
+        font-size: 0.65rem !important;
+        border-radius: 6px !important;
+    }
+
+    .merchant-stats-grid {
+        margin-top: 20px !important;
+        gap: 10px !important;
+        grid-template-columns: 1fr 1fr !important; /* Better 2-column layout for mobile */
+    }
+
+    /* Make the Outstanding Balance take full width if it's the 3rd item */
+    .premium-stat-card:last-child {
+        grid-column: span 2 !important;
+    }
+
+    .premium-stat-card {
+        padding: 12px !important;
+        border-radius: 10px !important;
+        border-top: 3px solid transparent !important;
+    }
+
+    .premium-stat-card p:first-child {
+        font-size: 0.6rem !important;
+        margin-bottom: 4px !important;
+    }
+
+    .premium-stat-card p:last-child {
+        font-size: 1rem !important;
+    }
+
+    .merchant-history-section {
+        border-top: 1px solid var(--border-color) !important;
+    }
+
+    .history-header {
+        background: #f8fafc !important; /* Subtle grey header background */
+        padding: 14px 18px !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    .history-header h3 {
+        font-size: 0.9rem !important;
+        color: #1e293b !important;
+        font-weight: 700 !important;
+    }
+
+    /* Premium Action Button Positioning */
+    .premium-table td:last-child {
+        border-top: 1px dashed #e2e8f0 !important;
+        padding: 12px 18px !important;
+        margin-top: 10px !important;
+        justify-content: flex-start !important;
+        display: flex !important;
+        background: #fcfdfe !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+
+    .premium-table td:last-child .mobile-label {
+        display: none !important;
+    }
+
+    .premium-table td:last-child button {
+        padding: 8px 16px !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        flex: 0 1 auto !important;
+    }
+}

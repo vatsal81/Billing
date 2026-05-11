@@ -1,6 +1,7 @@
 const LedgerEntry = require('../models/LedgerEntry');
 const Customer = require('../models/Customer');
 const Supplier = require('../models/Supplier');
+const mongoose = require('mongoose');
 
 // @desc    Add a payment/transaction entry
 // @route   POST /api/ledger
@@ -49,19 +50,18 @@ const addEntry = async (req, res) => {
 // @route   GET /api/ledger/:partyId
 const getEntries = async (req, res) => {
     try {
-        const mongoose = require('mongoose');
         const partyId = req.params.partyId;
-        console.log(`Fetching ledger entries for partyId: ${partyId}`);
+        const fs = require('fs');
+        fs.appendFileSync('ledger_trace.log', `[${new Date().toISOString()}] REQ ID: ${partyId}\n`);
         
-        // Find entries by partyId (explicitly cast to ObjectId for safety)
-        const entries = await LedgerEntry.find({ 
-            partyId: new mongoose.Types.ObjectId(partyId) 
-        }).sort({ date: -1 });
+        if (!partyId || partyId === 'null' || partyId === 'undefined') {
+            return res.json([]);
+        }
         
-        console.log(`Found ${entries.length} entries for partyId: ${partyId}`);
+        const entries = await LedgerEntry.find({ partyId: partyId }).sort({ date: -1 });
+        fs.appendFileSync('ledger_trace.log', `[${new Date().toISOString()}] FOUND: ${entries.length}\n`);
         res.json(entries);
     } catch (error) {
-        console.error(`Error fetching ledger entries: ${error.message}`);
         res.status(500).json({ message: error.message });
     }
 };

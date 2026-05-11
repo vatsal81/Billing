@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const PurchaseBill = require('../models/PurchaseBill');
 const Product = require('../models/Product');
 const Supplier = require('../models/Supplier');
@@ -249,10 +250,25 @@ const updatePurchaseBill = async (req, res) => {
 
         // 3. Find or Create the current/new supplier
         let currentSupplier = null;
-        if (supplierId) {
+        const trimmedName = supplierName ? supplierName.trim() : '';
+
+        if (supplierId && mongoose.Types.ObjectId.isValid(supplierId)) {
             currentSupplier = await Supplier.findById(supplierId);
-        } else if (supplierName) {
-            currentSupplier = await Supplier.findOne({ name: supplierName });
+        }
+        
+        if (!currentSupplier && trimmedName) {
+            // Try exact match first
+            currentSupplier = await Supplier.findOne({ name: trimmedName });
+            
+            // If not found, try with trailing space (common in this DB)
+            if (!currentSupplier) {
+                currentSupplier = await Supplier.findOne({ name: trimmedName + ' ' });
+            }
+            
+            // Still not found? Try case-insensitive fuzzy match
+            if (!currentSupplier) {
+                currentSupplier = await Supplier.findOne({ name: { $regex: new RegExp(`^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i') } });
+            }
         }
 
         if (!currentSupplier && supplierName) {
@@ -322,23 +338,55 @@ const updatePurchaseBill = async (req, res) => {
             await currentSupplier.save();
         }
 
-        // 6. Update Ledger Entry
-        await LedgerEntry.findOneAndUpdate(
-            { referenceId: oldBill._id, type: 'credit' },
-            {
-                partyType: 'supplier',
-                partyId: currentSupplier?._id,
-                partyName: supplierName,
-                amount: Number(totalAmount),
-                description: `Purchase Bill No: ${billNumber} (Updated)`,
-                balanceAfter: currentSupplier ? Number(currentSupplier.balance) : 0
-            },
-            { upsert: true, new: true }
-        );
+        // 6. Re-create Ledger Entry (Delete existing and create fresh to ensure sync)
+        await LedgerEntry.deleteMany({ referenceId: oldBill._id });
+        
+        await LedgerEntry.create({
+            partyType: 'supplier',
+            partyId: currentSupplier?._id,
+            partyName: supplierName.trim(),
+            type: 'credit',
+            amount: Number(totalAmount),
+            description: `Purchase Bill No: ${billNumber} (Updated)`,
+            referenceId: oldBill._id,
+            balanceAfter: currentSupplier ? Number(currentSupplier.balance) : Number(totalAmount)
+        });
 
         res.json({ purchaseBill: oldBill, unpricedProducts });
     } catch (error) {
         res.status(400).json({ message: error.message });
+    }
+};
+
+const getPurchaseBill = async (req, res) => {
+    try {
+        const id = req.params.id.trim();
+        console.log(`[API] Fetching JSON for bill ID: "${id}"`);
+        const bill = await PurchaseBill.findById(id);
+        
+        if (!bill) {
+            console.log(`[API] Bill ID ${id} not found. Attempting fallback search by description...`);
+            // Fallback: If ID not found, check if we can find a LedgerEntry with this referenceId
+            // and extract the bill number from description
+            const ledgerEntry = await LedgerEntry.findOne({ referenceId: id });
+            if (ledgerEntry && ledgerEntry.description) {
+                const match = ledgerEntry.description.match(/No:\s*([^\s(]+)/);
+                if (match && match[1]) {
+                    const billNo = match[1].trim();
+                    console.log(`[API] Fallback: Searching for bill number ${billNo}`);
+                    const fallbackBill = await PurchaseBill.findOne({ billNumber: billNo });
+                    if (fallbackBill) return res.json(fallbackBill);
+                }
+            }
+            
+            console.log(`[API] ERROR: Bill ${id} not found even with fallback.`);
+            return res.status(404).json({ message: `Bill with ID ${id} not found` });
+        }
+        
+        res.json(bill);
+    } catch (error) {
+        console.error(`[API] Fetch error for bill ${req.params.id}:`, error);
+        res.status(500).json({ message: error.message });
     }
 };
 
@@ -365,5 +413,6 @@ module.exports = {
     getMonthlyReport,
     getSingleBillPdf,
     deletePurchaseBill,
+    getPurchaseBill,
     updatePurchaseBill
 };

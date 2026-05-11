@@ -2,11 +2,53 @@ import React from 'react';
 import { X, Printer, Download, CheckCircle, ShieldCheck } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { numberToWords } from '../utils/numberToWords';
-import { getBackendUrl } from '../utils/api';
+import { getBackendUrl, fetchPurchaseBill } from '../utils/api';
 import './PurchaseBillView.css';
 
-const PurchaseBillView = ({ bill, onClose }) => {
-    if (!bill) return null;
+const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
+    const [bill, setBill] = React.useState(null);
+    const [loading, setLoading] = React.useState(true);
+    const [scale, setScale] = React.useState(1);
+
+    React.useEffect(() => {
+        if (billId) {
+            const loadBill = async () => {
+                try {
+                    if (setFetchingBill) setFetchingBill(true);
+                    setLoading(true);
+                    const data = await fetchPurchaseBill(billId);
+                    setBill(data);
+                } catch (err) {
+                    console.error('Error fetching bill:', err);
+                    alert('Failed to load bill details');
+                    onClose();
+                } finally {
+                    setLoading(false);
+                    if (setFetchingBill) setFetchingBill(false);
+                }
+            };
+            loadBill();
+        }
+    }, [billId]);
+
+    React.useLayoutEffect(() => {
+        const updateScale = () => {
+            const padding = window.innerWidth < 768 ? 20 : 40;
+            const availableWidth = window.innerWidth - padding;
+            const targetWidth = 1000;
+            if (availableWidth < targetWidth) {
+                setScale(availableWidth / targetWidth);
+            } else {
+                setScale(1);
+            }
+        };
+
+        window.addEventListener('resize', updateScale);
+        updateScale();
+        return () => window.removeEventListener('resize', updateScale);
+    }, []);
+
+    if (loading || !bill) return null;
 
     const formatDate = (date) => {
         if (!date) return '';
@@ -38,25 +80,6 @@ const PurchaseBillView = ({ bill, onClose }) => {
             alert('Failed to generate PDF: ' + err.message);
         }
     };
-
-    const [scale, setScale] = React.useState(1);
-
-    React.useLayoutEffect(() => {
-        const updateScale = () => {
-            const padding = window.innerWidth < 768 ? 20 : 40;
-            const availableWidth = window.innerWidth - padding;
-            const targetWidth = 1000;
-            if (availableWidth < targetWidth) {
-                setScale(availableWidth / targetWidth);
-            } else {
-                setScale(1);
-            }
-        };
-
-        window.addEventListener('resize', updateScale);
-        updateScale();
-        return () => window.removeEventListener('resize', updateScale);
-    }, []);
 
     const totalPcs = bill.items.reduce((acc, item) => acc + (item.pcs || 0), 0);
     const totalMeters = bill.items.reduce((acc, item) => acc + (item.meters || 0), 0);
