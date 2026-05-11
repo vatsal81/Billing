@@ -59,7 +59,8 @@ function App() {
               <header className="mobile-header no-print">
                 <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
                   <Menu size={24} onClick={() => setSidebarOpen(true)} style={{cursor: 'pointer', color: 'var(--text-primary)'}} />
-                  <div className="brand">
+                  <div className="brand" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    <img src="/favicon.png" alt="logo" style={{width: '28px', height: '28px', borderRadius: '6px'}} />
                     <h2 className="text-gradient" style={{fontSize: '20px', margin: 0}}>{t('appTitle')}</h2>
                   </div>
                 </div>
@@ -84,9 +85,10 @@ function App() {
                 <div className="mobile-close-btn" onClick={() => setSidebarOpen(false)}>
                   <X size={24} />
                 </div>
-                <div className="brand" style={{marginBottom: '10px'}}>
-                  <h1 className="text-gradient" style={{fontSize: '32px'}}>{t('appTitle')}</h1>
-                  <p style={{color: 'var(--text-secondary)', fontSize: '1rem', marginTop: '4px'}}>{t('appSubtitle')}</p>
+                <div className="brand" style={{marginBottom: '24px', textAlign: 'center', padding: '10px 0'}}>
+                  <img src="/favicon.png" alt="Shree Hari Logo" style={{ width: '120px', height: '120px', marginBottom: '16px', borderRadius: '24px', boxShadow: '0 10px 20px rgba(0,0,0,0.2)', border: '2px solid rgba(255,255,255,0.1)' }} />
+                  <h1 className="text-gradient" style={{fontSize: '38px', marginBottom: '8px', letterSpacing: '-1px'}}>{t('appTitle')}</h1>
+                  <p style={{color: 'var(--text-secondary)', fontSize: '1.1rem', fontWeight: 500, letterSpacing: '1px'}}>{t('appSubtitle')}</p>
                 </div>
                 
                 <nav style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
