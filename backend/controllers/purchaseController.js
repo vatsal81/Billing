@@ -84,10 +84,10 @@ const addPurchaseBill = async (req, res) => {
         // Update stock and sync inventory
         const unpricedProducts = [];
         for (const item of items) {
-            let product = await Product.findOne({ hsnCode: item.hsnCode });
+            let product = await Product.findOne({ name: item.name });
 
-            if (!product) {
-                product = await Product.findOne({ name: item.name });
+            if (!product && item.hsnCode) {
+                product = await Product.findOne({ hsnCode: item.hsnCode });
             }
 
             if (product) {
@@ -187,9 +187,9 @@ const deletePurchaseBill = async (req, res) => {
 
         // Reverse stock for each item
         for (const item of bill.items) {
-            let product = await Product.findOne({ hsnCode: item.hsnCode });
-            if (!product) {
-                product = await Product.findOne({ name: item.name });
+            let product = await Product.findOne({ name: item.name });
+            if (!product && item.hsnCode) {
+                product = await Product.findOne({ hsnCode: item.hsnCode });
             }
 
             if (product) {
@@ -239,8 +239,10 @@ const updatePurchaseBill = async (req, res) => {
 
         // 1. Reverse old stock
         for (const item of oldBill.items) {
-            let product = await Product.findOne({ hsnCode: item.hsnCode });
-            if (!product) product = await Product.findOne({ name: item.name });
+            let product = await Product.findOne({ name: item.name });
+            if (!product && item.hsnCode) {
+                product = await Product.findOne({ hsnCode: item.hsnCode });
+            }
 
             if (product) {
                 product.stockAmount -= (Number(item.meters) || Number(item.pcs) || 0);
@@ -283,8 +285,11 @@ const updatePurchaseBill = async (req, res) => {
         // 4. Apply new stock
         const unpricedProducts = [];
         for (const item of items) {
-            let product = await Product.findOne({ hsnCode: item.hsnCode });
-            if (!product) product = await Product.findOne({ name: item.name });
+            let product = await Product.findOne({ name: item.name });
+
+            if (!product && item.hsnCode) {
+                product = await Product.findOne({ hsnCode: item.hsnCode });
+            }
 
             if (product) {
                 product.stockAmount += (Number(item.meters) || Number(item.pcs) || 0);
