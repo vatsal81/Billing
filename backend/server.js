@@ -33,9 +33,9 @@ app.use(helmet({
 app.use(cors({
     origin: [
         'https://billing-pi-seven.vercel.app',
+        'https://billing-woad-sigma.vercel.app',
         'https://billing-i1lc.onrender.com',
-
-        'http://localhost:5173', // For local development
+        'http://localhost:5173',
         'http://localhost:5000'
     ],
     credentials: true
