@@ -1142,7 +1142,7 @@ const PurchaseBills = () => {
 
             {viewingBill && (
                 <PurchaseBillView
-                    bill={viewingBill}
+                    billId={viewingBill._id}
                     onClose={() => setViewingBill(null)}
                 />
             )}
