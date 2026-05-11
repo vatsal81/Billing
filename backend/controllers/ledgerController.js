@@ -49,9 +49,19 @@ const addEntry = async (req, res) => {
 // @route   GET /api/ledger/:partyId
 const getEntries = async (req, res) => {
     try {
-        const entries = await LedgerEntry.find({ partyId: req.params.partyId }).sort({ date: -1 });
+        const mongoose = require('mongoose');
+        const partyId = req.params.partyId;
+        console.log(`Fetching ledger entries for partyId: ${partyId}`);
+        
+        // Find entries by partyId (explicitly cast to ObjectId for safety)
+        const entries = await LedgerEntry.find({ 
+            partyId: new mongoose.Types.ObjectId(partyId) 
+        }).sort({ date: -1 });
+        
+        console.log(`Found ${entries.length} entries for partyId: ${partyId}`);
         res.json(entries);
     } catch (error) {
+        console.error(`Error fetching ledger entries: ${error.message}`);
         res.status(500).json({ message: error.message });
     }
 };

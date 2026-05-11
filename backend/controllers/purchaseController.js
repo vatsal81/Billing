@@ -86,13 +86,9 @@ const addPurchaseBill = async (req, res) => {
         for (const item of items) {
             let product = await Product.findOne({ name: item.name });
 
-            if (!product && item.hsnCode) {
-                product = await Product.findOne({ hsnCode: item.hsnCode });
-            }
-
             if (product) {
-                product.stockAmount += (item.meters || item.pcs || 0);
-                product.purchaseRate = item.rate;
+                product.stockAmount += (Number(item.meters) || Number(item.pcs) || 0);
+                product.purchaseRate = Number(item.rate);
                 // If the product exists but nameEnglish was empty, update it
                 if (!product.nameEnglish && item.nameEnglish) {
                     product.nameEnglish = item.nameEnglish;
@@ -108,15 +104,15 @@ const addPurchaseBill = async (req, res) => {
                     nameEnglish: item.nameEnglish || '',
                     hsnCode: item.hsnCode,
                     price: 0,
-                    purchaseRate: item.rate,
-                    stockAmount: (item.meters || item.pcs || 0)
+                    purchaseRate: Number(item.rate),
+                    stockAmount: (Number(item.meters) || Number(item.pcs) || 0)
                 });
                 unpricedProducts.push(newProduct);
             }
         }
 
         // Update Supplier Balance and Create Ledger Entry
-        supplier.balance = (supplier.balance || 0) + totalAmount;
+        supplier.balance = (Number(supplier.balance) || 0) + Number(totalAmount);
         await supplier.save();
 
         await LedgerEntry.create({
@@ -188,12 +184,9 @@ const deletePurchaseBill = async (req, res) => {
         // Reverse stock for each item
         for (const item of bill.items) {
             let product = await Product.findOne({ name: item.name });
-            if (!product && item.hsnCode) {
-                product = await Product.findOne({ hsnCode: item.hsnCode });
-            }
 
             if (product) {
-                product.stockAmount -= (item.meters || item.pcs || 0);
+                product.stockAmount -= (Number(item.meters) || Number(item.pcs) || 0);
                 await product.save();
             }
         }
@@ -201,7 +194,7 @@ const deletePurchaseBill = async (req, res) => {
         // Reverse Supplier Balance and Delete Ledger Entry
         const supplier = await Supplier.findById(bill.supplier);
         if (supplier) {
-            supplier.balance -= bill.totalAmount;
+            supplier.balance -= Number(bill.totalAmount);
             await supplier.save();
         }
         await LedgerEntry.deleteMany({ referenceId: bill._id });
@@ -240,9 +233,6 @@ const updatePurchaseBill = async (req, res) => {
         // 1. Reverse old stock
         for (const item of oldBill.items) {
             let product = await Product.findOne({ name: item.name });
-            if (!product && item.hsnCode) {
-                product = await Product.findOne({ hsnCode: item.hsnCode });
-            }
 
             if (product) {
                 product.stockAmount -= (Number(item.meters) || Number(item.pcs) || 0);
@@ -251,13 +241,31 @@ const updatePurchaseBill = async (req, res) => {
         }
 
         // 2. Reverse old supplier balance
-        const supplier = await Supplier.findById(oldBill.supplier);
-        if (supplier) {
-            supplier.balance -= oldBill.totalAmount;
-            await supplier.save();
+        const oldSupplier = await Supplier.findById(oldBill.supplier);
+        if (oldSupplier) {
+            oldSupplier.balance = (Number(oldSupplier.balance) || 0) - Number(oldBill.totalAmount);
+            await oldSupplier.save();
+        }
+
+        // 3. Find or Create the current/new supplier
+        let currentSupplier = null;
+        if (supplierId) {
+            currentSupplier = await Supplier.findById(supplierId);
+        } else if (supplierName) {
+            currentSupplier = await Supplier.findOne({ name: supplierName });
+        }
+
+        if (!currentSupplier && supplierName) {
+            currentSupplier = await Supplier.create({
+                name: supplierName,
+                gstin: supplierGstin,
+                pan: supplierPan,
+                address: supplierAddress
+            });
         }
 
         // 3. Update bill fields
+        oldBill.supplier = currentSupplier?._id || oldBill.supplier;
         oldBill.billNumber = billNumber || oldBill.billNumber;
         oldBill.supplierName = supplierName || oldBill.supplierName;
         oldBill.supplierGstin = supplierGstin || oldBill.supplierGstin;
@@ -287,10 +295,6 @@ const updatePurchaseBill = async (req, res) => {
         for (const item of items) {
             let product = await Product.findOne({ name: item.name });
 
-            if (!product && item.hsnCode) {
-                product = await Product.findOne({ hsnCode: item.hsnCode });
-            }
-
             if (product) {
                 product.stockAmount += (Number(item.meters) || Number(item.pcs) || 0);
                 product.purchaseRate = item.rate;
@@ -313,20 +317,23 @@ const updatePurchaseBill = async (req, res) => {
         }
 
         // 5. Apply new supplier balance
-        if (supplier) {
-            supplier.balance += Number(totalAmount);
-            await supplier.save();
+        if (currentSupplier) {
+            currentSupplier.balance = (Number(currentSupplier.balance) || 0) + Number(totalAmount);
+            await currentSupplier.save();
         }
 
         // 6. Update Ledger Entry
         await LedgerEntry.findOneAndUpdate(
             { referenceId: oldBill._id, type: 'credit' },
             {
+                partyType: 'supplier',
+                partyId: currentSupplier?._id,
                 partyName: supplierName,
-                amount: totalAmount,
+                amount: Number(totalAmount),
                 description: `Purchase Bill No: ${billNumber} (Updated)`,
-                balanceAfter: supplier ? supplier.balance : 0
-            }
+                balanceAfter: currentSupplier ? Number(currentSupplier.balance) : 0
+            },
+            { upsert: true, new: true }
         );
 
         res.json({ purchaseBill: oldBill, unpricedProducts });

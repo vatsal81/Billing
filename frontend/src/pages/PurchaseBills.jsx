@@ -193,7 +193,7 @@ const PurchaseBills = () => {
         // Explicit mapping to ensure perfect fetch and avoid null warnings
         setNewBill({
             billNumber: bill.billNumber || '',
-            supplierId: bill.supplierId || '',
+            supplierId: bill.supplier || '',
             supplierName: bill.supplierName || '',
             supplierGstin: bill.supplierGstin || '',
             supplierPan: bill.supplierPan || '',
@@ -290,14 +290,7 @@ const PurchaseBills = () => {
     const handleItemChange = (index, field, value) => {
         setNewBill(prev => {
             const updatedItems = [...prev.items];
-            if (field === 'hsnCode') {
-                // If user changes HSN on any item, apply to ALL items in this bill
-                updatedItems.forEach(item => {
-                    item.hsnCode = value;
-                });
-            } else {
-                updatedItems[index][field] = value;
-            }
+            updatedItems[index][field] = value;
 
             if (field === 'pcs' || field === 'meters' || field === 'rate') {
                 const meters = parseFloat(updatedItems[index].meters) || 0;
@@ -598,7 +591,7 @@ const PurchaseBills = () => {
                 </div>
             </header>
 
-            {isAdding && (
+            {(isAdding || isEditing) && (
                 <div style={{
                     position: 'fixed', 
                     top: 0, 
@@ -663,8 +656,8 @@ const PurchaseBills = () => {
                                                 <path d="M20 6L9 17L4 12" style={{ strokeDasharray: 50, strokeDashoffset: 50, animation: 'checkmark 0.5s ease-in-out forwards 0.2s' }} />
                                             </svg>
                                         </div>
-                                        <h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#15803d', marginBottom: '8px' }}>BILL RECORDED!</h3>
-                                        <p style={{ color: '#166534', fontWeight: 600 }}>Stock added to inventory successfully</p>
+                                        <h3 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#15803d', marginBottom: '8px' }}>{isEditing ? 'BILL UPDATED!' : 'BILL RECORDED!'}</h3>
+                                        <p style={{ color: '#166534', fontWeight: 600 }}>{isEditing ? 'Changes saved successfully' : 'Stock added to inventory successfully'}</p>
                                     </>
                                 )}
                             </div>
@@ -1137,9 +1130,9 @@ const PurchaseBills = () => {
                             </div>
 
                             <div className="modal-footer" style={{ padding: '20px', background: '#f8fafc', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '12px' }}>
-                                <button type="button" className="btn btn-secondary" style={{ flex: 1, height: '48px', fontWeight: 700 }} onClick={() => setIsAdding(false)}>Cancel</button>
+                                <button type="button" className="btn btn-secondary" style={{ flex: 1, height: '48px', fontWeight: 700 }} onClick={() => { setIsAdding(false); setIsEditing(false); }}>Cancel</button>
                                 <button type="submit" className="btn btn-primary" style={{ flex: 1.5, height: '48px', fontWeight: 800, gap: '10px' }}>
-                                    <Save size={18} /> Record Bill
+                                    <Save size={18} /> {isEditing ? 'Update Bill' : 'Record Bill'}
                                 </button>
                             </div>
                         </form>

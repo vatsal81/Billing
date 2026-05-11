@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchProducts, createProduct, deleteProduct, updateProduct, transliterateText } from '../utils/api';
-import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart, Pencil } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import GujaratiInput from '../components/GujaratiInput';
 import Modal from '../components/Modal';
@@ -26,12 +26,21 @@ export default function Inventory() {
   // Restock Modal States
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isProcessingDelete, setIsProcessingDelete] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [restockAmount, setRestockAmount] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [successToast, setSuccessToast] = useState(null);
+
+  // Edit States
+  const [editName, setEditName] = useState('');
+  const [editNameEnglish, setEditNameEnglish] = useState('');
+  const [editHsn, setEditHsn] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editStock, setEditStock] = useState('');
+  const [editThreshold, setEditThreshold] = useState('');
 
 
   const loadProducts = async () => {
@@ -158,6 +167,47 @@ export default function Inventory() {
     setSelectedProduct(product);
     setIsRestockModalOpen(true);
     setRestockAmount('');
+  };
+
+  const handleEditClick = (product) => {
+    setSelectedProduct(product);
+    setEditName(product.name);
+    setEditNameEnglish(product.nameEnglish || '');
+    setEditHsn(product.hsnCode || '');
+    setEditPrice(product.price || '');
+    setEditStock(product.stockAmount || '');
+    setEditThreshold(product.lowStockThreshold || 5);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateProduct = async (e) => {
+    e.preventDefault();
+    if (!selectedProduct || isProcessing) return;
+    
+    setIsProcessing(true);
+    try {
+      await updateProduct(selectedProduct._id, {
+        name: editName,
+        nameEnglish: editNameEnglish,
+        hsnCode: editHsn,
+        price: Number(editPrice),
+        stockAmount: Number(editStock),
+        lowStockThreshold: Number(editThreshold)
+      });
+      
+      await loadProducts();
+      setIsEditModalOpen(false);
+      setIsProcessing(false);
+      
+      setSuccessToast({
+        name: editName,
+        newStock: Number(editStock)
+      });
+      setTimeout(() => setSuccessToast(null), 4000);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      setIsProcessing(false);
+    }
   };
 
   const handleUpdateStock = async () => {
@@ -416,8 +466,11 @@ export default function Inventory() {
 
                     {/* Middle: Actions */}
                     <div className="receipt-actions" style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={() => handleRestock(p)} className="action-btn-hover" style={{background: 'rgba(3, 105, 161, 0.1)', color: 'var(--accent-primary)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Restock">
+                      <button onClick={() => handleRestock(p)} className="action-btn-hover" style={{background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Restock">
                         <ShoppingCart size={18} /> <span className="hide-on-mobile">Restock</span>
+                      </button>
+                      <button onClick={() => handleEditClick(p)} className="action-btn-hover" style={{background: 'rgba(3, 105, 161, 0.1)', color: 'var(--accent-primary)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Edit">
+                        <Pencil size={18} /> <span className="hide-on-mobile">Edit</span>
                       </button>
                       <button onClick={() => handleDeleteClick(p)} className="action-btn-hover" style={{background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Delete">
                         <Trash2 size={18} />
@@ -743,6 +796,84 @@ export default function Inventory() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Edit Product Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => !isProcessing && setIsEditModalOpen(false)}
+        title="Edit Product Details"
+        footer={(
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsEditModalOpen(false)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleUpdateProduct} disabled={isProcessing}>
+              {isProcessing ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        )}
+      >
+        <form onSubmit={handleUpdateProduct}>
+          <div className="input-group">
+            <label className="input-label">Item Name (Gujarati) *</label>
+            <GujaratiInput
+              className="input-field"
+              value={editName}
+              onChange={(val) => setEditName(val)}
+              required
+            />
+          </div>
+          <div className="input-group">
+            <label className="input-label">Item Name (English)</label>
+            <input
+              type="text"
+              className="input-field"
+              value={editNameEnglish}
+              onChange={(e) => setEditNameEnglish(e.target.value)}
+            />
+          </div>
+          <div className="input-group">
+            <label className="input-label">HSN Code</label>
+            <input
+              type="text"
+              className="input-field"
+              value={editHsn}
+              onChange={(e) => setEditHsn(e.target.value)}
+            />
+          </div>
+          <div className="input-group">
+            <label className="input-label">Selling Price *</label>
+            <input
+              type="number"
+              className="input-field"
+              value={editPrice}
+              onChange={(e) => setEditPrice(e.target.value)}
+              required
+              step="0.01"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <div className="input-group" style={{ flex: 1 }}>
+              <label className="input-label">Current Stock</label>
+              <input
+                type="number"
+                className="input-field"
+                value={editStock}
+                onChange={(e) => setEditStock(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-group" style={{ flex: 1 }}>
+              <label className="input-label">Low Alert Threshold</label>
+              <input
+                type="number"
+                className="input-field"
+                value={editThreshold}
+                onChange={(e) => setEditThreshold(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+        </form>
       </Modal>
     </div>
   );

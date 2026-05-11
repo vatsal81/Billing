@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { fetchSuppliers, createSupplier, updateSupplier, deleteSupplier, fetchLedgerEntries, createLedgerEntry } from '../utils/api';
-import { Building, Plus, Search, History, ArrowUpRight, ArrowDownLeft, X, Save, Wallet, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Building, Plus, Search, History, ArrowUpRight, ArrowDownLeft, X, Save, Wallet, Pencil, Trash2, AlertTriangle, MapPin } from 'lucide-react';
 import '../index.css';
 
-const emptySupplier = { name: '', gstin: '', pan: '', phone: '', email: '', address: '', city: '', state: 'Gujarat', bankName: '', branch: '', accountNo: '', ifsc: '' };
+const emptySupplier = { name: '', gstin: '', pan: '', phone: '', email: '', address: '', city: '', state: 'Gujarat', bankName: '', branch: '', accountNo: '', ifsc: '', balance: 0 };
 
 /* ── Animated Modal Overlay ── */
 const ModalOverlay = ({ onClose, onSubmit, header, children, footer, maxWidth }) => (
@@ -90,6 +90,11 @@ const SupplierFormFields = ({ data, onChange }) => (
                 <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#64748b', fontWeight: 700, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>A/C No</label>
                 <input type="text" placeholder="A/C No" style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%' }}
                     value={data.accountNo} onChange={e => onChange({ ...data, accountNo: e.target.value })} />
+            </div>
+            <div className="s-field">
+                <label style={{ fontSize: '0.65rem', marginBottom: '1px', color: '#ef4444', fontWeight: 800, display: 'block', textAlign: 'left', paddingLeft: '2px' }}>Current Balance (₹)</label>
+                <input type="number" placeholder="0.00" style={{ height: '30px', fontSize: '0.8rem', padding: '0 10px', width: '100%', borderColor: '#ef4444' }}
+                    value={data.balance} onChange={e => onChange({ ...data, balance: e.target.value })} />
             </div>
         </div>
     </>
