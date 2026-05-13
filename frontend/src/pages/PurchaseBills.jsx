@@ -1278,7 +1278,7 @@ const PurchaseBills = () => {
                                                 </td>
                                                  <td>
                                                     <span className="text-primary font-bold">
-                                                        ₹{bill.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                        ₹{(bill.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                                     </span>
                                                 </td>
                                                 <td>
@@ -1345,7 +1345,7 @@ const PurchaseBills = () => {
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ color: 'var(--accent-primary)', fontWeight: 800, fontSize: '1.1rem' }}>₹{bill.totalAmount.toLocaleString('en-IN')}</div>
+                                                <div style={{ color: 'var(--accent-primary)', fontWeight: 800, fontSize: '1.1rem' }}>₹{(bill.totalAmount || 0).toLocaleString('en-IN')}</div>
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(bill.billDate).toLocaleDateString('en-IN')}</div>
                                             </div>
                                         </div>
