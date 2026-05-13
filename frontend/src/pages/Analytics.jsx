@@ -123,7 +123,7 @@ const Analytics = () => {
                         <div>
                             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>{card.title}</p>
                             <h2 style={{ fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px', color: card.title === 'Net Profit' ? (card.value >= 0 ? 'var(--success)' : 'var(--danger)') : 'inherit' }}>
-                                ₹{card.value.toLocaleString('en-IN')}
+                                ₹{(card.value || 0).toLocaleString('en-IN')}
                             </h2>
                         </div>
                     </div>
@@ -155,7 +155,7 @@ const Analytics = () => {
                                 <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b'}} />
                                 <Tooltip 
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(4px)' }}
-                                    formatter={(value, name) => [`₹${value.toLocaleString('en-IN')}`, name === 'sales' ? 'Sales' : 'Purchases']}
+                                    formatter={(value, name) => [`₹${(value || 0).toLocaleString('en-IN')}`, name === 'sales' ? 'Sales' : 'Purchases']}
                                 />
                                 <Area type="monotone" dataKey="sales" stroke="var(--success)" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
                                 <Area type="monotone" dataKey="purchases" stroke="var(--accent-primary)" strokeWidth={3} fillOpacity={1} fill="url(#colorPurchases)" />

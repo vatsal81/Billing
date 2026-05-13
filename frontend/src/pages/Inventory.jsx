@@ -306,7 +306,7 @@ export default function Inventory() {
                 type="text" 
                 className="input-field" 
                 placeholder="e.g. Kurti"
-                value={nameEnglish}
+                value={nameEnglish ?? ''}
                 onChange={(e) => setNameEnglish(e.target.value)}
                 required
               />
@@ -316,7 +316,7 @@ export default function Inventory() {
               <GujaratiInput 
                 className="input-field" 
                 placeholder="e.g. કુર્તી"
-                value={name}
+                value={name ?? ''}
                 onChange={(val) => setName(val)}
                 onOriginal={(orig) => {
                   if (!nameEnglish) setNameEnglish(orig);
@@ -330,7 +330,7 @@ export default function Inventory() {
                 type="text" 
                 className="input-field" 
                 placeholder="e.g. 6211"
-                value={hsnCode}
+                value={hsnCode ?? ''}
                 onChange={(e) => setHsnCode(e.target.value)}
               />
             </div>
@@ -340,7 +340,7 @@ export default function Inventory() {
                 type="number" 
                 className="input-field" 
                 placeholder="e.g. 500"
-                value={price}
+                value={price ?? ''}
                 onChange={(e) => setPrice(e.target.value)}
                 required
                 min="0.01"
@@ -353,7 +353,7 @@ export default function Inventory() {
                 <input 
                   type="number" 
                   className="input-field" 
-                  value={stock}
+                  value={stock ?? ''}
                   onChange={(e) => setStock(e.target.value)}
                   required
                 />
@@ -363,7 +363,7 @@ export default function Inventory() {
                 <input 
                   type="number" 
                   className="input-field" 
-                  value={threshold}
+                  value={threshold ?? ''}
                   onChange={(e) => setThreshold(e.target.value)}
                   required
                 />
@@ -413,7 +413,7 @@ export default function Inventory() {
                   className="input-field" 
                   placeholder="Search..." 
                   style={{paddingLeft: '40px'}}
-                  value={searchTerm}
+                  value={searchTerm ?? ''}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
@@ -485,7 +485,7 @@ export default function Inventory() {
                             type="number" 
                             className="input-field" 
                             style={{width: '70px', padding: '2px 6px', height: '26px', margin: 0, fontSize: '0.85rem'}}
-                            value={newPrice}
+                            value={newPrice ?? ''}
                             onChange={(e) => setNewPrice(e.target.value)}
                             autoFocus
                           />
@@ -630,7 +630,7 @@ export default function Inventory() {
                     width: '100%',
                     letterSpacing: '1px'
                   }}
-                  value={restockAmount}
+                  value={restockAmount ?? ''}
                   onChange={(e) => setRestockAmount(e.target.value)}
                   autoFocus
                 />
@@ -827,7 +827,7 @@ export default function Inventory() {
             <input
               type="text"
               className="input-field"
-              value={editNameEnglish}
+              value={editNameEnglish ?? ''}
               onChange={(e) => setEditNameEnglish(e.target.value)}
             />
           </div>
@@ -836,7 +836,7 @@ export default function Inventory() {
             <input
               type="text"
               className="input-field"
-              value={editHsn}
+              value={editHsn ?? ''}
               onChange={(e) => setEditHsn(e.target.value)}
             />
           </div>
@@ -845,7 +845,7 @@ export default function Inventory() {
             <input
               type="number"
               className="input-field"
-              value={editPrice}
+              value={editPrice ?? ''}
               onChange={(e) => setEditPrice(e.target.value)}
               required
               step="0.01"
@@ -857,7 +857,7 @@ export default function Inventory() {
               <input
                 type="number"
                 className="input-field"
-                value={editStock}
+                value={editStock ?? ''}
                 onChange={(e) => setEditStock(e.target.value)}
                 required
               />
@@ -867,7 +867,7 @@ export default function Inventory() {
               <input
                 type="number"
                 className="input-field"
-                value={editThreshold}
+                value={editThreshold ?? ''}
                 onChange={(e) => setEditThreshold(e.target.value)}
                 required
               />

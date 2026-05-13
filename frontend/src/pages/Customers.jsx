@@ -52,13 +52,13 @@ const CustomerFormFields = ({ data, onChange }) => (
             <div className="s-field">
                 <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Customer Name <span style={{color:'#ef4444'}}>*</span></label>
                 <input type="text" required placeholder="e.g. Rahul Patel" style={{ height: '34px', fontSize: '0.85rem', padding: '0 10px' }}
-                    value={data.name} onChange={e => onChange({ ...data, name: e.target.value })} />
+                    value={data.name ?? ''} onChange={e => onChange({ ...data, name: e.target.value })} />
             </div>
             <div className="s-field">
                 <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Name (Gujarati)</label>
                 <GujaratiInput placeholder="નામ..." className="input-field"
                     style={{ height: '34px', fontSize: '0.85rem' }}
-                    value={data.nameGujarati} 
+                    value={data.nameGujarati ?? ''} 
                     onChange={val => onChange({ ...data, nameGujarati: val })}
                     onOriginal={orig => {
                         if (!data.name) onChange({ ...data, name: orig });
@@ -72,18 +72,18 @@ const CustomerFormFields = ({ data, onChange }) => (
             <div className="s-field s-span2">
                 <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Phone / Mobile</label>
                 <input type="text" placeholder="e.g. 9898088844" style={{ height: '34px', fontSize: '0.85rem', padding: '0 10px' }}
-                    value={data.phone} onChange={e => onChange({ ...data, phone: e.target.value })} />
+                    value={data.phone ?? ''} onChange={e => onChange({ ...data, phone: e.target.value })} />
             </div>
             <div className="s-field s-span2">
                 <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Address</label>
                 <textarea rows="1" placeholder="Full address..." style={{ padding: '6px 10px', fontSize: '0.85rem', minHeight: '34px' }}
-                    value={data.address} onChange={e => onChange({ ...data, address: e.target.value })} />
+                    value={data.address ?? ''} onChange={e => onChange({ ...data, address: e.target.value })} />
             </div>
             <div className="s-field s-span2">
                 <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Address (Gujarati)</label>
                 <GujaratiInput placeholder="સરનામું..." className="input-field"
                     style={{ height: '34px', fontSize: '0.85rem' }}
-                    value={data.addressGujarati} 
+                    value={data.addressGujarati ?? ''} 
                     onChange={val => onChange({ ...data, addressGujarati: val })}
                     onOriginal={orig => {
                         if (!data.address) onChange({ ...data, address: orig });
@@ -100,7 +100,7 @@ const CustomerList = ({ searchTerm, setSearchTerm, loading, filtered, selectedCu
             <div style={{ position: 'relative' }}>
                 <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                 <input type="text" className="input-field" placeholder="Search customers by name or phone..."
-                    style={{ paddingLeft: '38px' }} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                    style={{ paddingLeft: '38px' }} value={searchTerm ?? ''} onChange={e => setSearchTerm(e.target.value)} />
             </div>
         </div>
         <div style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
@@ -215,9 +215,9 @@ const CustomerLedger = ({ selectedCustomer, ledger, setEditCustomer, setActiveMo
             gridTemplateColumns: window.innerWidth < 768 ? 'repeat(3, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))'
         }}>
             {[
-                { label: 'Udhaar', val: '₹' + ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'), color: '#ef4444' },
-                { label: 'Jama', val: '₹' + ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0).toLocaleString('en-IN'),  color: '#10b981' },
-                { label: 'Balance',       val: '₹' + (selectedCustomer.balance?.toLocaleString('en-IN') || 0), color: selectedCustomer.balance > 0 ? '#ef4444' : '#10b981' },
+                { label: 'Udhaar', val: '₹' + (ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0) || 0).toLocaleString('en-IN'), color: '#ef4444' },
+                { label: 'Jama', val: '₹' + (ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0) || 0).toLocaleString('en-IN'),  color: '#10b981' },
+                { label: 'Balance',       val: '₹' + ((selectedCustomer.balance || 0).toLocaleString('en-IN')), color: selectedCustomer.balance > 0 ? '#ef4444' : '#10b981' },
             ].map(({ label, val, color }, idx) => (
                 <div key={label} style={{ 
                     padding: window.innerWidth < 768 ? '10px 4px' : '16px', 
@@ -276,12 +276,12 @@ const CustomerLedger = ({ selectedCustomer, ledger, setEditCustomer, setActiveMo
                                                 )}
                                             </td>
                                             <td className="right" style={{ fontWeight: 700, color: '#ef4444' }}>
-                                                {entry.type === 'debit' ? `₹${entry.amount.toLocaleString('en-IN')}` : '-'}
+                                                {entry.type === 'debit' ? `₹${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}
                                             </td>
                                             <td className="right" style={{ fontWeight: 700, color: '#10b981' }}>
-                                                {entry.type === 'credit' ? `₹${entry.amount.toLocaleString('en-IN')}` : '-'}
+                                                {entry.type === 'credit' ? `₹${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}
                                             </td>
-                                            <td className="right">₹{rowBalance.toLocaleString('en-IN')}</td>
+                                            <td className="right">₹{(rowBalance || 0).toLocaleString('en-IN')}</td>
                                         </tr>
                                     );
                                 });
@@ -378,9 +378,9 @@ const CustomerModals = ({
                     <button type="button" className="btn btn-secondary" onClick={() => setActiveModal(null)}>Cancel</button>
                     <button type="submit" className="btn btn-primary"><Save size={15} /> Confirm Receipt</button>
                 </>}>
-                <div className="s-field"><label>Received Amount (₹)</label><input type="number" required placeholder="0.00" autoFocus value={payment.amount} onChange={e => setPayment({ ...payment, amount: e.target.value })} /></div>
-                <div className="s-field"><label>Description / Note</label><input type="text" placeholder="e.g. Received via PhonePe" value={payment.description} onChange={e => setPayment({ ...payment, description: e.target.value })} /></div>
-                <div className="s-field"><label>Payment Date</label><input type="date" required value={payment.date} onChange={e => setPayment({ ...payment, date: e.target.value })} /></div>
+                <div className="s-field"><label>Received Amount (₹)</label><input type="number" required placeholder="0.00" autoFocus value={payment.amount ?? ''} onChange={e => setPayment({ ...payment, amount: e.target.value })} /></div>
+                <div className="s-field"><label>Description / Note</label><input type="text" placeholder="e.g. Received via PhonePe" value={payment.description ?? ''} onChange={e => setPayment({ ...payment, description: e.target.value })} /></div>
+                <div className="s-field"><label>Payment Date</label><input type="date" required value={payment.date ?? ''} onChange={e => setPayment({ ...payment, date: e.target.value })} /></div>
             </ModalOverlay>
         )}
     </>
@@ -410,7 +410,7 @@ const Customers = () => {
             if (balance <= 0) {
                 message = `Hello *${customer.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! ✨\n\nYour account is all clear. We look forward to seeing you again! 😊`;
             } else {
-                message = `*PAYMENT REMINDER* 🧾\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customer.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! ✨\n\nThis is a friendly reminder regarding your outstanding balance.\n\n💰 *Pending Amount: ₹${balance.toLocaleString('en-IN')}*\n\n📱 *View & Pay Online:*\n${paymentLink}\n\nKindly clear your dues at your earliest convenience.\n\nThank you for your continued trust! 🙏\n\n━━━━━━━━━━━━━━━━━━━━━━━\n*SHREE HARI DRESSES & CUTPIECE*`;
+                message = `*PAYMENT REMINDER* 🧾\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customer.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! ✨\n\nThis is a friendly reminder regarding your outstanding balance.\n\n💰 *Pending Amount: ₹${(balance || 0).toLocaleString('en-IN')}*\n\n📱 *View & Pay Online:*\n${paymentLink}\n\nKindly clear your dues at your earliest convenience.\n\nThank you for your continued trust! 🙏\n\n━━━━━━━━━━━━━━━━━━━━━━━\n*SHREE HARI DRESSES & CUTPIECE*`;
             }
             window.open(`https://wa.me/91${customer.phone}?text=${encodeURIComponent(message)}`, '_blank');
             setWaLoading(null);

@@ -685,16 +685,16 @@ const PurchaseBills = () => {
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                             <div className="input-group" style={{ marginBottom: 0 }}>
                                                 <label className="input-label" style={{ fontWeight: 600 }}>TRANSPORT NAME</label>
-                                                <input type="text" className="input-field" value={newBill.transport} onChange={(e) => setNewBill(prev => ({ ...prev, transport: e.target.value, ewayBillDetails: { ...prev.ewayBillDetails, transporter: e.target.value } }))} placeholder="e.g. H.H. ROADWAYS" style={{ background: 'white' }} />
+                                                <input type="text" className="input-field" value={newBill.transport ?? ''} onChange={(e) => setNewBill(prev => ({ ...prev, transport: e.target.value, ewayBillDetails: { ...prev.ewayBillDetails, transporter: e.target.value } }))} placeholder="e.g. H.H. ROADWAYS" style={{ background: 'white' }} />
                                             </div>
                                             <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth > 400 ? '1fr 1fr' : '1fr', gap: '16px' }}>
                                                 <div className="input-group" style={{ marginBottom: 0 }}>
                                                     <label className="input-label" style={{ fontWeight: 600 }}>L R NO</label>
-                                                    <input type="text" className="input-field" value={newBill.lrNo} onChange={(e) => setNewBill({ ...newBill, lrNo: e.target.value })} placeholder="LR Number" style={{ background: 'white' }} />
+                                                    <input type="text" className="input-field" value={newBill.lrNo ?? ''} onChange={(e) => setNewBill({ ...newBill, lrNo: e.target.value })} placeholder="LR Number" style={{ background: 'white' }} />
                                                 </div>
                                                 <div className="input-group" style={{ marginBottom: 0 }}>
                                                     <label className="input-label" style={{ fontWeight: 600 }}>BROKER</label>
-                                                    <input type="text" className="input-field" value={newBill.broker} onChange={(e) => setNewBill({ ...newBill, broker: e.target.value })} placeholder="Broker Name" style={{ background: 'white' }} />
+                                                    <input type="text" className="input-field" value={newBill.broker ?? ''} onChange={(e) => setNewBill({ ...newBill, broker: e.target.value })} placeholder="Broker Name" style={{ background: 'white' }} />
                                                 </div>
                                             </div>
                                         </div>
@@ -706,7 +706,7 @@ const PurchaseBills = () => {
                                         </div>
                                         <div className="input-group" style={{ marginBottom: '16px' }}>
                                             <label className="input-label" style={{ fontWeight: 600 }}>SELECT MERCHANT</label>
-                                            <input type="text" className="input-field" list="suppliers-list" required value={newBill.supplierName} onChange={(e) => handleSupplierSelect(e.target.value)} placeholder="Type merchant name..." style={{ background: '#fcfdfe' }} />
+                                            <input type="text" className="input-field" list="suppliers-list" required value={newBill.supplierName ?? ''} onChange={(e) => handleSupplierSelect(e.target.value)} placeholder="Type merchant name..." style={{ background: '#fcfdfe' }} />
                                             <datalist id="suppliers-list">
                                                 {suppliers.map(s => <option key={s._id} value={s.name} />)}
                                             </datalist>
@@ -714,16 +714,16 @@ const PurchaseBills = () => {
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                                             <div className="input-group" style={{ marginBottom: 0 }}>
                                                 <label className="input-label" style={{ fontWeight: 600 }}>GSTIN</label>
-                                                <input type="text" className="input-field" value={newBill.supplierGstin} onChange={(e) => setNewBill(prev => ({ ...prev, supplierGstin: e.target.value, ewayBillDetails: { ...prev.ewayBillDetails, supplierGstin: e.target.value } }))} placeholder="GSTIN Number" style={{ background: '#fcfdfe' }} />
+                                                <input type="text" className="input-field" value={newBill.supplierGstin ?? ''} onChange={(e) => setNewBill(prev => ({ ...prev, supplierGstin: e.target.value, ewayBillDetails: { ...prev.ewayBillDetails, supplierGstin: e.target.value } }))} placeholder="GSTIN Number" style={{ background: '#fcfdfe' }} />
                                             </div>
                                             <div className="input-group" style={{ marginBottom: 0 }}>
                                                 <label className="input-label" style={{ fontWeight: 600 }}>PAN NO.</label>
-                                                <input type="text" className="input-field" value={newBill.supplierPan} onChange={(e) => setNewBill({ ...newBill, supplierPan: e.target.value })} placeholder="PAN Number" style={{ background: '#fcfdfe' }} />
+                                                <input type="text" className="input-field" value={newBill.supplierPan ?? ''} onChange={(e) => setNewBill({ ...newBill, supplierPan: e.target.value })} placeholder="PAN Number" style={{ background: '#fcfdfe' }} />
                                             </div>
                                         </div>
                                         <div className="input-group" style={{ marginBottom: 0 }}>
                                             <label className="input-label" style={{ fontWeight: 600 }}>OFFICE ADDRESS</label>
-                                            <input type="text" className="input-field" value={newBill.supplierAddress} onChange={(e) => setNewBill({ ...newBill, supplierAddress: e.target.value })} placeholder="Full merchant address..." style={{ background: '#fcfdfe' }} />
+                                            <input type="text" className="input-field" value={newBill.supplierAddress ?? ''} onChange={(e) => setNewBill({ ...newBill, supplierAddress: e.target.value })} placeholder="Full merchant address..." style={{ background: '#fcfdfe' }} />
                                         </div>
                                     </div>
                                 </div>
@@ -740,11 +740,11 @@ const PurchaseBills = () => {
                                     }}>
                                         <div className="input-group" style={{ marginBottom: 0 }}>
                                             <label className="input-label" style={{ color: '#1e3a8a', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.05em' }}>INVOICE NO.</label>
-                                            <input type="text" className="input-field" required value={newBill.billNumber} onChange={(e) => setNewBill(prev => ({ ...prev, billNumber: e.target.value, ewayBillDetails: { ...prev.ewayBillDetails, documentNo: e.target.value } }))} placeholder="Enter Bill No." style={{ background: 'white' }} />
+                                            <input type="text" className="input-field" required value={newBill.billNumber ?? ''} onChange={(e) => setNewBill(prev => ({ ...prev, billNumber: e.target.value, ewayBillDetails: { ...prev.ewayBillDetails, documentNo: e.target.value } }))} placeholder="Enter Bill No." style={{ background: 'white' }} />
                                         </div>
                                         <div className="input-group" style={{ marginBottom: 0 }}>
                                             <label className="input-label" style={{ color: '#1e3a8a', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.05em' }}>INVOICE DATE</label>
-                                            <input type="date" className="input-field" required value={newBill.billDate} onChange={(e) => setNewBill(prev => ({ ...prev, billDate: e.target.value, ewayBillDetails: { ...prev.ewayBillDetails, documentDate: e.target.value } }))} style={{ background: 'white' }} />
+                                            <input type="date" className="input-field" required value={newBill.billDate ?? ''} onChange={(e) => setNewBill(prev => ({ ...prev, billDate: e.target.value, ewayBillDetails: { ...prev.ewayBillDetails, documentDate: e.target.value } }))} style={{ background: 'white' }} />
                                         </div>
                                     </div>
                                 </div>
@@ -778,13 +778,13 @@ const PurchaseBills = () => {
                                                     <tr key={index} style={{ borderTop: '1px solid var(--border-color)' }}>
                                                         <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{index + 1}</td>
                                                         <td style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px' }}>
-                                                            <input type="text" className="input-field" style={{ padding: '6px 10px', fontSize: '0.85rem' }} value={item.nameEnglish || ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="English Name" />
-                                                            <input type="text" className="input-field" style={{ padding: '6px 10px', fontSize: '0.85rem' }} required value={item.name || ''} onChange={(e) => handleItemChange(index, 'name', e.target.value)} placeholder="ગુજરાતી નામ" />
+                                                            <input type="text" className="input-field" style={{ padding: '6px 10px', fontSize: '0.85rem' }} value={item.nameEnglish ?? ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="English Name" />
+                                                            <input type="text" className="input-field" style={{ padding: '6px 10px', fontSize: '0.85rem' }} required value={item.name ?? ''} onChange={(e) => handleItemChange(index, 'name', e.target.value)} placeholder="ગુજરાતી નામ" />
                                                         </td>
-                                                        <td><input type="text" className="input-field" style={{ padding: '6px 10px' }} value={item.hsnCode || ''} onChange={(e) => handleItemChange(index, 'hsnCode', e.target.value)} placeholder="HSN" /></td>
-                                                        <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" value={item.pcs || ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} /></td>
-                                                        <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" value={item.meters || ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} /></td>
-                                                        <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" required value={item.rate || ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} /></td>
+                                                        <td><input type="text" className="input-field" style={{ padding: '6px 10px' }} value={item.hsnCode ?? ''} onChange={(e) => handleItemChange(index, 'hsnCode', e.target.value)} placeholder="HSN" /></td>
+                                                        <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} /></td>
+                                                        <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} /></td>
+                                                        <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} /></td>
                                                         <td style={{ textAlign: 'right', fontWeight: '800', color: 'var(--accent-primary)' }}>₹{item.amount.toFixed(2)}</td>
                                                         <td style={{ textAlign: 'center' }}>
                                                             <button type="button" style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => handleRemoveItem(index)}>
@@ -812,29 +812,29 @@ const PurchaseBills = () => {
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                 <div className="input-group" style={{ marginBottom: 0 }}>
                                                     <label className="input-label" style={{ fontSize: '0.75rem' }}>PRODUCT NAME (ENG / GUJ)</label>
-                                                    <input type="text" className="input-field" value={item.nameEnglish || ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="English Name" style={{ marginBottom: '8px' }} />
-                                                    <input type="text" className="input-field" required value={item.name || ''} onChange={(e) => handleItemChange(index, 'name', e.target.value)} placeholder="ગુજરાતી નામ" />
+                                                    <input type="text" className="input-field" value={item.nameEnglish ?? ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="English Name" style={{ marginBottom: '8px' }} />
+                                                    <input type="text" className="input-field" required value={item.name ?? ''} onChange={(e) => handleItemChange(index, 'name', e.target.value)} placeholder="ગુજરાતી નામ" />
                                                 </div>
                                                 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>HSN CODE</label>
-                                                        <input type="text" className="input-field" value={item.hsnCode || ''} onChange={(e) => handleItemChange(index, 'hsnCode', e.target.value)} placeholder="HSN" />
+                                                        <input type="text" className="input-field" value={item.hsnCode ?? ''} onChange={(e) => handleItemChange(index, 'hsnCode', e.target.value)} placeholder="HSN" />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>PCS</label>
-                                                        <input type="number" className="input-field" step="any" value={item.pcs || ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} />
+                                                        <input type="number" className="input-field" step="any" value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} />
                                                     </div>
                                                 </div>
 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>METERS</label>
-                                                        <input type="number" className="input-field" step="any" value={item.meters || ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} />
+                                                        <input type="number" className="input-field" step="any" value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>RATE (₹)</label>
-                                                        <input type="number" className="input-field" step="any" required value={item.rate || ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} />
+                                                        <input type="number" className="input-field" step="any" required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} />
                                                     </div>
                                                 </div>
 
@@ -852,7 +852,7 @@ const PurchaseBills = () => {
                                     <div className="left-summary-col">
                                         <div className="remarks-box" style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)', marginBottom: '24px' }}>
                                             <label className="input-label" style={{ marginBottom: '12px', display: 'block' }}>REMARKS / NOTES</label>
-                                            <textarea className="input-field" rows="3" placeholder="Add any special instructions..." value={newBill.remarks} onChange={(e) => setNewBill({ ...newBill, remarks: e.target.value })} style={{ background: 'white' }}></textarea>
+                                            <textarea className="input-field" rows="3" placeholder="Add any special instructions..." value={newBill.remarks ?? ''} onChange={(e) => setNewBill({ ...newBill, remarks: e.target.value })} style={{ background: 'white' }}></textarea>
                                         </div>
 
                                         <div className="attachments-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
@@ -960,15 +960,15 @@ const PurchaseBills = () => {
                                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem', fontWeight: 700 }}>UNIQUE NO.</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.uniqueNo} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, uniqueNo: e.target.value } })} placeholder="e.g. 5896 8745 6985" />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.uniqueNo ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, uniqueNo: e.target.value } })} placeholder="e.g. 5896 8745 6985" />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem', fontWeight: 700 }}>ENTERED DATE</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.enteredDate} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, enteredDate: e.target.value } })} placeholder="DD/MM/YYYY HH:MM" />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.enteredDate ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, enteredDate: e.target.value } })} placeholder="DD/MM/YYYY HH:MM" />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem', fontWeight: 700 }}>ENTERED BY</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.enteredBy} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, enteredBy: e.target.value } })} placeholder="e.g. KHGI6S9..." />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.enteredBy ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, enteredBy: e.target.value } })} placeholder="e.g. KHGI6S9..." />
                                                     </div>
                                                 </div>
 
@@ -978,27 +978,27 @@ const PurchaseBills = () => {
                                                 <div className="eway-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>GSTIN OF SUPPLIER</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.supplierGstin} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, supplierGstin: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.supplierGstin ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, supplierGstin: e.target.value } })} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>PLACE OF DISPATCH</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.placeOfDispatch} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, placeOfDispatch: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.placeOfDispatch ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, placeOfDispatch: e.target.value } })} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>GSTIN OF RECIPIENT</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.recipientGstin} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, recipientGstin: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.recipientGstin ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, recipientGstin: e.target.value } })} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>PLACE OF DELIVERY</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.placeOfDelivery} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, placeOfDelivery: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.placeOfDelivery ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, placeOfDelivery: e.target.value } })} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>DOCUMENT NO.</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.documentNo} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, documentNo: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.documentNo ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, documentNo: e.target.value } })} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>DOCUMENT DATE</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.documentDate} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, documentDate: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.documentDate ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, documentDate: e.target.value } })} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>TRANSACTION TYPE</label>
@@ -1010,19 +1010,19 @@ const PurchaseBills = () => {
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>VALUE OF GOODS</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.valueOfGoods} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, valueOfGoods: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.valueOfGoods ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, valueOfGoods: e.target.value } })} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>HSN CODE</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.hsnCode} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, hsnCode: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.hsnCode ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, hsnCode: e.target.value } })} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>REASON</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.reasonForTransportation} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, reasonForTransportation: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.reasonForTransportation ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, reasonForTransportation: e.target.value } })} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0, gridColumn: 'span 2' }}>
                                                         <label className="input-label" style={{ fontSize: '0.7rem' }}>TRANSPORTER</label>
-                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.transporter} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, transporter: e.target.value } })} />
+                                                        <input type="text" className="input-field" value={newBill.ewayBillDetails.transporter ?? ''} onChange={(e) => setNewBill({ ...newBill, ewayBillDetails: { ...newBill.ewayBillDetails, transporter: e.target.value } })} />
                                                     </div>
                                                 </div>
                                             </div>
@@ -1105,7 +1105,7 @@ const PurchaseBills = () => {
                                                     
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0' }}>
                                                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>ROUND OFF</span>
-                                                        <input type="number" step="any" className="input-field" style={{ width: '80px', padding: '4px 8px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 700 }} value={newBill.roundOff} onChange={(e) => {
+                                                        <input type="number" step="any" className="input-field" style={{ width: '80px', padding: '4px 8px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 700 }} value={newBill.roundOff ?? ''} onChange={(e) => {
                                                             const rawValue = e.target.value;
                                                             const rVal = parseFloat(rawValue) || 0;
                                                             const newTotal = Number((newBill.subTotal + newBill.igst + newBill.cgst + newBill.sgst + rVal).toFixed(2));

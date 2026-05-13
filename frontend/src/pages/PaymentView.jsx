@@ -150,7 +150,7 @@ export default function PaymentView() {
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: '2px' }}>Amount Due</span>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
                         <span style={{ fontSize: '1.2rem', fontWeight: 600, color: '#64748b' }}>₹</span>
-                        <span style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>{Number(amount).toLocaleString('en-IN')}</span>
+                        <span style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>{(Number(amount) || 0).toLocaleString('en-IN')}</span>
                     </div>
                 </div>
 

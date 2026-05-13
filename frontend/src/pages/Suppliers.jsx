@@ -455,13 +455,13 @@ const Suppliers = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                         <div className="s-field" style={{ gridColumn: 'span 2' }}>
                             <label>Business Name *</label>
-                            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+                            <input type="text" value={formData.name ?? ''} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                         </div>
-                        <div className="s-field"><label>GSTIN</label><input type="text" value={formData.gstin} onChange={e => setFormData({ ...formData, gstin: e.target.value })} /></div>
-                        <div className="s-field"><label>Phone</label><input type="text" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} /></div>
-                        <div className="s-field" style={{ gridColumn: 'span 2' }}><label>Address</label><input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} /></div>
-                        <div className="s-field"><label>City</label><input type="text" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} /></div>
-                        <div className="s-field"><label>Opening Balance</label><input type="number" value={formData.balance} onChange={e => setFormData({ ...formData, balance: e.target.value })} /></div>
+                        <div className="s-field"><label>GSTIN</label><input type="text" value={formData.gstin ?? ''} onChange={e => setFormData({ ...formData, gstin: e.target.value })} /></div>
+                        <div className="s-field"><label>Phone</label><input type="text" value={formData.phone ?? ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} /></div>
+                        <div className="s-field" style={{ gridColumn: 'span 2' }}><label>Address</label><input type="text" value={formData.address ?? ''} onChange={e => setFormData({ ...formData, address: e.target.value })} /></div>
+                        <div className="s-field"><label>City</label><input type="text" value={formData.city ?? ''} onChange={e => setFormData({ ...formData, city: e.target.value })} /></div>
+                        <div className="s-field"><label>Opening Balance</label><input type="number" value={formData.balance ?? ''} onChange={e => setFormData({ ...formData, balance: e.target.value })} /></div>
                     </div>
                 </Modal>
             )}
@@ -472,15 +472,15 @@ const Suppliers = () => {
                 }>
                     <div className="s-field" style={{ marginBottom: '16px' }}>
                         <label>Amount (₹) *</label>
-                        <input type="number" value={paymentData.amount} onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })} required autoFocus />
+                        <input type="number" value={paymentData.amount ?? ''} onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })} required autoFocus />
                     </div>
                     <div className="s-field" style={{ marginBottom: '16px' }}>
                         <label>Description / Note</label>
-                        <input type="text" value={paymentData.description} onChange={e => setPaymentData({ ...paymentData, description: e.target.value })} placeholder="e.g. Paid via GPay" />
+                        <input type="text" value={paymentData.description ?? ''} onChange={e => setPaymentData({ ...paymentData, description: e.target.value })} placeholder="e.g. Paid via GPay" />
                     </div>
                     <div className="s-field">
                         <label>Date</label>
-                        <input type="date" value={paymentData.date} onChange={e => setPaymentData({ ...paymentData, date: e.target.value })} required />
+                        <input type="date" value={paymentData.date ?? ''} onChange={e => setPaymentData({ ...paymentData, date: e.target.value })} required />
                     </div>
                 </Modal>
             )}

@@ -154,7 +154,7 @@ const ManualPos = () => {
     const smile = '\uD83D\uDE0A';
     const rupee = '\u20B9';
 
-    const text = `${sparkles} SHREE HARI DRESSES & CUTPIECE ${sparkles}\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n${page} Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : ${rupee}${totalAmount.toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n${linkIcon} View Your Invoice:\n${viewLink}\n\n${speech} "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting ${smile}\n━━━━━━━━━━━━━━━━━━━━━━━`;
+    const text = `${sparkles} SHREE HARI DRESSES & CUTPIECE ${sparkles}\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n${page} Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : ${rupee}${(totalAmount || 0).toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n${linkIcon} View Your Invoice:\n${viewLink}\n\n${speech} "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting ${smile}\n━━━━━━━━━━━━━━━━━━━━━━━`;
 
     const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
@@ -499,7 +499,7 @@ const ManualPos = () => {
                 ))}
                 <div style={{ borderTop: '2px solid var(--border-color)', paddingTop: '15px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ fontSize: '1.2rem' }}>{t('total')} (incl. GST)</h3>
-                  <h3 style={{ fontSize: '1.5rem', color: 'var(--accent-primary)' }}>₹{calculateTotal().toLocaleString('en-IN')}</h3>
+                  <h3 style={{ fontSize: '1.5rem', color: 'var(--accent-primary)' }}>₹{(calculateTotal() || 0).toLocaleString('en-IN')}</h3>
                 </div>
                 <button 
                   className="btn btn-primary hover-lift" 
@@ -701,27 +701,27 @@ const ManualPos = () => {
                 <div className="form-grid" style={{ marginBottom: '12px', gridTemplateColumns: '1fr' }}>
                   <div className="input-group" style={{ marginBottom: '10px' }}>
                     <label className="input-label" style={{ fontSize: '0.7rem' }}>Name (English) *</label>
-                    <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} required placeholder="Rahul Patel" value={newCustomer.name} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
+                    <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} required placeholder="Rahul Patel" value={newCustomer.name ?? ''} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
                   </div>
                   <div className="input-group" style={{ marginBottom: '10px' }}>
                     <label className="input-label" style={{ fontSize: '0.7rem' }}>Name (Gujarati)</label>
-                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="રાહુલ પટેલ" value={newCustomer.nameGujarati} onChange={val => setNewCustomer({ ...newCustomer, nameGujarati: val })} onOriginal={orig => { if (!newCustomer.name) setNewCustomer({ ...newCustomer, name: orig }); }} />
+                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="રાહુલ પટેલ" value={newCustomer.nameGujarati ?? ''} onChange={val => setNewCustomer({ ...newCustomer, nameGujarati: val })} onOriginal={orig => { if (!newCustomer.name) setNewCustomer({ ...newCustomer, name: orig }); }} />
                   </div>
                 </div>
 
                 <div className="input-group" style={{ marginBottom: '12px' }}>
                   <label className="input-label" style={{ fontSize: '0.7rem' }}>Phone Number</label>
-                  <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="9898088844" value={newCustomer.phone} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
+                  <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="9898088844" value={newCustomer.phone ?? ''} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
                 </div>
 
                 <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                   <div className="input-group" style={{ marginBottom: '10px' }}>
                     <label className="input-label" style={{ fontSize: '0.7rem' }}>Address (English)</label>
-                    <textarea className="input-field" rows="1" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="Full address..." value={newCustomer.address} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
+                    <textarea className="input-field" rows="1" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="Full address..." value={newCustomer.address ?? ''} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
                   </div>
                   <div className="input-group" style={{ marginBottom: 0 }}>
                     <label className="input-label" style={{ fontSize: '0.7rem' }}>Address (Gujarati)</label>
-                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="સરનામું..." value={newCustomer.addressGujarati} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.address) setNewCustomer({ ...newCustomer, address: orig }); }} />
+                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="સરનામું..." value={newCustomer.addressGujarati ?? ''} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.address) setNewCustomer({ ...newCustomer, address: orig }); }} />
                   </div>
                 </div>
               </div>
