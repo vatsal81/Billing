@@ -16,6 +16,7 @@ export default function Inventory() {
   const [nameEnglish, setNameEnglish] = useState('');
   const [hsnCode, setHsnCode] = useState('');
   const [price, setPrice] = useState('');
+  const [purchaseRate, setPurchaseRate] = useState('');
   const [stock, setStock] = useState(100);
   const [threshold, setThreshold] = useState(5);
   const [error, setError] = useState(null);
@@ -39,6 +40,7 @@ export default function Inventory() {
   const [editNameEnglish, setEditNameEnglish] = useState('');
   const [editHsn, setEditHsn] = useState('');
   const [editPrice, setEditPrice] = useState('');
+  const [editPurchaseRate, setEditPurchaseRate] = useState('');
   const [editStock, setEditStock] = useState('');
   const [editThreshold, setEditThreshold] = useState('');
 
@@ -67,11 +69,12 @@ export default function Inventory() {
   const handleExportCSV = () => {
     if (products.length === 0) return;
     
-    const headers = ['Name (Gujarati)', 'Name (English)', 'HSN Code', 'Selling Price', 'Stock Amount', 'Low Stock Threshold'];
+    const headers = ['Name (Gujarati)', 'Name (English)', 'HSN Code', 'Purchase Rate', 'Selling Price', 'Stock Amount', 'Low Stock Threshold'];
     const rows = products.map(p => [
       `"${p.name}"`,
       `"${p.nameEnglish || ''}"`,
       `"${p.hsnCode || ''}"`,
+      p.purchaseRate || 0,
       p.price || 0,
       p.stockAmount || 0,
       p.lowStockThreshold || 5
@@ -120,6 +123,7 @@ export default function Inventory() {
         nameEnglish,
         hsnCode,
         price: Number(price), 
+        purchaseRate: Number(purchaseRate),
         stockAmount: Number(stock), 
         lowStockThreshold: Number(threshold) 
       });
@@ -127,6 +131,7 @@ export default function Inventory() {
       setNameEnglish('');
       setHsnCode('');
       setPrice('');
+      setPurchaseRate('');
       setStock(100);
       setThreshold(5);
       await loadProducts();
@@ -175,6 +180,7 @@ export default function Inventory() {
     setEditNameEnglish(product.nameEnglish || '');
     setEditHsn(product.hsnCode || '');
     setEditPrice(product.price || '');
+    setEditPurchaseRate(product.purchaseRate || '');
     setEditStock(product.stockAmount || '');
     setEditThreshold(product.lowStockThreshold || 5);
     setIsEditModalOpen(true);
@@ -191,6 +197,7 @@ export default function Inventory() {
         nameEnglish: editNameEnglish,
         hsnCode: editHsn,
         price: Number(editPrice),
+        purchaseRate: Number(editPurchaseRate),
         stockAmount: Number(editStock),
         lowStockThreshold: Number(editThreshold)
       });
@@ -334,18 +341,32 @@ export default function Inventory() {
                 onChange={(e) => setHsnCode(e.target.value)}
               />
             </div>
-            <div className="input-group">
-              <label className="input-label">{t('priceInRs')}</label>
-              <input 
-                type="number" 
-                className="input-field" 
-                placeholder="e.g. 500"
-                value={price ?? ''}
-                onChange={(e) => setPrice(e.target.value)}
-                required
-                min="0.01"
-                step="0.01"
-              />
+            <div style={{display: 'flex', gap: '16px'}}>
+              <div className="input-group" style={{flex: 1}}>
+                <label className="input-label">Purchase Rate</label>
+                <input 
+                  type="number" 
+                  className="input-field" 
+                  placeholder="e.g. 400"
+                  value={purchaseRate ?? ''}
+                  onChange={(e) => setPurchaseRate(e.target.value)}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="input-group" style={{flex: 1}}>
+                <label className="input-label">Selling Price <span style={{color: 'var(--danger)'}}>*</span></label>
+                <input 
+                  type="number" 
+                  className="input-field" 
+                  placeholder="e.g. 500"
+                  value={price ?? ''}
+                  onChange={(e) => setPrice(e.target.value)}
+                  required
+                  min="0.01"
+                  step="0.01"
+                />
+              </div>
             </div>
             <div style={{display: 'flex', gap: '16px'}}>
               <div className="input-group" style={{flex: 1}}>
@@ -493,13 +514,18 @@ export default function Inventory() {
                           <button className="btn btn-secondary" style={{padding: '0 6px', height: '26px', fontSize: '0.75rem'}} onClick={() => setEditingPrice(null)}>X</button>
                         </div>
                       ) : (
-                        <h3 
-                          onClick={() => { setEditingPrice(p._id); setNewPrice(p.price); }}
-                          style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', letterSpacing: '-0.5px', color: 'var(--success)', cursor: 'pointer' }}
-                          title="Click to edit price"
-                        >
-                          ₹{(p.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
-                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <h3 
+                            onClick={() => { setEditingPrice(p._id); setNewPrice(p.price); }}
+                            style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', letterSpacing: '-0.5px', color: 'var(--success)', cursor: 'pointer' }}
+                            title="Click to edit selling price"
+                          >
+                            ₹{(p.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                          </h3>
+                          <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', opacity: 0.8 }}>
+                            Pur: ₹{(p.purchaseRate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                          </span>
+                        </div>
                       )}
                       
                       <div style={{
@@ -840,16 +866,28 @@ export default function Inventory() {
               onChange={(e) => setEditHsn(e.target.value)}
             />
           </div>
-          <div className="input-group">
-            <label className="input-label">Selling Price *</label>
-            <input
-              type="number"
-              className="input-field"
-              value={editPrice ?? ''}
-              onChange={(e) => setEditPrice(e.target.value)}
-              required
-              step="0.01"
-            />
+          <div style={{ display: 'flex', gap: '16px' }}>
+            <div className="input-group" style={{ flex: 1 }}>
+              <label className="input-label">Purchase Rate</label>
+              <input
+                type="number"
+                className="input-field"
+                value={editPurchaseRate ?? ''}
+                onChange={(e) => setEditPurchaseRate(e.target.value)}
+                step="0.01"
+              />
+            </div>
+            <div className="input-group" style={{ flex: 1 }}>
+              <label className="input-label">Selling Price *</label>
+              <input
+                type="number"
+                className="input-field"
+                value={editPrice ?? ''}
+                onChange={(e) => setEditPrice(e.target.value)}
+                required
+                step="0.01"
+              />
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '16px' }}>
             <div className="input-group" style={{ flex: 1 }}>
