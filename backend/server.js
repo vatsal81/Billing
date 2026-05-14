@@ -32,9 +32,9 @@ app.use(helmet({
 }));
 app.use(cors({
     origin: [
-        'https://billing-pi-seven.vercel.app',
         'https://billing-woad-sigma.vercel.app',
         'https://billing-i1lc.onrender.com',
+        'https://shreeharii.vercel.app',
         'http://localhost:5173',
         'http://localhost:5000'
     ],
@@ -90,7 +90,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    
+
     // Start the pinger to keep the server awake (for free hosting like Render)
     if (process.env.NODE_ENV === 'production') {
         const APP_URL = process.env.RENDER_EXTERNAL_URL || 'https://billing-i1lc.onrender.com';
