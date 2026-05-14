@@ -43,6 +43,8 @@ const purchaseBillSchema = mongoose.Schema({
     }],
     
     subTotal: { type: Number, required: true },
+    discountPercent: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
     igst: { type: Number, default: 0 },
     cgst: { type: Number, default: 0 },
     sgst: { type: Number, default: 0 },

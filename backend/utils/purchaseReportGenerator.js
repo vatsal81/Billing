@@ -299,11 +299,15 @@ const buildBillHTML = async (bill, settings = {}) => {
                     <img src="${invoiceQR}" class="qr-image" />
                 </div>
                 <div class="tax-totals-box">
+                    ${bill.discountAmount > 0 ? `
+                        <div class="tax-row"><span>DISCOUNT (${bill.discountPercent}%)</span><span>₹${(bill.discountAmount || 0).toFixed(2)}</span></div>
+                        <div class="tax-row"><span>TAXABLE VAL</span><span style="font-weight:800; color:#0f172a">₹${((bill.subTotal || 0) - (bill.discountAmount || 0)).toFixed(2)}</span></div>
+                    ` : ''}
                     ${(bill.cgst > 0 || bill.sgst > 0) ? `
-                        <div class="tax-row"><span>CGST (2.5%)</span><span>₹${(bill.cgst || 0).toFixed(2)}</span></div>
-                        <div class="tax-row"><span>SGST (2.5%)</span><span>₹${(bill.sgst || 0).toFixed(2)}</span></div>
+                        <div class="tax-row"><span>CGST (${(bill.gstRate || 5) / 2}%)</span><span>₹${(bill.cgst || 0).toFixed(2)}</span></div>
+                        <div class="tax-row"><span>SGST (${(bill.gstRate || 5) / 2}%)</span><span>₹${(bill.sgst || 0).toFixed(2)}</span></div>
                     ` : `
-                        <div class="tax-row"><span>IGST (5%)</span><span>₹${(bill.igst || 0).toFixed(2)}</span></div>
+                        <div class="tax-row"><span>IGST (${bill.gstRate || 5}%)</span><span>₹${(bill.igst || 0).toFixed(2)}</span></div>
                     `}
                     <div class="tax-row"><span>ROUND OFF</span><span>₹${(bill.roundOff || 0).toFixed(2)}</span></div>
                     <div class="grand-total-row">

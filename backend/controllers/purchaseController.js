@@ -21,7 +21,7 @@ const addPurchaseBill = async (req, res) => {
             billNumber, supplierId, supplierName, supplierGstin, supplierPan, supplierAddress,
             billDate, ewayBillNo,
             transport, lrNo, broker,
-            subTotal, igst, cgst, sgst, roundOff, totalAmount, remarks
+            subTotal, discountPercent, discountAmount, igst, cgst, sgst, roundOff, totalAmount, remarks
         } = body;
 
         // Get file paths from multer
@@ -72,6 +72,8 @@ const addPurchaseBill = async (req, res) => {
             broker,
             items,
             subTotal,
+            discountPercent,
+            discountAmount,
             igst,
             cgst,
             sgst,
@@ -224,7 +226,7 @@ const updatePurchaseBill = async (req, res) => {
             billNumber, supplierId, supplierName, supplierGstin, supplierPan, supplierAddress,
             billDate, ewayBillNo,
             transport, lrNo, broker,
-            subTotal, igst, cgst, sgst, roundOff, totalAmount, remarks
+            subTotal, discountPercent, discountAmount, igst, cgst, sgst, roundOff, totalAmount, remarks
         } = body;
 
         // Get file paths from multer
@@ -295,6 +297,8 @@ const updatePurchaseBill = async (req, res) => {
         oldBill.broker = broker || oldBill.broker;
         oldBill.items = items || oldBill.items;
         oldBill.subTotal = subTotal || oldBill.subTotal;
+        oldBill.discountPercent = discountPercent !== undefined ? discountPercent : oldBill.discountPercent;
+        oldBill.discountAmount = discountAmount !== undefined ? discountAmount : oldBill.discountAmount;
         oldBill.igst = igst || oldBill.igst;
         oldBill.cgst = cgst || oldBill.cgst;
         oldBill.sgst = sgst || oldBill.sgst;

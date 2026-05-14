@@ -305,6 +305,18 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                                 />
                             </div>
                             <div className="tax-totals-box">
+                                {bill.discountAmount > 0 && (
+                                    <>
+                                        <div className="tax-row" style={{ color: '#b45309', fontWeight: 700 }}>
+                                            <span>DISCOUNT ({bill.discountPercent}%)</span>
+                                            <span className="right">- ₹{(bill.discountAmount || 0).toFixed(2)}</span>
+                                        </div>
+                                        <div className="tax-row" style={{ borderBottom: '2px solid #e2e8f0', marginBottom: '4px' }}>
+                                            <span style={{ fontWeight: 800, color: '#0f172a' }}>TAXABLE VALUE</span>
+                                            <span className="right" style={{ fontWeight: 800, color: '#0f172a' }}>₹{((bill.subTotal || 0) - (bill.discountAmount || 0)).toFixed(2)}</span>
+                                        </div>
+                                    </>
+                                )}
                                 {(bill.cgst > 0 || bill.sgst > 0) ? (
                                     <>
                                         <div className="tax-row">
@@ -356,7 +368,7 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                             </thead>
                             <tbody>
                                 <tr style={{ backgroundColor: '#f8fafc' }}>
-                                    <td style={{ padding: '10px', fontWeight: 'bold' }}>₹{(bill.subTotal || 0).toFixed(2)}</td>
+                                    <td style={{ padding: '10px', fontWeight: 'bold' }}>₹{((bill.subTotal || 0) - (bill.discountAmount || 0)).toFixed(2)}</td>
                                     <td style={{ padding: '10px' }}>₹{(bill.cgst || 0).toFixed(2)}</td>
                                     <td style={{ padding: '10px' }}>₹{(bill.sgst || 0).toFixed(2)}</td>
                                     <td style={{ padding: '10px' }}>₹{(bill.igst || 0).toFixed(2)}</td>

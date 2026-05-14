@@ -51,6 +51,9 @@ const PurchaseBills = () => {
         broker: '',
         items: [{ name: '', nameEnglish: '', hsnCode: '', pcs: '', meters: '', rate: '', amount: 0 }],
         subTotal: 0,
+        discountPercent: 0,
+        discountAmount: 0,
+        discountMode: 'percent', // 'percent' or 'amount'
         igst: 0,
         cgst: 0,
         sgst: 0,
@@ -73,10 +76,10 @@ const PurchaseBills = () => {
     const loadBills = async () => {
         try {
             setLoading(true);
-            
+
             // Artificial delay for 'premium professional loader' experience
             await new Promise(resolve => setTimeout(resolve, 2500));
-            
+
             const data = await fetchPurchaseBills();
             setBills(Array.isArray(data) ? data : []);
         } catch (error) {
@@ -95,7 +98,7 @@ const PurchaseBills = () => {
             }
             // Store the file object for FormData
             setNewBill(prev => ({ ...prev, [fieldName]: file }));
-            
+
             // Also create a preview URL for the UI
             const previewUrl = URL.createObjectURL(file);
             if (fieldName === 'billImage') setBillPreview(previewUrl);
@@ -122,14 +125,14 @@ const PurchaseBills = () => {
 
     const confirmDelete = async () => {
         if (!billToDelete) return;
-        
+
         setShowDeleteConfirm(false);
         setIsDeletingProcess(true);
-        
+
         try {
             // Artificial delay for 'premium professional loader' experience
             await new Promise(resolve => setTimeout(resolve, 2500));
-            
+
             await deletePurchaseBill(billToDelete._id);
             setBills(bills.filter(b => b._id !== billToDelete._id));
             setBillToDelete(null);
@@ -172,18 +175,21 @@ const PurchaseBills = () => {
     const handleEdit = (bill) => {
         const items = bill.items || [];
         const subTotal = items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
-        
+
         let iVal = 0, cVal = 0, sVal = 0;
         const totalTaxRate = (bill.gstRate || 5) / 100;
 
+        const discountAmount = Number(bill.discountAmount) || 0;
+        const taxableAmount = subTotal - discountAmount;
+
         if (bill.taxType === 'local') {
-            cVal = (subTotal * totalTaxRate) / 2;
-            sVal = (subTotal * totalTaxRate) / 2;
+            cVal = (taxableAmount * totalTaxRate) / 2;
+            sVal = (taxableAmount * totalTaxRate) / 2;
         } else {
-            iVal = subTotal * totalTaxRate;
+            iVal = taxableAmount * totalTaxRate;
         }
 
-        const rawTotal = Number(subTotal) + Number(iVal) + Number(cVal) + Number(sVal);
+        const rawTotal = Number(taxableAmount) + Number(iVal) + Number(cVal) + Number(sVal);
         const finalTotal = Math.ceil(rawTotal);
         const autoRoundOff = Number((finalTotal - rawTotal).toFixed(2));
 
@@ -208,6 +214,8 @@ const PurchaseBills = () => {
             broker: bill.broker || '',
             items: items,
             subTotal: Number(bill.subTotal) || Number(subTotal.toFixed(2)),
+            discountPercent: Number(bill.discountPercent) || 0,
+            discountAmount: Number(bill.discountAmount) || 0,
             igst: Number(bill.igst) || Number(iVal.toFixed(2)),
             cgst: Number(bill.cgst) || Number(cVal.toFixed(2)),
             sgst: Number(bill.sgst) || Number(sVal.toFixed(2)),
@@ -237,7 +245,7 @@ const PurchaseBills = () => {
                 transporter: bill.ewayBillDetails?.transporter || bill.transport || ''
             }
         });
-        
+
         // Handle image previews 'properly'
         if (bill.billImage) {
             const isPath = bill.billImage.startsWith('uploads');
@@ -245,14 +253,14 @@ const PurchaseBills = () => {
         } else {
             setBillPreview(null);
         }
-        
+
         if (bill.ewayBillImage) {
             const isPath = bill.ewayBillImage.startsWith('uploads');
             setEwayPreview(isPath ? `${getBackendUrl()}/${bill.ewayBillImage}` : bill.ewayBillImage);
         } else {
             setEwayPreview(null);
         }
-        
+
         setIsAdding(true);
     };
 
@@ -275,7 +283,7 @@ const PurchaseBills = () => {
             const data = await response.json();
             if (data && data[0] === 'SUCCESS' && data[1][0][1][0]) {
                 const gujaratiText = data[1][0][1][0];
-                
+
                 setNewBill(prev => {
                     const updatedItems = [...prev.items];
                     updatedItems[index].name = gujaratiText;
@@ -302,25 +310,30 @@ const PurchaseBills = () => {
 
             // Also update totals
             const subTotal = updatedItems.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
-            
+
             let iVal = Number(prev.igst);
             let cVal = Number(prev.cgst);
             let sVal = Number(prev.sgst);
 
             if (!prev.isTaxLocked) {
                 const totalTaxRate = (prev.gstRate || 5) / 100;
+                const discountAmount = (subTotal * (prev.discountPercent || 0)) / 100;
+                const taxableAmount = subTotal - discountAmount;
+
                 if (prev.taxType === 'local') {
                     iVal = 0;
-                    cVal = (subTotal * totalTaxRate) / 2;
-                    sVal = (subTotal * totalTaxRate) / 2;
+                    cVal = (taxableAmount * totalTaxRate) / 2;
+                    sVal = (taxableAmount * totalTaxRate) / 2;
                 } else {
-                    iVal = subTotal * totalTaxRate;
+                    iVal = taxableAmount * totalTaxRate;
                     cVal = 0;
                     sVal = 0;
                 }
             }
 
-            const rawTotal = Number(subTotal) + Number(iVal) + Number(cVal) + Number(sVal);
+            const discountAmount = (subTotal * (prev.discountPercent || 0)) / 100;
+            const taxableAmount = subTotal - discountAmount;
+            const rawTotal = Number(taxableAmount) + Number(iVal) + Number(cVal) + Number(sVal);
             const finalTotal = Math.round(rawTotal);
             const autoRoundOff = Number((finalTotal - rawTotal).toFixed(2));
             const isMandatory = finalTotal > 49999;
@@ -328,13 +341,14 @@ const PurchaseBills = () => {
             // Sync HSN Code from first item if available
             const mainHsn = updatedItems[0]?.hsnCode || prev.ewayBillDetails.hsnCode;
 
-            return { 
-                ...prev, 
-                items: updatedItems, 
-                subTotal: Number(subTotal.toFixed(2)), 
-                igst: Number(iVal.toFixed(2)), 
-                cgst: Number(cVal.toFixed(2)), 
-                sgst: Number(sVal.toFixed(2)), 
+            return {
+                ...prev,
+                items: updatedItems,
+                subTotal: Number(subTotal.toFixed(2)),
+                discountAmount: Number(discountAmount.toFixed(2)),
+                igst: Number(iVal.toFixed(2)),
+                cgst: Number(cVal.toFixed(2)),
+                sgst: Number(sVal.toFixed(2)),
                 roundOff: autoRoundOff,
                 totalAmount: finalTotal,
                 showEwayBill: isMandatory ? true : prev.showEwayBill,
@@ -354,8 +368,20 @@ const PurchaseBills = () => {
         }
     };
 
-    const calculateTotals = (items, igst, cgst, sgst, roundOff) => {
+    const calculateTotals = (items, igst, cgst, sgst, roundOff, discountVal = null, mode = null) => {
         const subTotal = items.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
+
+        const currentMode = mode !== null ? mode : (newBill.discountMode || 'percent');
+        let discountAmount = 0;
+        let discountPercent = 0;
+
+        if (currentMode === 'percent') {
+            discountPercent = discountVal !== null ? discountVal : (newBill.discountPercent || 0);
+            discountAmount = (subTotal * discountPercent) / 100;
+        } else {
+            discountAmount = discountVal !== null ? discountVal : (newBill.discountAmount || 0);
+            discountPercent = subTotal > 0 ? (discountAmount / subTotal) * 100 : 0;
+        }
 
         let iVal = Number(igst);
         let cVal = Number(cgst);
@@ -364,24 +390,27 @@ const PurchaseBills = () => {
         // If tax is not locked, auto-calculate based on GST Rate
         if (!newBill.isTaxLocked) {
             const totalTaxRate = (newBill.gstRate || 5) / 100;
+            const taxableAmount = subTotal - discountAmount;
+
             if (newBill.taxType === 'local') {
                 iVal = 0;
-                cVal = (subTotal * totalTaxRate) / 2;
-                sVal = (subTotal * totalTaxRate) / 2;
+                cVal = (taxableAmount * totalTaxRate) / 2;
+                sVal = (taxableAmount * totalTaxRate) / 2;
             } else {
-                iVal = subTotal * totalTaxRate;
+                iVal = taxableAmount * totalTaxRate;
                 cVal = 0;
                 sVal = 0;
             }
         }
 
+        const taxableAmount = subTotal - discountAmount;
         const rVal = Number(roundOff) || 0;
-        const total = subTotal + iVal + cVal + sVal + rVal;
+        const total = taxableAmount + iVal + cVal + sVal + rVal;
 
-        const rawTotal = Number(subTotal) + Number(iVal) + Number(cVal) + Number(sVal);
+        const rawTotal = Number(taxableAmount) + Number(iVal) + Number(cVal) + Number(sVal);
         const finalTotal = Math.ceil(rawTotal);
         const autoRoundOff = Number((finalTotal - rawTotal).toFixed(2));
-        
+
         // Auto-activate E-way bill if > 49999
         const isMandatory = finalTotal > 49999;
 
@@ -391,6 +420,8 @@ const PurchaseBills = () => {
             ...prev,
             items,
             subTotal: Number(subTotal.toFixed(2)),
+            discountPercent: Number(discountPercent.toFixed(2)),
+            discountAmount: Number(discountAmount.toFixed(2)),
             totalAmount: finalTotal,
             igst: Number(iVal.toFixed(2)),
             cgst: Number(cVal.toFixed(2)),
@@ -404,8 +435,8 @@ const PurchaseBills = () => {
                 valueOfGoods: finalTotal,
                 hsnCode: mainHsn || prev.ewayBillDetails.hsnCode,
                 supplierGstin: prev.supplierGstin || prev.ewayBillDetails.supplierGstin,
-                recipientGstin: '24SHREEHARI123', 
-                placeOfDelivery: 'RAJKOT, GUJARAT' 
+                recipientGstin: '24SHREEHARI123',
+                placeOfDelivery: 'RAJKOT, GUJARAT'
             }
         }));
     };
@@ -415,7 +446,7 @@ const PurchaseBills = () => {
         try {
             setSaving(true);
             const formData = new FormData();
-            
+
             // Append simple fields
             Object.keys(newBill).forEach(key => {
                 if (key !== 'items' && key !== 'ewayBillDetails' && key !== 'billImage' && key !== 'ewayBillImage') {
@@ -440,13 +471,13 @@ const PurchaseBills = () => {
             } else {
                 await createPurchaseBill(formData);
             }
-            
+
             // Artificially wait to show the beautiful loader
             await new Promise(resolve => setTimeout(resolve, 3000));
-            
+
             setSaving(false);
             setShowSuccess(true);
-            
+
             // Show success for 2 seconds then reset
             setTimeout(() => {
                 setShowSuccess(false);
@@ -484,6 +515,8 @@ const PurchaseBills = () => {
             broker: '',
             items: [{ name: '', nameEnglish: '', hsnCode: '', pcs: '', meters: '', rate: '', amount: 0 }],
             subTotal: 0,
+            discountPercent: 0,
+            discountAmount: 0,
             igst: 0,
             cgst: 0,
             sgst: 0,
@@ -521,7 +554,7 @@ const PurchaseBills = () => {
             setLoading(true);
             // Connect with the premium bill finding animation
             await new Promise(resolve => setTimeout(resolve, 2500));
-            
+
             const blob = await downloadPurchaseReport(now.getMonth() + 1, now.getFullYear());
             const url = window.URL.createObjectURL(blob);
             const a = document.body.appendChild(document.createElement('a'));
@@ -569,15 +602,25 @@ const PurchaseBills = () => {
                     0% { stroke-dashoffset: 50; }
                     100% { stroke-dashoffset: 0; }
                 }
+
+                /* Hide spin buttons in number inputs */
+                input::-webkit-outer-spin-button,
+                input::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                input[type=number] {
+                    -moz-appearance: textfield;
+                }
             `}</style>
             <header className="page-header" style={{ marginBottom: '32px' }}>
                 <div>
                     <h1 className="text-gradient">Purchase Entry</h1>
                     <p className="text-secondary">Manage supplier invoices and inventory stock</p>
                 </div>
-                <div className="header-actions" style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: window.innerWidth < 768 ? '1fr 1fr' : 'auto auto', 
+                <div className="header-actions" style={{
+                    display: 'grid',
+                    gridTemplateColumns: window.innerWidth < 768 ? '1fr 1fr' : 'auto auto',
                     gap: '12px',
                     width: window.innerWidth < 768 ? '100%' : 'auto',
                     marginTop: window.innerWidth < 768 ? '16px' : '0'
@@ -593,13 +636,13 @@ const PurchaseBills = () => {
 
             {(isAdding || isEditing) && (
                 <div style={{
-                    position: 'fixed', 
-                    top: 0, 
-                    left: 0, 
-                    right: 0, 
-                    bottom: 0, 
-                    background: 'rgba(0,0,0,0.8)', 
-                    zIndex: 9000, 
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.8)',
+                    zIndex: 9000,
                     padding: '16px',
                     display: 'flex',
                     justifyContent: 'center',
@@ -729,14 +772,14 @@ const PurchaseBills = () => {
                                 </div>
 
                                 <div className="bill-header-grid" style={{ marginBottom: '20px' }}>
-                                    <div className="bill-info-box" style={{ 
-                                        display: 'grid', 
-                                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', 
-                                        gap: '20px', 
-                                        background: 'rgba(30, 58, 138, 0.04)', 
-                                        padding: '24px', 
-                                        borderRadius: '24px', 
-                                        border: '1px solid rgba(30, 58, 138, 0.1)' 
+                                    <div className="bill-info-box" style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                                        gap: '20px',
+                                        background: 'rgba(30, 58, 138, 0.04)',
+                                        padding: '24px',
+                                        borderRadius: '24px',
+                                        border: '1px solid rgba(30, 58, 138, 0.1)'
                                     }}>
                                         <div className="input-group" style={{ marginBottom: 0 }}>
                                             <label className="input-label" style={{ color: '#1e3a8a', fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.05em' }}>INVOICE NO.</label>
@@ -808,14 +851,14 @@ const PurchaseBills = () => {
                                                     <Trash2 size={18} />
                                                 </button>
                                             </div>
-                                            
+
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                 <div className="input-group" style={{ marginBottom: 0 }}>
                                                     <label className="input-label" style={{ fontSize: '0.75rem' }}>PRODUCT NAME (ENG / GUJ)</label>
                                                     <input type="text" className="input-field" value={item.nameEnglish ?? ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="English Name" style={{ marginBottom: '8px' }} />
                                                     <input type="text" className="input-field" required value={item.name ?? ''} onChange={(e) => handleItemChange(index, 'name', e.target.value)} placeholder="ગુજરાતી નામ" />
                                                 </div>
-                                                
+
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>HSN CODE</label>
@@ -860,7 +903,7 @@ const PurchaseBills = () => {
                                                 <label className="input-label" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <ShoppingBag size={14} /> SCAN COPY
                                                 </label>
-                                                <div 
+                                                <div
                                                     onClick={() => document.getElementById('bill-image-input').click()}
                                                     style={{
                                                         height: '100px',
@@ -889,7 +932,7 @@ const PurchaseBills = () => {
                                                 <label className="input-label" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     <FileText size={14} /> SCAN E-WAY SLIP
                                                 </label>
-                                                <div 
+                                                <div
                                                     onClick={() => document.getElementById('eway-image-input').click()}
                                                     style={{
                                                         height: '100px',
@@ -923,18 +966,18 @@ const PurchaseBills = () => {
                                                         <span style={{ fontWeight: 800, color: '#991b1b', fontSize: '0.9rem' }}>E-WAY BILL Part-A Slip</span>
                                                     </div>
                                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                                        <button 
-                                                            type="button" 
-                                                            style={{ 
-                                                                border: '1px solid #dc2626', 
-                                                                background: 'white', 
-                                                                color: '#dc2626', 
-                                                                fontSize: '0.7rem', 
-                                                                padding: '4px 10px', 
-                                                                borderRadius: '8px', 
-                                                                fontWeight: 700, 
-                                                                cursor: 'pointer' 
-                                                            }} 
+                                                        <button
+                                                            type="button"
+                                                            style={{
+                                                                border: '1px solid #dc2626',
+                                                                background: 'white',
+                                                                color: '#dc2626',
+                                                                fontSize: '0.7rem',
+                                                                padding: '4px 10px',
+                                                                borderRadius: '8px',
+                                                                fontWeight: 700,
+                                                                cursor: 'pointer'
+                                                            }}
                                                             onClick={() => {
                                                                 setNewBill(prev => ({
                                                                     ...prev,
@@ -1033,9 +1076,9 @@ const PurchaseBills = () => {
                                         <div className="totals-card" style={{ background: '#f8fafc', padding: '24px', borderRadius: '20px', border: '1px solid var(--border-color)', position: 'sticky', top: '0' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                                 <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)' }}>BILL SUMMARY</h4>
-                                                <button type="button" 
-                                                    style={{ 
-                                                        background: newBill.isTaxLocked ? 'rgba(3, 105, 161, 0.1)' : 'transparent', 
+                                                <button type="button"
+                                                    style={{
+                                                        background: newBill.isTaxLocked ? 'rgba(3, 105, 161, 0.1)' : 'transparent',
                                                         color: newBill.isTaxLocked ? 'var(--accent-primary)' : 'var(--text-secondary)',
                                                         border: `1px solid ${newBill.isTaxLocked ? 'var(--accent-primary)' : 'var(--border-color)'}`,
                                                         padding: '4px 10px',
@@ -1084,6 +1127,80 @@ const PurchaseBills = () => {
                                                     <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>₹{newBill.subTotal.toFixed(2)}</span>
                                                 </div>
 
+                                                <div style={{ background: '#fffbeb', padding: '12px 16px', borderRadius: '20px', border: '1px solid #fef3c7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            <span style={{ fontSize: '0.9rem', color: '#92400e', fontWeight: 800 }}>DISCOUNT</span>
+                                                            <div style={{ display: 'flex', background: '#fef3c7', padding: '2px', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setNewBill(prev => ({ ...prev, discountMode: 'percent' }))}
+                                                                    style={{ padding: '2px 8px', fontSize: '0.7rem', borderRadius: '6px', background: newBill.discountMode === 'percent' ? '#b45309' : 'transparent', color: newBill.discountMode === 'percent' ? 'white' : '#b45309', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+                                                                >%</button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setNewBill(prev => ({ ...prev, discountMode: 'amount' }))}
+                                                                    style={{ padding: '2px 8px', fontSize: '0.7rem', borderRadius: '6px', background: newBill.discountMode === 'amount' ? '#b45309' : 'transparent', color: newBill.discountMode === 'amount' ? 'white' : '#b45309', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+                                                                >₹</button>
+                                                            </div>
+                                                        </div>
+                                                        <span style={{ fontSize: '0.7rem', color: '#b45309', fontWeight: 600 }}>{newBill.discountMode === 'percent' ? 'Apply Percentage' : 'Apply Flat Amount'}</span>
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                                            {newBill.discountMode === 'percent' ? (
+                                                                <>
+                                                                    <input
+                                                                        type="number"
+                                                                        step="any"
+                                                                        className="input-field"
+                                                                        style={{ width: '85px', padding: '8px 25px 8px 12px', textAlign: 'right', fontSize: '1rem', fontWeight: 800, background: 'white', borderRadius: '12px', border: '2px solid #fbbf24' }}
+                                                                        value={newBill.discountPercent === 0 ? '' : newBill.discountPercent}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                                                            setNewBill(prev => ({ ...prev, discountPercent: val }));
+                                                                            calculateTotals(newBill.items, newBill.igst, newBill.cgst, newBill.sgst, newBill.roundOff, val, 'percent');
+                                                                        }}
+                                                                        placeholder="0"
+                                                                    />
+                                                                    <span style={{ position: 'absolute', right: '10px', fontWeight: 900, color: '#b45309', fontSize: '0.9rem', pointerEvents: 'none' }}>%</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <span style={{ position: 'absolute', left: '10px', fontWeight: 900, color: '#b45309', fontSize: '0.9rem', pointerEvents: 'none' }}>₹</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        step="any"
+                                                                        className="input-field"
+                                                                        style={{ width: '100px', padding: '8px 12px 8px 25px', textAlign: 'right', fontSize: '1rem', fontWeight: 800, background: 'white', borderRadius: '12px', border: '2px solid #fbbf24' }}
+                                                                        value={newBill.discountAmount === 0 ? '' : newBill.discountAmount}
+                                                                        onChange={(e) => {
+                                                                            const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                                                            setNewBill(prev => ({ ...prev, discountAmount: val }));
+                                                                            calculateTotals(newBill.items, newBill.igst, newBill.cgst, newBill.sgst, newBill.roundOff, val, 'amount');
+                                                                        }}
+                                                                        placeholder="0"
+                                                                    />
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {newBill.discountAmount > 0 && newBill.discountMode === 'percent' && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+                                                        <span style={{ fontSize: '0.85rem', color: '#b45309', fontWeight: 600 }}>Discount Value</span>
+                                                        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#b45309' }}>- ₹{newBill.discountAmount.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+
+                                                {newBill.discountPercent > 0 && newBill.discountMode === 'amount' && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+                                                        <span style={{ fontSize: '0.85rem', color: '#b45309', fontWeight: 600 }}>Effective Percent</span>
+                                                        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#b45309' }}>{newBill.discountPercent.toFixed(2)}%</span>
+                                                    </div>
+                                                )}
+
                                                 <div style={{ background: 'white', padding: '16px', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                                     {newBill.taxType === 'local' ? (
                                                         <>
@@ -1102,16 +1219,16 @@ const PurchaseBills = () => {
                                                             <span style={{ fontWeight: 600 }}>₹{newBill.igst.toFixed(2)}</span>
                                                         </div>
                                                     )}
-                                                    
+
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0' }}>
                                                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>ROUND OFF</span>
                                                         <input type="number" step="any" className="input-field" style={{ width: '80px', padding: '4px 8px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 700 }} value={newBill.roundOff ?? ''} onChange={(e) => {
                                                             const rawValue = e.target.value;
                                                             const rVal = parseFloat(rawValue) || 0;
                                                             const newTotal = Number((newBill.subTotal + newBill.igst + newBill.cgst + newBill.sgst + rVal).toFixed(2));
-                                                            setNewBill(prev => ({ 
-                                                                ...prev, 
-                                                                roundOff: rawValue, 
+                                                            setNewBill(prev => ({
+                                                                ...prev,
+                                                                roundOff: rawValue,
                                                                 totalAmount: newTotal,
                                                                 ewayBillDetails: { ...prev.ewayBillDetails, valueOfGoods: Math.round(newTotal) }
                                                             }));
@@ -1149,11 +1266,11 @@ const PurchaseBills = () => {
 
             <div className="content-grid">
                 {loading ? (
-                    <div className="premium-search-loader" style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
+                    <div className="premium-search-loader" style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         minHeight: '400px',
                         gap: '24px'
                     }}>
@@ -1165,35 +1282,35 @@ const PurchaseBills = () => {
                             </div>
                         </div>
                         <div style={{ textAlign: 'center' }}>
-                            <h3 style={{ 
-                                margin: 0, 
-                                fontSize: '1.2rem', 
-                                fontWeight: 800, 
+                            <h3 style={{
+                                margin: 0,
+                                fontSize: '1.2rem',
+                                fontWeight: 800,
                                 color: 'var(--text-primary)',
                                 letterSpacing: '0.05em'
                             }}>FETCHING INVOICES</h3>
-                            <p style={{ 
-                                margin: '8px 0 0', 
-                                fontSize: '0.85rem', 
+                            <p style={{
+                                margin: '8px 0 0',
+                                fontSize: '0.85rem',
                                 color: 'var(--text-secondary)',
                                 opacity: 0.8
                             }}>Scanning your purchase history...</p>
                         </div>
                     </div>
                 ) : bills.length === 0 ? (
-                    <div className="empty-state premium-card" style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        padding: '80px 24px', 
+                    <div className="empty-state premium-card" style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '80px 24px',
                         textAlign: 'center',
                         gap: '16px'
                     }}>
-                        <div style={{ 
-                            background: 'rgba(3, 105, 161, 0.05)', 
-                            padding: '24px', 
-                            borderRadius: '30px', 
+                        <div style={{
+                            background: 'rgba(3, 105, 161, 0.05)',
+                            padding: '24px',
+                            borderRadius: '30px',
                             color: 'var(--accent-primary)',
                             marginBottom: '8px'
                         }}>
@@ -1210,32 +1327,32 @@ const PurchaseBills = () => {
                 ) : (
                     <div className="bills-list-container">
                         <div className="premium-card">
-                            <div className="card-header" style={{ 
-                                    flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-                                    alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
-                                    gap: '16px'
+                            <div className="card-header" style={{
+                                flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+                                alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+                                gap: '16px'
+                            }}>
+                                <h3 className="card-title">Recent Purchase Invoices</h3>
+                                <div className="card-tools" style={{
+                                    display: 'flex',
+                                    gap: '12px',
+                                    alignItems: 'center',
+                                    width: window.innerWidth < 768 ? '100%' : 'auto'
                                 }}>
-                                    <h3 className="card-title">Recent Purchase Invoices</h3>
-                                    <div className="card-tools" style={{ 
-                                        display: 'flex', 
-                                        gap: '12px', 
-                                        alignItems: 'center',
-                                        width: window.innerWidth < 768 ? '100%' : 'auto'
-                                    }}>
-                                        <div style={{ position: 'relative', flex: 1 }}>
-                                            <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                            <input
-                                                type="text"
-                                                className="input-field"
-                                                placeholder="Search by supplier or bill no..."
-                                                style={{ paddingLeft: '32px', fontSize: '12px', height: '36px', width: '100%' }}
-                                                value={searchQuery}
-                                                onChange={e => setSearchQuery(e.target.value)}
-                                            />
-                                        </div>
-                                        <span className="badge info" style={{ whiteSpace: 'nowrap' }}>{bills.filter(b => !searchQuery || b.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || b.billNumber?.toLowerCase().includes(searchQuery.toLowerCase())).length} Records</span>
+                                    <div style={{ position: 'relative', flex: 1 }}>
+                                        <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                        <input
+                                            type="text"
+                                            className="input-field"
+                                            placeholder="Search by supplier or bill no..."
+                                            style={{ paddingLeft: '32px', fontSize: '12px', height: '36px', width: '100%' }}
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                        />
                                     </div>
+                                    <span className="badge info" style={{ whiteSpace: 'nowrap' }}>{bills.filter(b => !searchQuery || b.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || b.billNumber?.toLowerCase().includes(searchQuery.toLowerCase())).length} Records</span>
                                 </div>
+                            </div>
                             {/* Desktop Table View */}
                             <div className="table-container desktop-only">
                                 <table className="premium-table">
@@ -1276,7 +1393,7 @@ const PurchaseBills = () => {
                                                         {bill.items.length} Products
                                                     </span>
                                                 </td>
-                                                 <td>
+                                                <td>
                                                     <span className="text-primary font-bold">
                                                         ₹{(bill.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                                     </span>
@@ -1329,11 +1446,11 @@ const PurchaseBills = () => {
                             {/* Mobile Card View */}
                             <div className="mobile-only" style={{ padding: '0 4px' }}>
                                 {bills.filter(b => !searchQuery || b.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || b.billNumber?.toLowerCase().includes(searchQuery.toLowerCase())).map((bill) => (
-                                    <div key={bill._id} className="mobile-purchase-card" style={{ 
-                                        background: 'white', 
-                                        borderRadius: '20px', 
-                                        padding: '16px', 
-                                        marginBottom: '16px', 
+                                    <div key={bill._id} className="mobile-purchase-card" style={{
+                                        background: 'white',
+                                        borderRadius: '20px',
+                                        padding: '16px',
+                                        marginBottom: '16px',
                                         border: '1px solid #f1f5f9',
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
                                     }}>
@@ -1355,12 +1472,12 @@ const PurchaseBills = () => {
                                             {bill.billImage && <span className="badge info" style={{ fontSize: '0.7rem', padding: '4px 8px' }}>Invoice Attached</span>}
                                         </div>
 
-                                        <div style={{ 
-                                            display: 'flex', 
-                                            justifyContent: 'space-between', 
-                                            alignItems: 'center', 
-                                            paddingTop: '12px', 
-                                            borderTop: '1px solid #f1f5f9' 
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            paddingTop: '12px',
+                                            borderTop: '1px solid #f1f5f9'
                                         }}>
                                             <div style={{ display: 'flex', gap: '10px' }}>
                                                 {bill.billImage && (
@@ -1389,24 +1506,24 @@ const PurchaseBills = () => {
             </div>
             {showDeleteConfirm && (
                 <div className="modal-overlay" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)' }}>
-                    <div className="delete-modal-content" style={{ 
-                        background: 'white', 
-                        padding: '40px', 
-                        borderRadius: '32px', 
-                        maxWidth: '400px', 
-                        width: '90%', 
+                    <div className="delete-modal-content" style={{
+                        background: 'white',
+                        padding: '40px',
+                        borderRadius: '32px',
+                        maxWidth: '400px',
+                        width: '90%',
                         textAlign: 'center',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                         animation: 'modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
                     }}>
-                        <div style={{ 
-                            width: '80px', 
-                            height: '80px', 
-                            background: 'rgba(239, 68, 68, 0.1)', 
-                            borderRadius: '50%', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
+                        <div style={{
+                            width: '80px',
+                            height: '80px',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             margin: '0 auto 24px',
                             color: '#ef4444'
                         }}>
@@ -1417,25 +1534,25 @@ const PurchaseBills = () => {
                             Are you sure you want to delete <strong style={{ color: '#1e293b' }}>{billToDelete?.billNumber}</strong>? This action is permanent and cannot be undone.
                         </p>
                         <div style={{ display: 'flex', gap: '12px' }}>
-                            <button onClick={() => setShowDeleteConfirm(false)} style={{ 
-                                flex: 1, 
-                                padding: '14px', 
-                                borderRadius: '16px', 
-                                border: '1px solid #e2e8f0', 
-                                background: 'white', 
-                                color: '#64748b', 
-                                fontWeight: 700, 
+                            <button onClick={() => setShowDeleteConfirm(false)} style={{
+                                flex: 1,
+                                padding: '14px',
+                                borderRadius: '16px',
+                                border: '1px solid #e2e8f0',
+                                background: 'white',
+                                color: '#64748b',
+                                fontWeight: 700,
                                 cursor: 'pointer',
                                 transition: 'all 0.2s'
                             }}>Cancel</button>
-                            <button onClick={confirmDelete} style={{ 
-                                flex: 1, 
-                                padding: '14px', 
-                                borderRadius: '16px', 
-                                border: 'none', 
-                                background: '#ef4444', 
-                                color: 'white', 
-                                fontWeight: 700, 
+                            <button onClick={confirmDelete} style={{
+                                flex: 1,
+                                padding: '14px',
+                                borderRadius: '16px',
+                                border: 'none',
+                                background: '#ef4444',
+                                color: 'white',
+                                fontWeight: 700,
                                 cursor: 'pointer',
                                 boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
                                 transition: 'all 0.2s'
@@ -1458,9 +1575,9 @@ const PurchaseBills = () => {
                                 <div className="shredder-glow"></div>
                             </div>
                         </div>
-                        
+
                         <h3 className="purging-text">PURGING RECORD...</h3>
-                        
+
                         <div className="optimum-progress">
                             <div className="optimum-bar">
                                 <div className="bar-shine"></div>
@@ -1473,24 +1590,24 @@ const PurchaseBills = () => {
             {/* Premium Animated Error Notification */}
             {errorMessage && (
                 <div className="modal-overlay" style={{ zIndex: 20000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(2, 6, 23, 0.7)', backdropFilter: 'blur(10px)' }}>
-                    <div style={{ 
-                        background: 'white', 
-                        padding: '32px', 
-                        borderRadius: '28px', 
-                        maxWidth: '380px', 
-                        width: '90%', 
+                    <div style={{
+                        background: 'white',
+                        padding: '32px',
+                        borderRadius: '28px',
+                        maxWidth: '380px',
+                        width: '90%',
                         textAlign: 'center',
                         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                         animation: 'modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
                     }}>
-                        <div style={{ 
-                            width: '64px', 
-                            height: '64px', 
-                            background: 'rgba(239, 68, 68, 0.1)', 
-                            borderRadius: '20px', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
+                        <div style={{
+                            width: '64px',
+                            height: '64px',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            borderRadius: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             margin: '0 auto 20px',
                             color: '#ef4444'
                         }}>
@@ -1500,14 +1617,14 @@ const PurchaseBills = () => {
                         </div>
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '8px' }}>Action Required</h3>
                         <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '24px', fontSize: '0.95rem' }}>{errorMessage}</p>
-                        <button onClick={() => setErrorMessage(null)} style={{ 
-                            width: '100%', 
-                            padding: '14px', 
-                            borderRadius: '16px', 
-                            border: 'none', 
-                            background: '#1e293b', 
-                            color: 'white', 
-                            fontWeight: 700, 
+                        <button onClick={() => setErrorMessage(null)} style={{
+                            width: '100%',
+                            padding: '14px',
+                            borderRadius: '16px',
+                            border: 'none',
+                            background: '#1e293b',
+                            color: 'white',
+                            fontWeight: 700,
                             cursor: 'pointer',
                             boxShadow: '0 10px 15px -3px rgba(30, 41, 59, 0.3)',
                             transition: 'all 0.2s'
