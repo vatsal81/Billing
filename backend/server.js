@@ -35,6 +35,7 @@ app.use(cors({
         'https://billing-pi-seven.vercel.app',
         'https://billing-woad-sigma.vercel.app',
         'https://billing-i1lc.onrender.com',
+        'https://shreeharii.vercel.app',
         'http://localhost:5173',
         'http://localhost:5000'
     ],
