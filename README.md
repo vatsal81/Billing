@@ -1,7 +1,1 @@
-# Billing System - Shree Hari
-
-**Live URLs:**
-- Primary: https://shreeharii.vercel.app/
-- Secondary: https://billing-pi-seven.vercel.app/
-- Backend API: https://billing-i1lc.onrender.com/
-
+# Billing
