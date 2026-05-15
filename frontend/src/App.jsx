@@ -65,13 +65,6 @@ function App() {
                   </div>
                 </div>
                 <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                  <button 
-                    className="btn-secondary" 
-                    style={{padding: '6px 12px', borderRadius: '8px', fontSize: '0.8rem'}}
-                    onClick={() => toggleLanguage(language === 'en' ? 'gu' : 'en')}
-                  >
-                    {language === 'en' ? 'ગુજ' : 'Eng'}
-                  </button>
                   <LogOut size={20} onClick={logoutUser} style={{color: 'var(--danger)', cursor: 'pointer'}} />
                 </div>
               </header>
@@ -141,15 +134,6 @@ function App() {
                 </nav>
 
                 <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px'}}>
-                  <div style={{padding: '16px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)'}}>
-                    <h4 style={{marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)'}}>
-                      <Globe size={16} /> {t('languageOptions')}
-                    </h4>
-                    <div style={{display: 'flex', gap: '8px'}}>
-                      <button className={`btn ${language === 'en' ? 'btn-primary' : 'btn-secondary'}`} style={{flex: 1, padding: '8px'}} onClick={() => toggleLanguage('en')}>Eng</button>
-                      <button className={`btn ${language === 'gu' ? 'btn-primary' : 'btn-secondary'}`} style={{flex: 1, padding: '8px'}} onClick={() => toggleLanguage('gu')}>ગુજ</button>
-                    </div>
-                  </div>
                   <div style={{padding: '16px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)'}}>
                     <h4 style={{marginBottom: '8px', color: 'var(--success)'}}>{t('sysStatus')}</h4>
                     <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', marginBottom: '12px'}}>

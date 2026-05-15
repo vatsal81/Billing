@@ -205,13 +205,11 @@ export default function History() {
       const search = searchTerm.toLowerCase().trim();
       const rawSearch = searchTerm.trim(); // For case-sensitive invoice numbers
       const name = (bill.customerName || '').toLowerCase();
-      const nameGu = (bill.customerNameGujarati || '');
       const phone = (bill.customerPhone || '');
       const amount = String(bill.actualTotal);
       
       if (!billNo.includes(rawSearch) && 
           !name.includes(search) && 
-          !nameGu.includes(search) &&
           !phone.includes(search) &&
           !amount.includes(search)) {
           match = false;

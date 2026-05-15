@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { generateBill, searchCustomers, createCustomer, transliterateText, getFrontendUrl } from '../utils/api';
+import { generateBill, searchCustomers, createCustomer, getFrontendUrl } from '../utils/api';
 import { Zap, Printer, CheckCircle2, History, RefreshCw, User, MapPin, Phone, MessageCircle, X, Plus, Save } from 'lucide-react';
 
 import { useLanguage } from '../utils/LanguageContext';
 import PrintableBill from '../components/PrintableBill';
-import GujaratiInput from '../components/GujaratiInput';
 import { generatePDFBlob } from '../utils/pdfGenerator';
 
 
@@ -13,9 +12,7 @@ export default function Dashboard() {
   const [targetAmount, setTargetAmount] = useState('');
   const [customerId, setCustomerId] = useState(null);
   const [customerName, setCustomerName] = useState('');
-  const [customerNameGujarati, setCustomerNameGujarati] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [customerAddressGujarati, setCustomerAddressGujarati] = useState('');
 
 
   const [customerPhone, setCustomerPhone] = useState('');
@@ -93,7 +90,6 @@ export default function Dashboard() {
         targetAmount,
         customerId,
         customerName,
-        customerNameGujarati,
         customerAddress,
         customerPhone,
         paymentMode
@@ -135,9 +131,7 @@ export default function Dashboard() {
   const selectCustomer = (c) => {
     setCustomerId(c._id);
     setCustomerName(c.name);
-    setCustomerNameGujarati(c.nameGujarati || '');
     setCustomerAddress(c.address || '');
-    setCustomerAddressGujarati(c.addressGujarati || '');
     if (c.phone) setCustomerPhone(c.phone);
 
     setSuggestions([]);
@@ -157,7 +151,7 @@ export default function Dashboard() {
       const created = await createCustomer(newCustomer);
       selectCustomer(created);
       setShowAddModal(false);
-      setNewCustomer({ name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' });
+      setNewCustomer({ name: '', address: '', phone: '' });
     } catch (err) {
       alert('Failed to save customer');
     } finally {
@@ -165,34 +159,7 @@ export default function Dashboard() {
     }
   };
 
-  // Auto-transliterate English fields to Gujarati fields
-  useEffect(() => {
-    if (!showAddModal) return;
-    
-    const translateName = async () => {
-      if (newCustomer.name) {
-        const trans = await transliterateText(newCustomer.name);
-        setNewCustomer(prev => ({ ...prev, nameGujarati: trans }));
-      }
-    };
-    
-    const timeout = setTimeout(translateName, 800);
-    return () => clearTimeout(timeout);
-  }, [newCustomer.name, showAddModal]);
-
-  useEffect(() => {
-    if (!showAddModal) return;
-    
-    const translateAddress = async () => {
-      if (newCustomer.address) {
-        const trans = await transliterateText(newCustomer.address);
-        setNewCustomer(prev => ({ ...prev, addressGujarati: trans }));
-      }
-    };
-    
-    const timeout = setTimeout(translateAddress, 800);
-    return () => clearTimeout(timeout);
-  }, [newCustomer.address, showAddModal]);
+  // Transliteration disabled as per English-only requirement
 
 
 
@@ -237,10 +204,10 @@ export default function Dashboard() {
                     alignItems: 'center'
                   }}>
                     <div>
-                      <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--text-primary)'}}>{customerNameGujarati || customerName} {customerNameGujarati && <span style={{fontSize:'0.85rem', color:'var(--text-secondary)'}}>({customerName})</span>}</div>
+                      <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--text-primary)'}}>{customerName}</div>
                       <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', gap: '12px'}}>
                         {customerPhone && <span><Phone size={12}/> {customerPhone}</span>}
-                        {(customerAddressGujarati || customerAddress) && <span><MapPin size={12}/> {customerAddressGujarati || customerAddress}</span>}
+                        {customerAddress && <span><MapPin size={12}/> {customerAddress}</span>}
                       </div>
                     </div>
                     <button 
@@ -248,9 +215,7 @@ export default function Dashboard() {
                       onClick={() => {
                         setCustomerId(null);
                         setCustomerName('');
-                        setCustomerNameGujarati('');
                         setCustomerAddress('');
-                        setCustomerAddressGujarati('');
                         setCustomerPhone('');
                         setSearchTerm('');
                       }}
@@ -305,8 +270,8 @@ export default function Dashboard() {
                                 onClick={() => selectCustomer(c)}
                                 className="hover-row"
                                 style={{padding: '12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', marginBottom: '4px'}}>
-                              <span style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{c.nameGujarati || c.name} {c.nameGujarati && <span style={{fontSize:'0.8rem', opacity:0.7}}>({c.name})</span>}</span>
-                              {(c.address || c.phone) && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{c.phone} {c.addressGujarati || c.address}</span>}
+                              <span style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{c.name}</span>
+                              {(c.address || c.phone) && <span style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{c.phone} {c.address}</span>}
                             </li>
                           ))}
                         </ul>
@@ -472,12 +437,8 @@ export default function Dashboard() {
               <div className="modal-body" style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
                 <div className="form-grid" style={{ marginBottom: '12px', gridTemplateColumns: '1fr' }}>
                   <div className="input-group" style={{ marginBottom: '10px' }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Name (English) *</label>
+                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Customer Name *</label>
                     <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} required placeholder="Rahul Patel" value={newCustomer.name ?? ''} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
-                  </div>
-                  <div className="input-group" style={{ marginBottom: '10px' }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Name (Gujarati)</label>
-                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="રાહુલ પટેલ" value={newCustomer.nameGujarati ?? ''} onChange={val => setNewCustomer({ ...newCustomer, nameGujarati: val })} onOriginal={orig => { if (!newCustomer.name) setNewCustomer({ ...newCustomer, name: orig }); }} />
                   </div>
                 </div>
 
@@ -488,12 +449,8 @@ export default function Dashboard() {
 
                 <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                   <div className="input-group" style={{ marginBottom: '10px' }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Address (English)</label>
+                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Address</label>
                     <textarea className="input-field" rows="1" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="Full address..." value={newCustomer.address ?? ''} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
-                  </div>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Address (Gujarati)</label>
-                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="સરનામું..." value={newCustomer.addressGujarati ?? ''} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.name) setNewCustomer({ ...newCustomer, name: orig }); }} />
                   </div>
                 </div>
               </div>

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { fetchProducts, generateManualBill, searchCustomers, createCustomer, transliterateText, getFrontendUrl } from '../utils/api';
+import { fetchProducts, generateManualBill, searchCustomers, createCustomer, getFrontendUrl } from '../utils/api';
 import { ShoppingCart, User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save, Check } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
-import GujaratiInput from '../components/GujaratiInput';
 import PrintableBill from '../components/PrintableBill';
 import '../index.css';
 
@@ -12,9 +11,7 @@ const ManualPos = () => {
   const [cart, setCart] = useState([]);
   const [customerId, setCustomerId] = useState(null);
   const [customerName, setCustomerName] = useState('');
-  const [customerNameGujarati, setCustomerNameGujarati] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [customerAddressGujarati, setCustomerAddressGujarati] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMode, setPaymentMode] = useState('cash');
   const [bill, setBill] = useState(null);
@@ -60,7 +57,7 @@ const ManualPos = () => {
         item.product === product._id ? { ...item, quantity: item.quantity + 1 } : item
       ));
     } else {
-      const fullName = product.nameEnglish ? `${product.name} (${product.nameEnglish})` : product.name;
+      const fullName = product.nameEnglish || product.name;
       setCart([...cart, { product: product._id, name: fullName, price: product.price, hsnCode: product.hsnCode, quantity: 1 }]);
     }
   };
@@ -191,9 +188,7 @@ const ManualPos = () => {
   const selectCustomer = (c) => {
     setCustomerId(c._id);
     setCustomerName(c.name);
-    setCustomerNameGujarati(c.nameGujarati || '');
     setCustomerAddress(c.address || '');
-    setCustomerAddressGujarati(c.addressGujarati || '');
     if (c.phone) setCustomerPhone(c.phone);
     setSuggestions([]);
     setShowSuggestions(false);
@@ -212,42 +207,13 @@ const ManualPos = () => {
       const created = await createCustomer(newCustomer);
       selectCustomer(created);
       setShowAddModal(false);
-      setNewCustomer({ name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' });
+      setNewCustomer({ name: '', address: '', phone: '' });
     } catch (err) {
       alert('Failed to save customer');
     } finally {
       setSavingCustomer(false);
     }
   };
-
-  // Auto-transliterate English fields to Gujarati fields
-  useEffect(() => {
-    if (!showAddModal) return;
-    
-    const translateName = async () => {
-      if (newCustomer.name) {
-        const trans = await transliterateText(newCustomer.name);
-        setNewCustomer(prev => ({ ...prev, nameGujarati: trans }));
-      }
-    };
-    
-    const timeout = setTimeout(translateName, 800);
-    return () => clearTimeout(timeout);
-  }, [newCustomer.name, showAddModal]);
-
-  useEffect(() => {
-    if (!showAddModal) return;
-    
-    const translateAddress = async () => {
-      if (newCustomer.address) {
-        const trans = await transliterateText(newCustomer.address);
-        setNewCustomer(prev => ({ ...prev, addressGujarati: trans }));
-      }
-    };
-    
-    const timeout = setTimeout(translateAddress, 800);
-    return () => clearTimeout(timeout);
-  }, [newCustomer.address, showAddModal]);
 
   return (
     <div className="animate-fade-in no-print" style={{ 
@@ -280,7 +246,7 @@ const ManualPos = () => {
         minHeight: 0
       }}>
         {/* Left Side: Product Selection */}
-        <div className="glass-panel" style={{ 
+        <div className="glass-panel custom-scrollbar" style={{ 
           padding: '12px', // Compact padding
           overflowY: 'auto',
           height: '100%',
@@ -316,9 +282,8 @@ const ManualPos = () => {
                 {/* Minimalist Top Layout */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <h4 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-                    {p.name}
+                    {p.nameEnglish || p.name}
                   </h4>
-                  {p.nameEnglish && <span style={{fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '500'}}>{p.nameEnglish}</span>}
                 </div>
                 
                 <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', opacity: 0.3, margin: '2px 0' }}></div>
@@ -381,10 +346,10 @@ const ManualPos = () => {
                   alignItems: 'center'
                 }}>
                   <div>
-                    <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--text-primary)'}}>{customerNameGujarati || customerName} {customerNameGujarati && <span style={{fontSize:'0.85rem', color:'var(--text-secondary)'}}>({customerName})</span>}</div>
+                    <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--text-primary)'}}>{customerName}</div>
                     <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', gap: '12px'}}>
                       {customerPhone && <span><Phone size={12}/> {customerPhone}</span>}
-                      {(customerAddressGujarati || customerAddress) && <span><MapPin size={12}/> {customerAddressGujarati || customerAddress}</span>}
+                      {customerAddress && <span><MapPin size={12}/> {customerAddress}</span>}
                     </div>
                   </div>
                   <button 
@@ -392,9 +357,7 @@ const ManualPos = () => {
                     onClick={() => {
                       setCustomerId(null);
                       setCustomerName('');
-                      setCustomerNameGujarati('');
                       setCustomerAddress('');
-                      setCustomerAddressGujarati('');
                       setCustomerPhone('');
                       setSearchTerm('');
                     }}
@@ -449,8 +412,8 @@ const ManualPos = () => {
                             onClick={() => selectCustomer(c)}
                             className="hover-row"
                             style={{ padding: '12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{c.nameGujarati || c.name} {c.nameGujarati && <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>({c.name})</span>}</span>
-                            {(c.address || c.phone) && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone} {c.addressGujarati || c.address}</span>}
+                            <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{c.name}</span>
+                            {(c.address || c.phone) && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone} {c.address}</span>}
                           </li>
                         ))}
                       </ul>
@@ -700,12 +663,8 @@ const ManualPos = () => {
               <div className="modal-body" style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
                 <div className="form-grid" style={{ marginBottom: '12px', gridTemplateColumns: '1fr' }}>
                   <div className="input-group" style={{ marginBottom: '10px' }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Name (English) *</label>
+                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Customer Name *</label>
                     <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} required placeholder="Rahul Patel" value={newCustomer.name ?? ''} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
-                  </div>
-                  <div className="input-group" style={{ marginBottom: '10px' }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Name (Gujarati)</label>
-                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="રાહુલ પટેલ" value={newCustomer.nameGujarati ?? ''} onChange={val => setNewCustomer({ ...newCustomer, nameGujarati: val })} onOriginal={orig => { if (!newCustomer.name) setNewCustomer({ ...newCustomer, name: orig }); }} />
                   </div>
                 </div>
 
@@ -716,12 +675,8 @@ const ManualPos = () => {
 
                 <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                   <div className="input-group" style={{ marginBottom: '10px' }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Address (English)</label>
+                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Address</label>
                     <textarea className="input-field" rows="1" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="Full address..." value={newCustomer.address ?? ''} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
-                  </div>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Address (Gujarati)</label>
-                    <GujaratiInput className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="સરનામું..." value={newCustomer.addressGujarati ?? ''} onChange={val => setNewCustomer({ ...newCustomer, addressGujarati: val })} onOriginal={orig => { if (!newCustomer.address) setNewCustomer({ ...newCustomer, address: orig }); }} />
                   </div>
                 </div>
               </div>

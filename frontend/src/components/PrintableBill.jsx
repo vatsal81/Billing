@@ -228,7 +228,7 @@ export default function PrintableBill({ bill }) {
                      fontWeight: 'bold',
                      fontSize: '12px'
                    }}>
-                     {settings.stampName || 'શ્રી હરિ ડ્રેસીસ & કટપીસ'}
+                     {settings.stampName || 'SHREE HARI DRESSES & CUTPIECE'}
                    </div>
 
                    {settings.signature && (

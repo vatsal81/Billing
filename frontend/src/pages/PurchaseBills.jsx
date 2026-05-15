@@ -308,6 +308,10 @@ const PurchaseBills = () => {
                 updatedItems[index].amount = qty * rate;
             }
 
+            if (field === 'nameEnglish') {
+                updatedItems[index].name = value;
+            }
+
             // Also update totals
             const subTotal = updatedItems.reduce((acc, item) => acc + (Number(item.amount) || 0), 0);
 
@@ -362,10 +366,12 @@ const PurchaseBills = () => {
             };
         });
 
-        // Trigger transliteration outside of the state update
+        // Transliteration disabled for English-only support
+        /*
         if (field === 'nameEnglish' && value.trim()) {
             transliterateToGujarati(index, value);
         }
+        */
     };
 
     const calculateTotals = (items, igst, cgst, sgst, roundOff, discountVal = null, mode = null) => {
@@ -807,7 +813,7 @@ const PurchaseBills = () => {
                                             <thead style={{ background: 'var(--bg-secondary)' }}>
                                                 <tr>
                                                     <th style={{ padding: '12px', textAlign: 'center', width: '50px' }}>#</th>
-                                                    <th style={{ padding: '12px', textAlign: 'left' }}>PRODUCT NAME (ENG / GUJ)</th>
+                                                    <th style={{ padding: '12px', textAlign: 'left' }}>PRODUCT NAME</th>
                                                     <th style={{ padding: '12px', width: '100px' }}>HSN</th>
                                                     <th style={{ padding: '12px', width: '80px' }}>PCS</th>
                                                     <th style={{ padding: '12px', width: '80px' }}>METERS</th>
@@ -821,8 +827,7 @@ const PurchaseBills = () => {
                                                     <tr key={index} style={{ borderTop: '1px solid var(--border-color)' }}>
                                                         <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>{index + 1}</td>
                                                         <td style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px' }}>
-                                                            <input type="text" className="input-field" style={{ padding: '6px 10px', fontSize: '0.85rem' }} value={item.nameEnglish ?? ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="English Name" />
-                                                            <input type="text" className="input-field" style={{ padding: '6px 10px', fontSize: '0.85rem' }} required value={item.name ?? ''} onChange={(e) => handleItemChange(index, 'name', e.target.value)} placeholder="ગુજરાતી નામ" />
+                                                            <input type="text" className="input-field" style={{ padding: '6px 10px', fontSize: '0.85rem' }} required value={item.nameEnglish ?? ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="Product Name" />
                                                         </td>
                                                         <td><input type="text" className="input-field" style={{ padding: '6px 10px' }} value={item.hsnCode ?? ''} onChange={(e) => handleItemChange(index, 'hsnCode', e.target.value)} placeholder="HSN" /></td>
                                                         <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} /></td>
@@ -854,9 +859,8 @@ const PurchaseBills = () => {
 
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                                 <div className="input-group" style={{ marginBottom: 0 }}>
-                                                    <label className="input-label" style={{ fontSize: '0.75rem' }}>PRODUCT NAME (ENG / GUJ)</label>
-                                                    <input type="text" className="input-field" value={item.nameEnglish ?? ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="English Name" style={{ marginBottom: '8px' }} />
-                                                    <input type="text" className="input-field" required value={item.name ?? ''} onChange={(e) => handleItemChange(index, 'name', e.target.value)} placeholder="ગુજરાતી નામ" />
+                                                    <label className="input-label" style={{ fontSize: '0.75rem' }}>PRODUCT NAME</label>
+                                                    <input type="text" className="input-field" required value={item.nameEnglish ?? ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="Product Name" />
                                                 </div>
 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

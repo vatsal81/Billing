@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { fetchProducts, createProduct, deleteProduct, updateProduct, transliterateText } from '../utils/api';
+import { fetchProducts, createProduct, deleteProduct, updateProduct } from '../utils/api';
 import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart, Pencil } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
-import GujaratiInput from '../components/GujaratiInput';
 import Modal from '../components/Modal';
 
 
@@ -96,6 +95,7 @@ export default function Inventory() {
   useEffect(() => {
     const results = products.filter(p => 
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.nameEnglish && p.nameEnglish.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (p.hsnCode && p.hsnCode.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     setFilteredProducts(results);
@@ -119,7 +119,7 @@ export default function Inventory() {
     try {
       setLoading(true);
       await createProduct({ 
-        name, 
+        name: nameEnglish, 
         nameEnglish,
         hsnCode,
         price: Number(price), 
@@ -193,7 +193,7 @@ export default function Inventory() {
     setIsProcessing(true);
     try {
       await updateProduct(selectedProduct._id, {
-        name: editName,
+        name: editNameEnglish,
         nameEnglish: editNameEnglish,
         hsnCode: editHsn,
         price: Number(editPrice),
@@ -207,7 +207,7 @@ export default function Inventory() {
       setIsProcessing(false);
       
       setSuccessToast({
-        name: editName,
+        name: editNameEnglish,
         newStock: Number(editStock)
       });
       setTimeout(() => setSuccessToast(null), 4000);
@@ -251,7 +251,7 @@ export default function Inventory() {
   const closeRestockModal = () => {
     if (showSuccess) {
       setSuccessToast({
-        name: selectedProduct.name,
+        name: selectedProduct.nameEnglish || selectedProduct.name,
         newStock: (Number(selectedProduct.stockAmount) || 0) + (Number(restockAmount) || 0)
       });
       setTimeout(() => setSuccessToast(null), 4000);
@@ -315,19 +315,6 @@ export default function Inventory() {
                 placeholder="e.g. Kurti"
                 value={nameEnglish ?? ''}
                 onChange={(e) => setNameEnglish(e.target.value)}
-                required
-              />
-            </div>
-            <div className="input-group">
-              <label className="input-label">Item Name (Gujarati) <span style={{color: 'var(--danger)'}}>*</span></label>
-              <GujaratiInput 
-                className="input-field" 
-                placeholder="e.g. કુર્તી"
-                value={name ?? ''}
-                onChange={(val) => setName(val)}
-                onOriginal={(orig) => {
-                  if (!nameEnglish) setNameEnglish(orig);
-                }}
                 required
               />
             </div>
@@ -444,7 +431,8 @@ export default function Inventory() {
           {loading && products.length === 0 ? (
             <div className="animate-pulse" style={{color: 'var(--text-secondary)'}}>{t('loadingInv')}</div>
           ) : (
-            <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+            <div className="custom-scrollbar" style={{ maxHeight: '650px', overflowY: 'auto', paddingRight: '8px', margin: '0 -8px' }}>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px'}}>
               {filteredProducts.length === 0 ? (
                 <div style={{textAlign: 'center', padding: '60px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed var(--border-color)'}}>
                   <Search size={40} style={{marginBottom: '16px', opacity: 0.2}} />
@@ -477,10 +465,10 @@ export default function Inventory() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
                         <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                          {p.name}
+                          {p.nameEnglish || p.name}
                         </h4>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                          HSN: {p.hsnCode || 'N/A'} {p.nameEnglish && `• ${p.nameEnglish}`}
+                          HSN: {p.hsnCode || 'N/A'}
                         </span>
                       </div>
                     </div>
@@ -541,6 +529,7 @@ export default function Inventory() {
                   </div>
                 ))
               )}
+              </div>
             </div>
           )}
         </div>
@@ -562,7 +551,7 @@ export default function Inventory() {
                 <div style={{ maxHeight: '150px', overflowY: 'auto', marginBottom: '20px', background: '#f8fafc', padding: '10px', borderRadius: '8px', textAlign: 'left' }}>
                     {unpricedItems.map((item, idx) => (
                         <div key={idx} style={{ padding: '8px', borderBottom: idx === unpricedItems.length - 1 ? 'none' : '1px solid #e2e8f0', fontSize: '0.9rem' }}>
-                            <span style={{ fontWeight: 'bold' }}>{item.name}</span>
+                            <span style={{ fontWeight: 'bold' }}>{item.nameEnglish || item.name}</span>
                             <span style={{ color: '#94a3b8', marginLeft: '10px' }}>({item.hsnCode})</span>
                         </div>
                     ))}
@@ -626,8 +615,8 @@ export default function Inventory() {
 
             {/* Product Info */}
             <div style={{ marginBottom: '20px', padding: '20px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-              <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.4rem', fontWeight: '800' }}>
-                {selectedProduct?.name}
+               <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '1.4rem', fontWeight: '800' }}>
+                {selectedProduct?.nameEnglish || selectedProduct?.name}
               </h3>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'var(--bg-card)', padding: '6px 16px', borderRadius: '100px', fontWeight: '600', border: '1px solid var(--border-color)' }}>
                  <span>Current Stock:</span>
@@ -811,7 +800,7 @@ export default function Inventory() {
             </h3>
             
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: '1.5', marginBottom: '24px' }}>
-              You are about to permanently delete <strong style={{ color: 'var(--text-primary)' }}>{selectedProduct?.name}</strong> from your inventory. This action cannot be undone.
+              You are about to permanently delete <strong style={{ color: 'var(--text-primary)' }}>{selectedProduct?.nameEnglish || selectedProduct?.name}</strong> from your inventory. This action cannot be undone.
             </p>
             
             <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px dashed rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', gap: '12px', textAlign: 'left' }}>
@@ -839,15 +828,6 @@ export default function Inventory() {
         )}
       >
         <form onSubmit={handleUpdateProduct}>
-          <div className="input-group">
-            <label className="input-label">Item Name (Gujarati) *</label>
-            <GujaratiInput
-              className="input-field"
-              value={editName}
-              onChange={(val) => setEditName(val)}
-              required
-            />
-          </div>
           <div className="input-group">
             <label className="input-label">Item Name (English)</label>
             <input

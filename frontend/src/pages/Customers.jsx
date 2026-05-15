@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { fetchCustomers, createCustomer, updateCustomer, deleteCustomer, fetchLedgerEntries, createLedgerEntry, fetchBillById, transliterateText, getFrontendUrl } from '../utils/api';
+import { fetchCustomers, createCustomer, updateCustomer, deleteCustomer, fetchLedgerEntries, createLedgerEntry, fetchBillById, getFrontendUrl } from '../utils/api';
 import { User, Plus, Search, History, ArrowUpRight, ArrowDownLeft, X, Save, Wallet, Pencil, Trash2, AlertTriangle, Phone, MapPin, Eye, MessageCircle } from 'lucide-react';
 import PrintableBill from '../components/PrintableBill';
-import GujaratiInput from '../components/GujaratiInput';
 import '../index.css';
 
-const emptyCustomer = { name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' };
+const emptyCustomer = { name: '', address: '', phone: '' };
 
 /* ── Animated Modal Overlay ── */
 const ModalOverlay = ({ onClose, onSubmit, header, children, footer, maxWidth }) => (
@@ -54,17 +53,6 @@ const CustomerFormFields = ({ data, onChange }) => (
                 <input type="text" required placeholder="e.g. Rahul Patel" style={{ height: '34px', fontSize: '0.85rem', padding: '0 10px' }}
                     value={data.name ?? ''} onChange={e => onChange({ ...data, name: e.target.value })} />
             </div>
-            <div className="s-field">
-                <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Name (Gujarati)</label>
-                <GujaratiInput placeholder="નામ..." className="input-field"
-                    style={{ height: '34px', fontSize: '0.85rem' }}
-                    value={data.nameGujarati ?? ''} 
-                    onChange={val => onChange({ ...data, nameGujarati: val })}
-                    onOriginal={orig => {
-                        if (!data.name) onChange({ ...data, name: orig });
-                    }}
-                />
-            </div>
         </div>
 
         <div className="s-section-label" style={{ marginBottom: '4px', fontSize: '0.65rem', marginTop: '4px' }}>Contact Details</div>
@@ -78,17 +66,6 @@ const CustomerFormFields = ({ data, onChange }) => (
                 <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Address</label>
                 <textarea rows="1" placeholder="Full address..." style={{ padding: '6px 10px', fontSize: '0.85rem', minHeight: '34px' }}
                     value={data.address ?? ''} onChange={e => onChange({ ...data, address: e.target.value })} />
-            </div>
-            <div className="s-field s-span2">
-                <label style={{ fontSize: '0.7rem', marginBottom: '2px', color: '#64748b' }}>Address (Gujarati)</label>
-                <GujaratiInput placeholder="સરનામું..." className="input-field"
-                    style={{ height: '34px', fontSize: '0.85rem' }}
-                    value={data.addressGujarati ?? ''} 
-                    onChange={val => onChange({ ...data, addressGujarati: val })}
-                    onOriginal={orig => {
-                        if (!data.address) onChange({ ...data, address: orig });
-                    }}
-                />
             </div>
         </div>
     </>
@@ -436,54 +413,7 @@ const Customers = () => {
         else setLedger([]);
     };
 
-    // Auto-transliterate English fields to Gujarati for Add/Edit
-    useEffect(() => {
-        if (activeModal !== 'add') return;
-        const translateName = async () => {
-            if (newCustomer.name) {
-                const trans = await transliterateText(newCustomer.name);
-                setNewCustomer(prev => ({ ...prev, nameGujarati: trans }));
-            }
-        };
-        const timeout = setTimeout(translateName, 800);
-        return () => clearTimeout(timeout);
-    }, [newCustomer.name, activeModal]);
-
-    useEffect(() => {
-        if (activeModal !== 'add') return;
-        const translateAddress = async () => {
-            if (newCustomer.address) {
-                const trans = await transliterateText(newCustomer.address);
-                setNewCustomer(prev => ({ ...prev, addressGujarati: trans }));
-            }
-        };
-        const timeout = setTimeout(translateAddress, 800);
-        return () => clearTimeout(timeout);
-    }, [newCustomer.address, activeModal]);
-
-    useEffect(() => {
-        if (activeModal !== 'edit') return;
-        const translateName = async () => {
-            if (editCustomer.name) {
-                const trans = await transliterateText(editCustomer.name);
-                setEditCustomer(prev => ({ ...prev, nameGujarati: trans }));
-            }
-        };
-        const timeout = setTimeout(translateName, 800);
-        return () => clearTimeout(timeout);
-    }, [editCustomer.name, activeModal]);
-
-    useEffect(() => {
-        if (activeModal !== 'edit') return;
-        const translateAddress = async () => {
-            if (editCustomer.address) {
-                const trans = await transliterateText(editCustomer.address);
-                setEditCustomer(prev => ({ ...prev, addressGujarati: trans }));
-            }
-        };
-        const timeout = setTimeout(translateAddress, 800);
-        return () => clearTimeout(timeout);
-    }, [editCustomer.address, activeModal]);
+    // Transliteration disabled as per English-only requirement
 
     const handleAdd = async e => {
         e.preventDefault(); setSaving(true);

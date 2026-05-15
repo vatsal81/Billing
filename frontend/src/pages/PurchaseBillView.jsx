@@ -239,9 +239,7 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                                     <tr key={idx}>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#0f172a' }}>
-                                            {item.nameEnglish && item.name && item.nameEnglish !== item.name 
-                                                ? `${item.nameEnglish}( ${item.name} )` 
-                                                : (item.name || item.nameEnglish || 'N/A')}
+                                            {item.nameEnglish || item.name || 'N/A'}
                                         </td>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'center', color: '#64748b' }}>{item.hsnCode}</td>
                                         <td style={{ borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '10px 12px', textAlign: 'right', color: '#0f172a', fontWeight: '500' }}>{item.pcs ? item.pcs.toFixed(2) : '0.00'}</td>
