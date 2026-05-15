@@ -294,10 +294,10 @@ export default function Inventory() {
         </div>
       )}
 
-      <div className="charts-grid" style={{ gridTemplateColumns: products.length > 0 ? '1fr 2fr' : '1fr' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: products.length > 0 ? 'minmax(350px, 1fr) 2.5fr' : '1fr', gap: '24px', alignItems: 'start', marginBottom: '32px' }}>
         
         {/* Add Product Form */}
-        <div className="premium-card" style={{padding: '24px', height: 'fit-content', margin: '0 8px 24px'}}>
+        <div className="premium-card" style={{padding: '24px', height: 'fit-content', margin: '0'}}>
           <h3 style={{marginBottom: '20px'}}>{t('addNewItem')}</h3>
           <form onSubmit={handleCreate}>
             <div className="input-group">
@@ -375,32 +375,6 @@ export default function Inventory() {
             </button>
           </form>
         </div>
-
-        {/* Success Toast */}
-        {successToast && (
-          <div style={{ 
-            margin: '0 8px 16px', 
-            padding: '12px 16px', 
-            background: '#f0fdf4', 
-            border: '1px solid #bbf7d0', 
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            animation: 'slideDown 0.4s ease-out'
-          }}>
-            <div style={{ background: '#22c55e', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Check size={14} strokeWidth={4} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, color: '#166534', fontWeight: '700', fontSize: '0.9rem' }}>Stock updated successfully!</p>
-              <p style={{ margin: 0, color: '#15803d', fontSize: '0.8rem', opacity: 0.8 }}>{successToast.name} new stock is {successToast.newStock}</p>
-            </div>
-            <button onClick={() => setSuccessToast(null)} style={{ background: 'none', border: 'none', color: '#166534', cursor: 'pointer', padding: '4px' }}>
-              <Plus size={18} style={{ transform: 'rotate(45deg)' }} />
-            </button>
-          </div>
-        )}
 
         {/* Product List */}
         <div className="premium-card" style={{padding: '24px', margin: '0 8px'}}>
@@ -886,6 +860,36 @@ export default function Inventory() {
           </div>
         </form>
       </Modal>
+
+      {/* Success Toast - Top Centered Alert Style */}
+      {successToast && (
+        <div style={{ 
+          position: 'fixed',
+          top: '32px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 9999,
+          padding: '10px 24px', 
+          background: '#f0fdf4', 
+          border: '1px solid #10b981', 
+          borderRadius: '100px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+          animation: 'slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
+          <div style={{ background: '#10b981', color: 'white', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Check size={14} strokeWidth={4} />
+          </div>
+          <p style={{ margin: 0, color: '#064e3b', fontWeight: '800', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+            {successToast.name} Stock Updated!
+          </p>
+          <button onClick={() => setSuccessToast(null)} style={{ background: 'none', border: 'none', color: '#10b981', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={16} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -20,6 +20,18 @@ const PurchaseBills = () => {
     const [isDeletingProcess, setIsDeletingProcess] = useState(false);
     const [billToDelete, setBillToDelete] = useState(null);
     const [errorMessage, setErrorMessage] = useState(null);
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
+    const [reportYear, setReportYear] = useState(new Date().getFullYear());
+
+    const months = [
+        { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
+        { value: 4, label: 'April' }, { value: 5, label: 'May' }, { value: 6, label: 'June' },
+        { value: 7, label: 'July' }, { value: 8, label: 'August' }, { value: 9, label: 'September' },
+        { value: 10, label: 'October' }, { value: 11, label: 'November' }, { value: 12, label: 'December' }
+    ];
+
+    const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
     const [newBill, setNewBill] = useState({
         billNumber: '',
@@ -555,21 +567,22 @@ const PurchaseBills = () => {
     };
 
     const handleDownloadReport = async () => {
-        const now = new Date();
         try {
             setLoading(true);
+            setShowReportModal(false);
             // Connect with the premium bill finding animation
             await new Promise(resolve => setTimeout(resolve, 2500));
 
-            const blob = await downloadPurchaseReport(now.getMonth() + 1, now.getFullYear());
+            const blob = await downloadPurchaseReport(reportMonth, reportYear);
             const url = window.URL.createObjectURL(blob);
             const a = document.body.appendChild(document.createElement('a'));
             a.href = url;
-            a.download = `Purchase_Report_${now.getMonth() + 1}_${now.getFullYear()}.pdf`;
+            const monthLabel = months.find(m => m.value === reportMonth)?.label || reportMonth;
+            a.download = `Purchase_Report_${monthLabel}_${reportYear}.pdf`;
             a.click();
             a.remove();
         } catch (error) {
-            setErrorMessage('No bills found for this month.');
+            setErrorMessage('No bills found for this period.');
         } finally {
             setLoading(false);
         }
@@ -631,7 +644,7 @@ const PurchaseBills = () => {
                     width: window.innerWidth < 768 ? '100%' : 'auto',
                     marginTop: window.innerWidth < 768 ? '16px' : '0'
                 }}>
-                    <button className="btn btn-secondary" onClick={handleDownloadReport} style={{ height: 'auto', minHeight: '70px', padding: '10px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', flex: 1 }}>
+                    <button className="btn btn-secondary" onClick={() => setShowReportModal(true)} style={{ height: 'auto', minHeight: '70px', padding: '10px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', flex: 1 }}>
                         <Download size={20} /> <span>Monthly PDF</span>
                     </button>
                     <button className="btn btn-primary" onClick={() => { setIsEditing(false); setEditingId(null); resetForm(); setBillPreview(null); setEwayPreview(null); setIsAdding(true); }} style={{ height: 'auto', minHeight: '70px', padding: '10px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', flex: 1 }}>
@@ -639,6 +652,64 @@ const PurchaseBills = () => {
                     </button>
                 </div>
             </header>
+
+            {showReportModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.85)',
+                    zIndex: 9500,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '20px',
+                    backdropFilter: 'blur(10px)'
+                }}>
+                    <div className="modal-content" style={{ maxWidth: '450px', width: '100%', borderRadius: '32px', overflow: 'hidden', animation: 'scale-up 0.3s ease-out' }}>
+                        <div style={{ padding: '24px', background: 'var(--accent-gradient)', color: 'white', textAlign: 'center' }}>
+                            <div style={{ background: 'rgba(255,255,255,0.2)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <Calendar size={32} />
+                            </div>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Select Report Period</h2>
+                            <p style={{ fontSize: '0.9rem', opacity: 0.9, marginTop: '8px' }}>Choose the month and year for purchase summary</p>
+                        </div>
+                        <div style={{ padding: '32px', background: 'white' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label className="input-label" style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>MONTH</label>
+                                    <select 
+                                        className="input-field" 
+                                        value={reportMonth} 
+                                        onChange={(e) => setReportMonth(Number(e.target.value))}
+                                        style={{ background: '#f8fafc', fontWeight: 600 }}
+                                    >
+                                        {months.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                                    </select>
+                                </div>
+                                <div className="input-group" style={{ marginBottom: 0 }}>
+                                    <label className="input-label" style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>YEAR</label>
+                                    <select 
+                                        className="input-field" 
+                                        value={reportYear} 
+                                        onChange={(e) => setReportYear(Number(e.target.value))}
+                                        style={{ background: '#f8fafc', fontWeight: 600 }}
+                                    >
+                                        {years.map(y => <option key={y} value={y}>{y}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button className="btn btn-secondary" onClick={() => setShowReportModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '16px', fontWeight: 700 }}>
+                                    Cancel
+                                </button>
+                                <button className="btn btn-primary" onClick={handleDownloadReport} style={{ flex: 1.5, padding: '14px', borderRadius: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                    <Download size={20} /> Download PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {(isAdding || isEditing) && (
                 <div style={{
