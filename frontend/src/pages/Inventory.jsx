@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { fetchProducts, createProduct, deleteProduct, updateProduct } from '../utils/api';
-import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart, Pencil } from 'lucide-react';
+import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart, Pencil, X } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import Modal from '../components/Modal';
-
-
+import './Inventory.css';
 export default function Inventory() {
   const { t } = useLanguage();
   const [products, setProducts] = useState([]);
@@ -294,10 +293,10 @@ export default function Inventory() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: products.length > 0 ? 'minmax(350px, 1fr) 2.5fr' : '1fr', gap: '24px', alignItems: 'start', marginBottom: '32px' }}>
+      <div className="inventory-grid">
         
         {/* Add Product Form */}
-        <div className="premium-card" style={{padding: '24px', height: 'fit-content', margin: '0'}}>
+        <div className="premium-card inventory-form-card">
           <h3 style={{marginBottom: '20px'}}>{t('addNewItem')}</h3>
           <form onSubmit={handleCreate}>
             <div className="input-group">
@@ -321,7 +320,7 @@ export default function Inventory() {
                 onChange={(e) => setHsnCode(e.target.value)}
               />
             </div>
-            <div style={{display: 'flex', gap: '16px'}}>
+            <div className="form-grid">
               <div className="input-group" style={{flex: 1}}>
                 <label className="input-label">Purchase Rate</label>
                 <input 
@@ -348,7 +347,7 @@ export default function Inventory() {
                 />
               </div>
             </div>
-            <div style={{display: 'flex', gap: '16px'}}>
+            <div className="form-grid">
               <div className="input-group" style={{flex: 1}}>
                 <label className="input-label">Init Stock</label>
                 <input 
@@ -377,10 +376,10 @@ export default function Inventory() {
         </div>
 
         {/* Product List */}
-        <div className="premium-card" style={{padding: '24px', margin: '0 8px'}}>
+        <div className="premium-card inventory-list-card">
           <div className="page-header" style={{ marginBottom: '20px' }}>
             <h3 style={{margin: 0}}>{t('currentStock')} ({filteredProducts.length})</h3>
-            <div className="header-actions" style={{ flex: 1, maxWidth: '300px' }}>
+            <div className="header-actions inventory-search-container">
               <div className="input-group" style={{marginBottom: 0, width: '100%', position: 'relative'}}>
                 <Search size={16} style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)'}} />
                 <input 
@@ -409,19 +408,12 @@ export default function Inventory() {
                 </div>
               ) : (
                 filteredProducts.map(p => (
-                  <div key={p._id} className="glass-panel hover-lift receipt-card" style={{
-                    padding: '16px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    gap: '12px',
-                    position: 'relative',
-                    overflow: 'hidden',
+                  <div key={p._id} className="glass-panel hover-lift inventory-receipt-card" style={{
                     borderLeft: `5px solid ${(p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'var(--danger)' : 'var(--success)'}`
                   }}>
                     
                     {/* Left Details */}
-                    <div className="receipt-left" style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: '1 1 auto' }}>
+                    <div className="receipt-left">
                       <div style={{
                         width: '46px', height: '46px', borderRadius: '14px', flexShrink: 0,
                         background: (p.stockAmount || 0) <= (p.lowStockThreshold || 5) ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
@@ -441,7 +433,7 @@ export default function Inventory() {
                     </div>
 
                     {/* Middle: Actions */}
-                    <div className="receipt-actions" style={{ display: 'flex', gap: '8px' }}>
+                    <div className="receipt-actions">
                       <button onClick={() => handleRestock(p)} className="action-btn-hover" style={{background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Restock">
                         <ShoppingCart size={18} /> <span className="hide-on-mobile">Restock</span>
                       </button>
@@ -454,7 +446,7 @@ export default function Inventory() {
                     </div>
 
                     {/* Right: Amount & Stock */}
-                    <div className="receipt-right" style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                    <div className="receipt-right">
                       {editingPrice === p._id ? (
                         <div style={{display: 'flex', gap: '6px', marginBottom: '2px'}}>
                           <input 
