@@ -23,7 +23,7 @@ export default function Dashboard() {
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: '', address: '', phone: '' });
+  const [newCustomer, setNewCustomer] = useState({ name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' });
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

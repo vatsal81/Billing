@@ -87,6 +87,21 @@ export const fetchSettings = async () => {
   return data;
 };
 
+export const transliterateText = async (text) => {
+  if (!text || text.trim() === '') return '';
+  try {
+    const url = `https://www.google.com/inputtools/request?text=${encodeURIComponent(text)}&ime=transliteration_en_gu&num=1`;
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data && data[0] === 'SUCCESS' && data[1] && data[1][0] && data[1][0][1]) {
+      return data[1][0][1][0];
+    }
+  } catch (error) {
+    console.error('Transliteration failed:', error);
+  }
+  return text; // Fallback to original text if fails
+};
+
 export const updateSettings = async (settingsData) => {
   const { data } = await API.put('/settings', settingsData);
   return data;

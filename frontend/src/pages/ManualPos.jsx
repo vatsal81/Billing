@@ -23,7 +23,7 @@ const ManualPos = () => {
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: '', address: '', phone: '' });
+  const [newCustomer, setNewCustomer] = useState({ name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' });
   const [animatingItems, setAnimatingItems] = useState({});
   const [isSharingProcess, setIsSharingProcess] = useState(false);
   const [sharingBillNo, setSharingBillNo] = useState('');
@@ -89,7 +89,9 @@ const ManualPos = () => {
         items: cart,
         customerId,
         customerName,
+        customerNameGujarati,
         customerAddress,
+        customerAddressGujarati,
         customerPhone,
         paymentMode
       };
