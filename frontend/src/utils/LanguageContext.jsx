@@ -111,8 +111,6 @@ const translations = {
     totalPaidCol: "Total Paid",
     noInvoices: "No invoices generated yet.",
     walkInCash: "Walk-in Cash"
-  },
-    walkInCash: "Walk-in Cash"
   }
 };
 
