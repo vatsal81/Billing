@@ -90,7 +90,7 @@ const translations = {
     invSubtitle: "Add or remove items from your stock inventory.",
     addNewItem: "Add New Item",
     itemName: "Item Name",
-    priceInRs: "Price in ₹",
+    priceInRs: "Price in Rs.",
     addProductBtn: "Add Product",
     adding: "Adding...",
     currentStock: "Current Stock",
