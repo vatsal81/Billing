@@ -64,7 +64,7 @@ export default function Expenses() {
         <div className="header-actions" style={{ textAlign: 'right' }}>
           <div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Total Expenses</p>
-            <h3 style={{ color: 'var(--danger)', fontSize: '1.8rem' }}>₹{(totalExpenses || 0).toLocaleString('en-IN')}</h3>
+            <h3 style={{ color: 'var(--danger)', fontSize: '1.8rem' }}>Rs.{(totalExpenses || 0).toLocaleString('en-IN')}</h3>
           </div>
         </div>
       </header>
@@ -78,7 +78,7 @@ export default function Expenses() {
           return (
             <button key={cat} onClick={() => setFilterCategory(cat)}
               style={{ padding: '6px 14px', borderRadius: '20px', border: `2px solid ${active ? color : 'var(--border-color)'}`, background: active ? color + '22' : 'transparent', color: active ? color : 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', fontWeight: '600', transition: '0.2s' }}>
-              {cat}{catTotal > 0 ? ` · ₹${(catTotal || 0).toLocaleString('en-IN')}` : ''}
+              {cat}{catTotal > 0 ? ` · Rs.${(catTotal || 0).toLocaleString('en-IN')}` : ''}
             </button>
           );
         })}
@@ -102,7 +102,7 @@ export default function Expenses() {
               <input type="text" className="input-field" placeholder="e.g. Shop Rent / Electricity" value={description ?? ''} onChange={e => setDescription(e.target.value)} required />
             </div>
             <div className="input-group">
-              <label className="input-label">Amount (₹)</label>
+              <label className="input-label">Amount (Rs.)</label>
               <input type="number" className="input-field" value={amount ?? ''} onChange={e => setAmount(e.target.value)} required />
             </div>
             <div className="input-group">
@@ -138,7 +138,7 @@ export default function Expenses() {
                       </p>
                     </div>
                     <div style={{ textAlign: 'right', paddingRight: '16px' }}>
-                      <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--danger)' }}>-₹{(exp.amount || 0).toLocaleString('en-IN')}</div>
+                      <div style={{ fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--danger)' }}>-Rs.{(exp.amount || 0).toLocaleString('en-IN')}</div>
                     </div>
                     <button className="btn btn-danger" style={{ padding: '8px', borderRadius: '8px' }} onClick={() => handleDelete(exp._id)}>
                       <Trash2 size={18} />

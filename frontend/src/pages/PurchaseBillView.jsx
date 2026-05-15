@@ -231,7 +231,7 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                                     <th style={{ background: '#f1f5f9', borderBottom: '2px solid #1e3a8a', borderRight: '1px solid #1e293b', padding: '12px 8px', fontWeight: '800', color: '#0f172a', fontSize: '11px', textTransform: 'uppercase', textAlign: 'center' }}>PCS</th>
                                     <th style={{ background: '#f1f5f9', borderBottom: '2px solid #1e3a8a', borderRight: '1px solid #1e293b', padding: '12px 8px', fontWeight: '800', color: '#0f172a', fontSize: '11px', textTransform: 'uppercase', textAlign: 'center' }}>METERS</th>
                                     <th style={{ background: '#f1f5f9', borderBottom: '2px solid #1e3a8a', borderRight: '1px solid #1e293b', padding: '12px 8px', fontWeight: '800', color: '#0f172a', fontSize: '11px', textTransform: 'uppercase', textAlign: 'center' }}>RATE</th>
-                                    <th style={{ background: '#f1f5f9', borderBottom: '2px solid #1e3a8a', padding: '12px 8px', fontWeight: '800', color: '#0f172a', fontSize: '11px', textTransform: 'uppercase', textAlign: 'right' }}>AMOUNT (₹)</th>
+                                    <th style={{ background: '#f1f5f9', borderBottom: '2px solid #1e3a8a', padding: '12px 8px', fontWeight: '800', color: '#0f172a', fontSize: '11px', textTransform: 'uppercase', textAlign: 'right' }}>AMOUNT (Rs.)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -266,7 +266,7 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                                     <td style={{ borderTop: '2px solid #1e3a8a', borderLeft: '1px solid #e2e8f0', padding: '12px', textAlign: 'right', fontWeight: '800', color: '#1e3a8a', fontSize: '13px' }}>{totalPcs.toFixed(2)}</td>
                                     <td style={{ borderTop: '2px solid #1e3a8a', borderLeft: '1px solid #e2e8f0', padding: '12px', textAlign: 'right', fontWeight: '800', color: '#1e3a8a', fontSize: '13px' }}>{totalMeters.toFixed(2)}</td>
                                     <td style={{ borderTop: '2px solid #1e3a8a', borderLeft: '1px solid #e2e8f0', padding: '12px' }}></td>
-                                    <td style={{ borderTop: '2px solid #1e3a8a', borderLeft: '1px solid #e2e8f0', padding: '12px', textAlign: 'right', fontWeight: '900', color: '#1e3a8a', fontSize: '15px' }}>₹{(bill.subTotal || 0).toFixed(2)}</td>
+                                    <td style={{ borderTop: '2px solid #1e3a8a', borderLeft: '1px solid #e2e8f0', padding: '12px', textAlign: 'right', fontWeight: '900', color: '#1e3a8a', fontSize: '15px' }}>Rs.{(bill.subTotal || 0).toFixed(2)}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -297,7 +297,7 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                         <div className="bottom-right">
                             <div className="qr-section">
                                 <QRCodeCanvas 
-                                    value={`Invoice: ${bill.billNumber}\nDate: ${formatDate(bill.billDate)}\nSupplier: ${bill.supplierName}\nAmount: ₹${bill.totalAmount}`}
+                                    value={`Invoice: ${bill.billNumber}\nDate: ${formatDate(bill.billDate)}\nSupplier: ${bill.supplierName}\nAmount: Rs.${bill.totalAmount}`}
                                     size={95}
                                     level="H"
                                 />
@@ -307,11 +307,11 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                                     <>
                                         <div className="tax-row" style={{ color: '#b45309', fontWeight: 700 }}>
                                             <span>DISCOUNT ({bill.discountPercent}%)</span>
-                                            <span className="right">- ₹{(bill.discountAmount || 0).toFixed(2)}</span>
+                                            <span className="right">- Rs.{(bill.discountAmount || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="tax-row" style={{ borderBottom: '2px solid #e2e8f0', marginBottom: '4px' }}>
                                             <span style={{ fontWeight: 800, color: '#0f172a' }}>TAXABLE VALUE</span>
-                                            <span className="right" style={{ fontWeight: 800, color: '#0f172a' }}>₹{((bill.subTotal || 0) - (bill.discountAmount || 0)).toFixed(2)}</span>
+                                            <span className="right" style={{ fontWeight: 800, color: '#0f172a' }}>Rs.{((bill.subTotal || 0) - (bill.discountAmount || 0)).toFixed(2)}</span>
                                         </div>
                                     </>
                                 )}
@@ -319,29 +319,29 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                                     <>
                                         <div className="tax-row">
                                             <span>CGST (2.50%)</span>
-                                            <span className="right">₹{(bill.cgst || 0).toFixed(2)}</span>
+                                            <span className="right">Rs.{(bill.cgst || 0).toFixed(2)}</span>
                                         </div>
                                         <div className="tax-row">
                                             <span>SGST (2.50%)</span>
-                                            <span className="right">₹{(bill.sgst || 0).toFixed(2)}</span>
+                                            <span className="right">Rs.{(bill.sgst || 0).toFixed(2)}</span>
                                         </div>
                                     </>
                                 ) : (
                                     <div className="tax-row">
                                         <span>IGST (5.00%)</span>
-                                        <span className="right">₹{(bill.igst || 0).toFixed(2)}</span>
+                                        <span className="right">Rs.{(bill.igst || 0).toFixed(2)}</span>
                                     </div>
                                 )}
                                 <div className="tax-row">
                                     <span>ROUND OFF</span>
-                                    <span className="right">₹{(bill.roundOff || 0).toFixed(2)}</span>
+                                    <span className="right">Rs.{(bill.roundOff || 0).toFixed(2)}</span>
                                 </div>
                                 <div className="grand-total-row">
                                     <div>
                                         <p style={{ fontSize: '9px', textTransform: 'uppercase', marginBottom: '2px' }}>Net Payable</p>
                                         <span style={{ fontSize: '11px' }}>TOTAL AMOUNT</span>
                                     </div>
-                                    <span className="amount">₹{(bill.totalAmount || 0).toFixed(2)}</span>
+                                    <span className="amount">Rs.{(bill.totalAmount || 0).toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
@@ -366,12 +366,12 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                             </thead>
                             <tbody>
                                 <tr style={{ backgroundColor: '#f8fafc' }}>
-                                    <td style={{ padding: '10px', fontWeight: 'bold' }}>₹{((bill.subTotal || 0) - (bill.discountAmount || 0)).toFixed(2)}</td>
-                                    <td style={{ padding: '10px' }}>₹{(bill.cgst || 0).toFixed(2)}</td>
-                                    <td style={{ padding: '10px' }}>₹{(bill.sgst || 0).toFixed(2)}</td>
-                                    <td style={{ padding: '10px' }}>₹{(bill.igst || 0).toFixed(2)}</td>
+                                    <td style={{ padding: '10px', fontWeight: 'bold' }}>Rs.{((bill.subTotal || 0) - (bill.discountAmount || 0)).toFixed(2)}</td>
+                                    <td style={{ padding: '10px' }}>Rs.{(bill.cgst || 0).toFixed(2)}</td>
+                                    <td style={{ padding: '10px' }}>Rs.{(bill.sgst || 0).toFixed(2)}</td>
+                                    <td style={{ padding: '10px' }}>Rs.{(bill.igst || 0).toFixed(2)}</td>
                                     <td style={{ padding: '10px' }}>0.00</td>
-                                    <td style={{ padding: '10px', fontWeight: '900', color: '#1e3a8a', fontSize: '14px', backgroundColor: '#f1f5f9' }}>₹{(bill.totalAmount || 0).toFixed(2)}</td>
+                                    <td style={{ padding: '10px', fontWeight: '900', color: '#1e3a8a', fontSize: '14px', backgroundColor: '#f1f5f9' }}>Rs.{(bill.totalAmount || 0).toFixed(2)}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -463,7 +463,7 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', borderBottom: '1px solid #fecaca', padding: '10px 0' }}>
                                     <span style={{ color: '#6b7280', fontWeight: 'bold' }}>Value of Goods</span>
-                                    <span style={{ fontWeight: 'bold' }}>₹{bill.ewayBillDetails.valueOfGoods}</span>
+                                    <span style={{ fontWeight: 'bold' }}>Rs.{bill.ewayBillDetails.valueOfGoods}</span>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '250px 1fr', borderBottom: '1px solid #fecaca', padding: '10px 0' }}>
                                     <span style={{ color: '#6b7280', fontWeight: 'bold' }}>HSN Code</span>

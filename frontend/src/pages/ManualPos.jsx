@@ -23,7 +23,7 @@ const ManualPos = () => {
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: '', nameGujarati: '', address: '', addressGujarati: '', phone: '' });
+  const [newCustomer, setNewCustomer] = useState({ name: '', address: '', phone: '' });
   const [animatingItems, setAnimatingItems] = useState({});
   const [isSharingProcess, setIsSharingProcess] = useState(false);
   const [sharingBillNo, setSharingBillNo] = useState('');
@@ -57,7 +57,7 @@ const ManualPos = () => {
         item.product === product._id ? { ...item, quantity: item.quantity + 1 } : item
       ));
     } else {
-      const fullName = product.nameEnglish || product.name;
+      const fullName = product.name;
       setCart([...cart, { product: product._id, name: fullName, price: product.price, hsnCode: product.hsnCode, quantity: 1 }]);
     }
   };
@@ -89,9 +89,7 @@ const ManualPos = () => {
         items: cart,
         customerId,
         customerName,
-        customerNameGujarati,
         customerAddress,
-        customerAddressGujarati,
         customerPhone,
         paymentMode
       };
@@ -144,14 +142,7 @@ const ManualPos = () => {
       closing = 'May Your New Attire Bring You Endless Confidence And Joy.';
     }
 
-    const sparkles = '\u2728';
-    const page = '\uD83D\uDCC4';
-    const linkIcon = '\uD83D\uDD17';
-    const speech = '\uD83D\uDCAF';
-    const smile = '\uD83D\uDE0A';
-    const rupee = '\u20B9';
-
-    const text = `${sparkles} SHREE HARI DRESSES & CUTPIECE ${sparkles}\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n${page} Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : ${rupee}${(totalAmount || 0).toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n${linkIcon} View Your Invoice:\n${viewLink}\n\n${speech} "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting ${smile}\n━━━━━━━━━━━━━━━━━━━━━━━`;
+    const text = `*SHREE HARI DRESSES & CUTPIECE*\n-----------------------------------------------------------\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n*PURCHASE DETAILS*\n-----------------------------------------------------------\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : Rs.${(totalAmount || 0).toLocaleString('en-IN')}\n-----------------------------------------------------------\n\nView Your Invoice:\n${viewLink}\n\n"${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\nVisit Us Again - Your Next Favorite Look Is Waiting\n-----------------------------------------------------------`;
 
     const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
@@ -290,7 +281,7 @@ const ManualPos = () => {
                 
                 {/* Bottom Action Row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                  <span style={{ color: 'var(--accent-primary)', fontWeight: '900', fontSize: '1.1rem', letterSpacing: '-0.5px' }}>₹{p.price}</span>
+                  <span style={{ color: 'var(--accent-primary)', fontWeight: '900', fontSize: '1.1rem', letterSpacing: '-0.5px' }}>Rs.{p.price}</span>
                   
                   <button 
                     type="button"
@@ -452,7 +443,7 @@ const ManualPos = () => {
                   <div key={item.product} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px' }}>
                     <div>
                       <h4 style={{ fontSize: '0.95rem' }}>{item.name}</h4>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>₹{item.price} x {item.quantity}</p>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Rs.{item.price} x {item.quantity}</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <input type="number" className="input-field" style={{ width: '60px', padding: '6px' }} value={item.quantity} onChange={(e) => updateQuantity(item.product, parseInt(e.target.value))} />
@@ -462,7 +453,7 @@ const ManualPos = () => {
                 ))}
                 <div style={{ borderTop: '2px solid var(--border-color)', paddingTop: '15px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h3 style={{ fontSize: '1.2rem' }}>{t('total')} (incl. GST)</h3>
-                  <h3 style={{ fontSize: '1.5rem', color: 'var(--accent-primary)' }}>₹{(calculateTotal() || 0).toLocaleString('en-IN')}</h3>
+                  <h3 style={{ fontSize: '1.5rem', color: 'var(--accent-primary)' }}>Rs.{(calculateTotal() || 0).toLocaleString('en-IN')}</h3>
                 </div>
                 <button 
                   className="btn btn-primary hover-lift" 

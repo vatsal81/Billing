@@ -238,7 +238,7 @@ const Suppliers = () => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <h4 style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{s.name}</h4>
                                     <div style={{ fontSize: '0.8rem', fontWeight: 800, color: (s.balance || 0) > 0 ? '#ef4444' : '#10b981' }}>
-                                        ₹{(s.balance || 0).toLocaleString('en-IN')}
+                                        Rs.{(s.balance || 0).toLocaleString('en-IN')}
                                     </div>
                                 </div>
                                 <p style={{ margin: '4px 0 0 0', fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.gstin || 'No GST'}</p>
@@ -277,15 +277,15 @@ const Suppliers = () => {
                             <div className="stats-grid merchant-stats-grid" style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
                                 <div className="premium-stat-card">
                                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Total Purchased</p>
-                                    <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ef4444' }}>₹{(purchasedTotal || 0).toLocaleString('en-IN')}</p>
+                                    <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ef4444' }}>Rs.{(purchasedTotal || 0).toLocaleString('en-IN')}</p>
                                 </div>
                                 <div className="premium-stat-card" style={{ borderTopColor: '#10b981' }}>
                                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Total Paid</p>
-                                    <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981' }}>₹{(paidTotal || 0).toLocaleString('en-IN')}</p>
+                                    <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981' }}>Rs.{(paidTotal || 0).toLocaleString('en-IN')}</p>
                                 </div>
                                 <div className="premium-stat-card" style={{ borderTopColor: (selectedSupplier.balance || 0) > 0 ? '#ef4444' : '#10b981' }}>
                                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>Outstanding Balance</p>
-                                    <p style={{ fontSize: '1.25rem', fontWeight: 800, color: (selectedSupplier.balance || 0) > 0 ? '#ef4444' : '#10b981' }}>₹{(selectedSupplier.balance || 0).toLocaleString('en-IN')}</p>
+                                    <p style={{ fontSize: '1.25rem', fontWeight: 800, color: (selectedSupplier.balance || 0) > 0 ? '#ef4444' : '#10b981' }}>Rs.{(selectedSupplier.balance || 0).toLocaleString('en-IN')}</p>
                                 </div>
                             </div>
 
@@ -343,19 +343,19 @@ const Suppliers = () => {
                                                             <td data-label="Udhaar (+)" style={{ fontWeight: 700, color: '#ef4444', fontSize: '0.85rem' }}>
                                                                 <div className="td-content">
                                                                     <span className="mobile-label">Udhaar (+)</span>
-                                                                    <span className="ledger-value">{entry.type === 'credit' ? `₹${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}</span>
+                                                                    <span className="ledger-value">{entry.type === 'credit' ? `Rs.${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}</span>
                                                                 </div>
                                                             </td>
                                                             <td data-label="Jama (-)" style={{ fontWeight: 700, color: '#10b981', fontSize: '0.85rem' }}>
                                                                 <div className="td-content">
                                                                     <span className="mobile-label">Jama (-)</span>
-                                                                    <span className="ledger-value">{entry.type === 'debit' ? `₹${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}</span>
+                                                                    <span className="ledger-value">{entry.type === 'debit' ? `Rs.${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}</span>
                                                                 </div>
                                                             </td>
                                                             <td data-label="Balance" style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                                                                 <div className="td-content">
                                                                     <span className="mobile-label">Balance</span>
-                                                                    <span className="ledger-value">₹{(rowBal || 0).toLocaleString('en-IN')}</span>
+                                                                    <span className="ledger-value">Rs.{(rowBal || 0).toLocaleString('en-IN')}</span>
                                                                 </div>
                                                             </td>
                                                             <td data-label="Action" className="center">
@@ -471,7 +471,7 @@ const Suppliers = () => {
                     <button className="btn btn-primary" onClick={handlePayment} disabled={saving}><Wallet size={16} /> Confirm Payment</button>
                 }>
                     <div className="s-field" style={{ marginBottom: '16px' }}>
-                        <label>Amount (₹) *</label>
+                        <label>Amount (Rs.) *</label>
                         <input type="number" value={paymentData.amount ?? ''} onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })} required autoFocus />
                     </div>
                     <div className="s-field" style={{ marginBottom: '16px' }}>

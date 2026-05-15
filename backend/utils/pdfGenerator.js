@@ -22,6 +22,8 @@ const loadFontAsBase64 = (fontName) => {
 const kalamBase64 = loadFontAsBase64('Kalam-Regular.ttf');
 const gujaratiBase64 = loadFontAsBase64('NotoSansGujarati-Regular.ttf');
 
+const { numberToWords } = require('./numberToWords');
+
 const getBillStyles = () => `
     @font-face {
         font-family: 'Kalam';
@@ -44,30 +46,35 @@ const getBillStyles = () => `
     }
     .bill-wrapper {
         width: 210mm;
-        padding: 10mm;
+        height: 297mm;
+        padding: 5mm;
         background: #fff;
         page-break-after: always;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
     .bill-wrapper:last-child {
         page-break-after: auto;
     }
     .bill-container {
         width: 190mm;
-        min-height: 275mm;
+        height: 282mm;
         background: #eedd82;
         color: black;
-        padding: 15px;
+        padding: 10px;
         border: none;
         display: flex;
         flex-direction: column;
-        margin: 0 auto;
+        page-break-inside: avoid;
     }
     .bill-inner-border {
         border: 2px solid #000;
         display: flex;
         flex-direction: column;
         flex-grow: 1;
-        min-height: 265mm;
+        height: 100%;
     }
     .header-section { display: flex; border-bottom: 2px solid #000; }
     .header-left { width: 35%; border-right: 2px solid #000; padding: 8px; font-size: 13px; line-height: 1.4; }
@@ -117,7 +124,7 @@ const buildSingleBillHTML = (bill, settings = {}) => {
 
     const finalTotal = bill.actualTotal || bill.targetAmount || 0;
 
-    const emptyRowsHTML = Array.from({length: Math.max(1, 10 - bill.items.length)}).map((_, i) => `
+    const emptyRowsHTML = Array.from({length: Math.max(1, 8 - bill.items.length)}).map((_, i) => `
         <tr style="display: flex; width: 100%; ${i === 0 ? 'flex-grow: 1;' : ''}">
             <td style="padding: 12px; border-right: 1px solid #000; width: 45%">&nbsp;</td>
             <td style="border-right: 1px solid #000; width: 15%"></td>
@@ -142,40 +149,40 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                     <div>${settings.stateInfo || 'State : Gujarat    Code : 24'}</div>
                 </div>
                 <div class="header-right">
-                    <h1 class="gujarati-text" style="font-size: 28px; margin: 0 0 4px 0; color: #002060; font-weight: bold;">${settings.shopName || 'શ્રી હરિ ડ્રેસીસ & કટપીસ'}</h1>
+                    <h1 style="font-size: 28px; margin: 0 0 4px 0; color: #002060; font-weight: bold;">${settings.shopName || 'SHREE HARI DRESSES & CUTPIS'}</h1>
                     <p style="font-size: 14px; margin: 0; font-weight: 600;">${settings.shopSubTitle || 'Wholesale & Retail'}</p>
-                    <p class="gujarati-text" style="font-size: 14px; margin: 0 0 4px 0; font-weight: 600; white-space: pre-wrap;">${settings.shopAddress || 'માધવ પાર્ક ૧, શ્રી હરિ કોમ્પલેક્ષની બાજુમાં, આલાપ રોયલ પામની પાછળ,\nબાપાસીતારામ ચોક, મવડી, રાજકોટ - ૩૬૦ ૦૦૪.'}</p>
+                    <p style="font-size: 14px; margin: 0 0 4px 0; font-weight: 600; white-space: pre-wrap;">${settings.shopAddress || 'Madhav Park 1, Next to Shree Hari Complex,\nBehind Alap Royal Palm, Bapasitaram Chowk, Mavdi, Rajkot - 390 004.'}</p>
                 </div>
             </div>
 
             <div class="customer-meta-section">
                 <div class="customer-info">
                     <div class="info-row">
-                        <div style="min-width: 40px; font-weight: bold;">મે. :</div>
-                        <div class="dotted-line kalam-text">${bill.customerNameGujarati || bill.customerName || ''}</div>
+                        <div style="min-width: 40px; font-weight: bold;">To :</div>
+                        <div class="dotted-line kalam-text">${bill.customerName || ''}</div>
                     </div>
                     <div class="info-row" style="margin-top: 4px;">
-                        <div style="min-width: 60px; font-weight: bold;">એડ્રેસ :</div>
-                        <div class="dotted-line kalam-text">${bill.customerAddressGujarati || bill.customerAddress || ''}</div>
+                        <div style="min-width: 60px; font-weight: bold;">Addr :</div>
+                        <div class="dotted-line kalam-text">${bill.customerAddress || ''}</div>
                     </div>
                     <div style="display: flex; margin-top: 8px; border-top: 1px solid #000; padding-top: 4px;">
                         <div style="min-width: 60px; font-weight: bold;">GSTIN :</div>
                         <div style="flex: 1;"></div>
-                        <div style="min-width: 60px; font-weight: bold;">State :</div>
+                        <div style="min-width: 60px; font-weight: bold;">State : Gujarat</div>
                         <div style="flex: 1;"></div>
-                        <div style="min-width: 60px; font-weight: bold;">Code :</div>
+                        <div style="min-width: 60px; font-weight: bold;">Code : 24</div>
                         <div style="flex: 2;"></div>
                     </div>
                 </div>
                 <div class="meta-info">
                     <div style="display: flex; padding: 6px 8px; border-bottom: 1px solid #000;">
-                        <span style="width: 70px; font-weight: bold;">બુક નં. :</span> <span style="color: #c00; font-weight: bold;">${renderBookNo()}</span>
+                        <span style="width: 70px; font-weight: bold;">Book No :</span> <span style="color: #c00; font-weight: bold;">${renderBookNo()}</span>
                     </div>
                     <div style="display: flex; padding: 6px 8px; border-bottom: 1px solid #000;">
-                        <span style="width: 70px; font-weight: bold;">બીલ નં. :</span> <span style="color: #c00; font-weight: bold;">${renderBillNo()}</span>
+                        <span style="width: 70px; font-weight: bold;">Bill No :</span> <span style="color: #c00; font-weight: bold;">${renderBillNo()}</span>
                     </div>
                     <div style="display: flex; padding: 6px 8px;">
-                        <span style="width: 70px; font-weight: bold;">તા. :</span> <span class="kalam-text" style="color: #0f3c88; font-size: 15px; font-weight: bold;">${formatDate(bill.createdAt)}</span>
+                        <span style="width: 70px; font-weight: bold;">Date :</span> <span class="kalam-text" style="color: #0f3c88; font-size: 15px; font-weight: bold;">${formatDate(bill.createdAt)}</span>
                     </div>
                 </div>
             </div>
@@ -183,11 +190,11 @@ const buildSingleBillHTML = (bill, settings = {}) => {
             <table class="items-table">
                 <thead>
                     <tr style="display: flex; width: 100%;">
-                        <th style="padding: 8px; border-right: 1px solid #000; width: 45%;">માલની વિગત</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 45%;">Item Description</th>
                         <th style="padding: 8px; border-right: 1px solid #000; width: 15%;">HSN Code</th>
-                        <th style="padding: 8px; border-right: 1px solid #000; width: 10%;">નંગ / મીટર</th>
-                        <th style="padding: 8px; border-right: 2px solid #000; width: 12%;">ભાવ</th>
-                        <th style="padding: 8px; width: 18%;">રકમ રૂ.</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 10%;">Qty/Mtr</th>
+                        <th style="padding: 8px; border-right: 2px solid #000; width: 12%;">Rate</th>
+                        <th style="padding: 8px; width: 18%;">Amount Rs.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -205,19 +212,33 @@ const buildSingleBillHTML = (bill, settings = {}) => {
             </table>
 
             <div class="footer-section">
-                <div class="footer-left">
-                    <div class="gpay-text">GPay</div>
-                    <div style="margin-top: 60px; border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 4px 0;">
-                        <span class="kalam-text" style="color: #0f3c88; font-size: 20px; font-weight: bold;">${finalTotal}-only</span>
+                <div class="footer-left" style="display: flex; flex-direction: column; justify-content: space-between;">
+                    <div style="position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;">
+                        ${bill.paymentMode === 'online' ? '<div class="gpay-text" style="position: absolute; top: 45px; left: 10px; font-size: 32px; opacity: 0.2; transform: rotate(-10deg);">GPay</div>' : ''}
+                        
+                        <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px; position: relative; z-index: 1; color: #666;">Total Amount in Words:</div>
+                        <div class="kalam-text" style="color: #0f3c88; font-size: 13px; border-bottom: 1px dotted rgba(0,0,0,0.1); padding-bottom: 4px; position: relative; z-index: 1; width: 95%;">
+                            ${numberToWords(finalTotal)}
+                        </div>
+
+                        <div style="display: flex; align-items: center; margin-top: 55px; border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 4px 0; width: 85%;">
+                            <span class="kalam-text" style="color: #0f3c88; font-size: 20px; font-weight: bold;">${finalTotal}-only</span>
+                        </div>
                     </div>
-                    <div class="gujarati-text" style="font-size: 12px; font-weight: bold; line-height: 1.6; margin-top: 15px;">
-                        ટર્મ્સ એન્ડ કન્ડિશન :<br/>${settings.terms1 || '૧. ન્યાયક્ષેત્ર રાજકોટ રહેશે.'}<br/>${settings.terms2 || '૨. ભૂલચૂક લેવી દેવી.'}
+
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end; padding: 10px 0;">
+                        <div style="font-size: 11px; font-weight: bold; line-height: 1.6;">
+                            Terms & Conditions:<br/>${settings.terms1 || '1. Subject to Rajkot Jurisdiction.'}<br/>${settings.terms2 || '2. E. & O.E.'}
+                        </div>
+                        <div class="kalam-text" style="font-size: 18px; color: #0f3c88; opacity: 0.8; padding-right: 40px;">
+                            Thank You - Visit Again!
+                        </div>
                     </div>
                 </div>
                 <div class="footer-right">
                     <div class="total-row">
-                        <span style="width: 65%; font-weight: bold;">સબટોટલ (Subtotal)</span>
-                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.totalAmount.toFixed(2)}</span>
+                        <span style="width: 65%; font-weight: bold;">Sub Total</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${(bill.subTotal || bill.totalAmount).toFixed(2)}</span>
                     </div>
                     <div class="total-row">
                         <span style="width: 65%; font-weight: bold;">CGST 2.5%</span>
@@ -232,16 +253,16 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                         <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;"></span>
                     </div>
                     <div class="total-row" style="border-bottom: 2px solid #000;">
-                        <span style="width: 65%; font-weight: bold;">રાઉન્ડ ઓફ</span>
+                        <span style="width: 65%; font-weight: bold;">Round Off</span>
                         <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.roundOff >= 0 ? '+' : ''}${bill.roundOff.toFixed(2)}</span>
                     </div>
-                    <div style="display: flex; padding: 8px; font-family: 'Gujarati', sans-serif;">
-                        <span style="width: 50%; font-weight: bold; font-size: 16px;">કુલ (Total)</span>
+                    <div style="display: flex; padding: 8px;">
+                        <span style="width: 50%; font-weight: bold; font-size: 16px;">Total</span>
                         <span class="kalam-text" style="width: 50%; text-align: right; color: #0f3c88; font-size: 24px; font-weight: bold;">${finalTotal}/-</span>
                     </div>
-                    <div class="stamp-area">
-                        <div class="stamp">${settings.stampName || 'શ્રી હરિ ડ્રેસીસ & કટપીસ'}</div>
-                        <span class="gujarati-text" style="font-weight: bold; font-size: 13px;">${settings.shopName || 'શ્રી હરિ ડ્રેસીસ & કટપીસ'}</span>
+                    <div class="stamp-area" style="min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative;">
+                        <div class="stamp" style="position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-5deg); color: #0f3c88; border: 2px dotted #0f3c88; border-radius: 8px; padding: 4px 10px; opacity: 0.7; background: rgba(238, 221, 130, 0.4); font-weight: bold; font-size: 11px; white-space: nowrap;">${settings.stampName || 'SHREE HARI DRESSES & CUTPIS'}</div>
+                        <div style="font-weight: bold; font-size: 12px; border-top: 1px solid rgba(0,0,0,0.3); width: 85%; padding-top: 4px;">Authorized Signatory</div>
                     </div>
                 </div>
             </div>

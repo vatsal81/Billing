@@ -17,12 +17,12 @@ const ModalOverlay = ({ onClose, onSubmit, header, children, footer, maxWidth })
             overflowY: 'auto'
         }}
         onClick={e => e.target === e.currentTarget && onClose()}>
-        <span className="s-float s-f1">₹</span>
+        <span className="s-float s-f1">Rs.</span>
         <span className="s-float s-f2">👤</span>
         <span className="s-float s-f3">💳</span>
         <span className="s-float s-f4">📄</span>
         <span className="s-float s-f5">💼</span>
-        <span className="s-float s-f6">₹</span>
+        <span className="s-float s-f6">Rs.</span>
 
         <div className="s-modal" style={maxWidth ? { maxWidth } : {}}>
             <div className="s-modal-accent" />
@@ -109,7 +109,7 @@ const CustomerList = ({ searchTerm, setSearchTerm, loading, filtered, selectedCu
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
                                         <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Outstanding</p>
-                                        <p style={{ fontWeight: 700, fontSize: '0.9rem', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>₹{c.balance?.toLocaleString('en-IN') || 0}</p>
+                                        <p style={{ fontWeight: 700, fontSize: '0.9rem', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>Rs.{c.balance?.toLocaleString('en-IN') || 0}</p>
                                     </div>
                                 </div>
                             </div>
@@ -192,9 +192,9 @@ const CustomerLedger = ({ selectedCustomer, ledger, setEditCustomer, setActiveMo
             gridTemplateColumns: window.innerWidth < 768 ? 'repeat(3, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))'
         }}>
             {[
-                { label: 'Udhaar', val: '₹' + (ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0) || 0).toLocaleString('en-IN'), color: '#ef4444' },
-                { label: 'Jama', val: '₹' + (ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0) || 0).toLocaleString('en-IN'),  color: '#10b981' },
-                { label: 'Balance',       val: '₹' + ((selectedCustomer.balance || 0).toLocaleString('en-IN')), color: selectedCustomer.balance > 0 ? '#ef4444' : '#10b981' },
+                { label: 'Udhaar', val: 'Rs.' + (ledger.filter(e => e.type === 'debit').reduce((a, b) => a + b.amount, 0) || 0).toLocaleString('en-IN'), color: '#ef4444' },
+                { label: 'Jama', val: 'Rs.' + (ledger.filter(e => e.type === 'credit').reduce((a, b) => a + b.amount, 0) || 0).toLocaleString('en-IN'),  color: '#10b981' },
+                { label: 'Balance',       val: 'Rs.' + ((selectedCustomer.balance || 0).toLocaleString('en-IN')), color: selectedCustomer.balance > 0 ? '#ef4444' : '#10b981' },
             ].map(({ label, val, color }, idx) => (
                 <div key={label} style={{ 
                     padding: window.innerWidth < 768 ? '10px 4px' : '16px', 
@@ -253,12 +253,12 @@ const CustomerLedger = ({ selectedCustomer, ledger, setEditCustomer, setActiveMo
                                                 )}
                                             </td>
                                             <td className="right" style={{ fontWeight: 700, color: '#ef4444' }}>
-                                                {entry.type === 'debit' ? `₹${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}
+                                                {entry.type === 'debit' ? `Rs.${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}
                                             </td>
                                             <td className="right" style={{ fontWeight: 700, color: '#10b981' }}>
-                                                {entry.type === 'credit' ? `₹${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}
+                                                {entry.type === 'credit' ? `Rs.${(entry.amount || 0).toLocaleString('en-IN')}` : '-'}
                                             </td>
-                                            <td className="right">₹{(rowBalance || 0).toLocaleString('en-IN')}</td>
+                                            <td className="right">Rs.{(rowBalance || 0).toLocaleString('en-IN')}</td>
                                         </tr>
                                     );
                                 });
@@ -355,7 +355,7 @@ const CustomerModals = ({
                     <button type="button" className="btn btn-secondary" onClick={() => setActiveModal(null)}>Cancel</button>
                     <button type="submit" className="btn btn-primary"><Save size={15} /> Confirm Receipt</button>
                 </>}>
-                <div className="s-field"><label>Received Amount (₹)</label><input type="number" required placeholder="0.00" autoFocus value={payment.amount ?? ''} onChange={e => setPayment({ ...payment, amount: e.target.value })} /></div>
+                <div className="s-field"><label>Received Amount (Rs.)</label><input type="number" required placeholder="0.00" autoFocus value={payment.amount ?? ''} onChange={e => setPayment({ ...payment, amount: e.target.value })} /></div>
                 <div className="s-field"><label>Description / Note</label><input type="text" placeholder="e.g. Received via PhonePe" value={payment.description ?? ''} onChange={e => setPayment({ ...payment, description: e.target.value })} /></div>
                 <div className="s-field"><label>Payment Date</label><input type="date" required value={payment.date ?? ''} onChange={e => setPayment({ ...payment, date: e.target.value })} /></div>
             </ModalOverlay>
@@ -373,7 +373,7 @@ const Customers = () => {
     const [searchTerm, setSearchTerm]         = useState('');
     const [saving, setSaving]                 = useState(false);
     const [viewingBill, setViewingBill]       = useState(null);
-    const [newCustomer, setNewCustomer]       = useState(emptyCustomer);
+    const [newCustomer, setNewCustomer] = useState({ name: '', address: '', phone: '' });
     const [editCustomer, setEditCustomer]     = useState(emptyCustomer);
     const [payment, setPayment]               = useState({ amount: '', description: '', date: new Date().toISOString().split('T')[0] });
     const [waLoading, setWaLoading]           = useState(null);
@@ -387,7 +387,7 @@ const Customers = () => {
             if (balance <= 0) {
                 message = `Hello *${customer.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! ✨\n\nYour account is all clear. We look forward to seeing you again! 😊`;
             } else {
-                message = `*PAYMENT REMINDER* 🧾\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${customer.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*! ✨\n\nThis is a friendly reminder regarding your outstanding balance.\n\n💰 *Pending Amount: ₹${(balance || 0).toLocaleString('en-IN')}*\n\n📱 *View & Pay Online:*\n${paymentLink}\n\nKindly clear your dues at your earliest convenience.\n\nThank you for your continued trust! 🙏\n\n━━━━━━━━━━━━━━━━━━━━━━━\n*SHREE HARI DRESSES & CUTPIECE*`;
+                message = `*PAYMENT REMINDER*\n-------------------------------------\n\nDear *${customer.name}*,\n\nGreetings from *Shree Hari Dresses & Cutpiece*!\n\nThis is a friendly reminder regarding your outstanding balance.\n\n*Pending Amount: Rs.${(balance || 0).toLocaleString('en-IN')}*\n\n*View & Pay Online:*\n${paymentLink}\n\nKindly clear your dues at your earliest convenience.\n\nThank you for your continued trust!\n\n-------------------------------------\n*SHREE HARI DRESSES & CUTPIECE*`;
             }
             window.open(`https://wa.me/91${customer.phone}?text=${encodeURIComponent(message)}`, '_blank');
             setWaLoading(null);

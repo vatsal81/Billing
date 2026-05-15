@@ -131,14 +131,7 @@ export default function History() {
       closing = 'May Your New Attire Bring You Endless Confidence And Joy.';
     }
 
-    const sparkles = '\u2728';
-    const page = '\uD83D\uDCC4';
-    const linkIcon = '\uD83D\uDD17';
-    const speech = '\uD83D\uDCAF';
-    const smile = '\uD83D\uDE0A';
-    const rupee = '\u20B9';
-
-    const text = `${sparkles} SHREE HARI DRESSES & CUTPIECE ${sparkles}\n━━━━━━━━━━━━━━━━━━━━━━━\n\nDear *${b.customerName}*,\n\n${emotionalOpening}\n\n${page} Purchase Details\n━━━━━━━━━━━━━━━━━━━━━━━\nDate : ${new Date(b.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : ${rupee}${(b.actualTotal || 0).toLocaleString('en-IN')}\n━━━━━━━━━━━━━━━━━━━━━━━\n\n${linkIcon} View Your Invoice:\n${viewLink}\n\n${speech} "${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\n\nVisit Us Again \u2014 Your Next Favorite Look Is Waiting ${smile}\n━━━━━━━━━━━━━━━━━━━━━━━`;
+    const text = `*SHREE HARI DRESSES & CUTPIECE*\n-----------------------------------------------------------\n\nDear *${b.customerName}*,\n\n${emotionalOpening}\n\n*PURCHASE DETAILS*\n-----------------------------------------------------------\nDate : ${new Date(b.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : Rs.${(b.actualTotal || 0).toLocaleString('en-IN')}\n-----------------------------------------------------------\n\nView Your Invoice:\n${viewLink}\n\n"${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\nVisit Us Again - Your Next Favorite Look Is Waiting\n-----------------------------------------------------------`;
 
     
     const waUrl = `https://wa.me/91${b.customerPhone}?text=${encodeURIComponent(text)}`;
@@ -353,7 +346,7 @@ export default function History() {
           </div>
           <div>
             <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>{t('totalRevenue')}</p>
-            <h3 style={{fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px'}}>₹{(totalRevenue || 0).toLocaleString('en-IN')}</h3>
+            <h3 style={{fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px'}}>Rs.{(totalRevenue || 0).toLocaleString('en-IN')}</h3>
           </div>
         </div>
 
@@ -375,7 +368,7 @@ export default function History() {
           </div>
           <div>
             <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>Net Profit</p>
-            <h3 style={{fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px', color: netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}}>₹{(netProfit || 0).toLocaleString('en-IN')}</h3>
+            <h3 style={{fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px', color: netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}}>Rs.{(netProfit || 0).toLocaleString('en-IN')}</h3>
           </div>
         </div>
       </div>
@@ -405,12 +398,12 @@ export default function History() {
                   axisLine={false} 
                   tickLine={false} 
                   tick={{fontSize: 11, fill: 'var(--text-secondary)'}}
-                  tickFormatter={(val) => `₹${val >= 1000 ? (val/1000) + 'k' : val}`}
+                  tickFormatter={(val) => `Rs.${val >= 1000 ? (val/1000) + 'k' : val}`}
                 />
                 <Tooltip 
                   contentStyle={{backgroundColor: 'rgba(30, 41, 59, 0.9)', border: 'none', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', backdropFilter: 'blur(4px)'}}
                   itemStyle={{color: 'white'}}
-                  formatter={(value) => [`₹${(value || 0).toLocaleString('en-IN')}`, 'Revenue']}
+                  formatter={(value) => [`Rs.${(value || 0).toLocaleString('en-IN')}`, 'Revenue']}
                 />
                 <Area 
                   type="monotone" 
@@ -551,7 +544,7 @@ export default function History() {
                     {/* Right: Amount */}
                     <div className="receipt-right" style={{ textAlign: 'right', flexShrink: 0 }}>
                       <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '900', letterSpacing: '-0.5px', color: isVoid ? 'var(--text-secondary)' : 'var(--success)' }}>
-                        ₹{(bill.actualTotal || 0).toLocaleString('en-IN')}
+                        Rs.{(bill.actualTotal || 0).toLocaleString('en-IN')}
                       </h3>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
                         Incl. ₹{totalTaxes.toFixed(2)} Tax

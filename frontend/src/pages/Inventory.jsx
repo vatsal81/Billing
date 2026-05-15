@@ -22,6 +22,7 @@ export default function Inventory() {
   const [editingPrice, setEditingPrice] = useState(null);
   const [newPrice, setNewPrice] = useState('');
   const [unpricedItems, setUnpricedItems] = useState([]);
+  const [showUnpricedAlert, setShowUnpricedAlert] = useState(false);
   
   // Restock Modal States
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
@@ -44,7 +45,7 @@ export default function Inventory() {
   const [editThreshold, setEditThreshold] = useState('');
 
 
-  const loadProducts = async () => {
+  const loadProducts = async (isInitial = false) => {
     try {
       setLoading(true);
       const data = await fetchProducts();
@@ -54,6 +55,9 @@ export default function Inventory() {
       // Check for unpriced items
       const unpriced = data.filter(p => !p.price || p.price === 0);
       setUnpricedItems(unpriced);
+      if (isInitial && unpriced.length > 0) {
+        setShowUnpricedAlert(true);
+      }
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -62,16 +66,15 @@ export default function Inventory() {
   };
 
   useEffect(() => {
-    loadProducts();
+    loadProducts(true);
   }, []);
 
   const handleExportCSV = () => {
     if (products.length === 0) return;
     
-    const headers = ['Name (Gujarati)', 'Name (English)', 'HSN Code', 'Purchase Rate', 'Selling Price', 'Stock Amount', 'Low Stock Threshold'];
+    const headers = ['Name', 'HSN Code', 'Purchase Rate', 'Selling Price', 'Stock Amount', 'Low Stock Threshold'];
     const rows = products.map(p => [
-      `"${p.name}"`,
-      `"${p.nameEnglish || ''}"`,
+      `"${p.nameEnglish || p.name}"`,
       `"${p.hsnCode || ''}"`,
       p.purchaseRate || 0,
       p.price || 0,
@@ -101,17 +104,7 @@ export default function Inventory() {
     setFilteredProducts(results);
   }, [searchTerm, products]);
 
-  // Auto-transliterate English name to Gujarati name
-  useEffect(() => {
-    const translateName = async () => {
-      if (nameEnglish) {
-        const trans = await transliterateText(nameEnglish);
-        setName(trans);
-      }
-    };
-    const timeout = setTimeout(translateName, 800);
-    return () => clearTimeout(timeout);
-  }, [nameEnglish]);
+
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -508,10 +501,10 @@ export default function Inventory() {
                             style={{ margin: 0, fontSize: '1.25rem', fontWeight: '900', letterSpacing: '-0.5px', color: 'var(--success)', cursor: 'pointer' }}
                             title="Click to edit selling price"
                           >
-                            ₹{(p.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                            Rs.{(p.price || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
                           </h3>
                           <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', opacity: 0.8 }}>
-                            Pur: ₹{(p.purchaseRate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
+                            Pur: Rs.{(p.purchaseRate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}
                           </span>
                         </div>
                       )}
@@ -536,7 +529,7 @@ export default function Inventory() {
       </div>
 
       {/* Unpriced Items Alert */}
-      {unpricedItems.length > 0 && (
+      {showUnpricedAlert && unpricedItems.length > 0 && (
         <div className="modal-overlay" style={{ zIndex: 3000 }}>
             <div className="modal-content alert-modal" style={{ maxWidth: '500px', textAlign: 'center', padding: '40px', border: '2px solid #ef4444', animation: 'shake 0.5s ease-in-out', background: 'white' }}>
                 <div style={{ marginBottom: '20px' }}>
@@ -557,7 +550,7 @@ export default function Inventory() {
                     ))}
                 </div>
                 <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-                    <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setUnpricedItems([])}>I will set them now</button>
+                    <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setShowUnpricedAlert(false)}>I will set them now</button>
                 </div>
             </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { numberToWords } from '../utils/numberToWords';
 import { useLanguage } from '../utils/LanguageContext';
 import { fetchSettings } from '../utils/api';
 
@@ -153,7 +154,7 @@ export default function PrintableBill({ bill }) {
               ))}
               
               {/* Filler rows to stretch the table */}
-              {Array.from({length: Math.max(1, 10 - bill.items.length)}).map((_, i) => (
+              {Array.from({length: Math.max(1, 8 - bill.items.length)}).map((_, i) => (
                  <tr key={`empty-${i}`} style={{display: 'flex', width: '100%', flexGrow: i === 0 ? 1 : 0}}>
                    <td style={{padding: '12px', borderRight: '1px solid #000', width: '45%'}}>&nbsp;</td>
                    <td style={{borderRight: '1px solid #000', width: '15%'}}></td>
@@ -168,22 +169,34 @@ export default function PrintableBill({ bill }) {
           {/* Footer */}
           <div style={{display: 'flex', borderTop: '2px solid #000', marginTop: 'auto'}}>
               <div style={{width: '68%', borderRight: '2px solid #000', padding: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between'}}>
-                <div style={{position: 'relative', height: '100%'}}>
-                   {/* Decorative GPay text from image context */}
-                   <div style={{position: 'absolute', top: '10px', left: '20px', fontFamily: '"Kalam", cursive', fontSize: '28px', color: '#0f3c88', opacity: 0.8, transform: 'rotate(-15deg)'}}>
-                     GPay
+                 <div style={{position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', paddingTop: '5px'}}>
+                   {/* Decorative GPay text - Only show for online payments */}
+                   {bill.paymentMode === 'online' && (
+                     <div style={{position: 'absolute', top: '45px', left: '10px', fontFamily: '"Kalam", cursive', fontSize: '32px', color: '#0f3c88', opacity: 0.2, transform: 'rotate(-10deg)', zIndex: 0}}>
+                       GPay
+                     </div>
+                   )}
+
+                   <div style={{fontSize: '10px', fontWeight: 'bold', marginBottom: '2px', position: 'relative', zIndex: 1, color: '#666'}}>Total Amount in Words:</div>
+                   <div style={{fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '13px', borderBottom: '1px dotted rgba(0,0,0,0.1)', paddingBottom: '4px', position: 'relative', zIndex: 1, width: '95%'}}>
+                      {numberToWords(finalTotal)}
                    </div>
                    
-                   <div style={{display: 'flex', alignItems: 'center', marginTop: '60px', borderBottom: '1px solid #000', borderTop: '1px solid #000', padding: '4px 0'}}>
+                   <div style={{display: 'flex', alignItems: 'center', marginTop: '55px', borderBottom: '1px solid #000', borderTop: '1px solid #000', padding: '4px 0', width: '85%'}}>
                      <span style={{fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '20px'}}>{finalTotal}-only</span>
                    </div>
-                </div>
-                
-                <div style={{fontSize: '12px', fontWeight: 'bold', lineHeight: '1.6', marginTop: '15px'}}>
-                  {t('termsLabel')}<br/>
-                  {settings.terms1 || t('terms1')}<br/>
-                  {settings.terms2 || t('terms2')}
-                </div>
+                 </div>
+                 
+                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '10px 0'}}>
+                   <div style={{fontSize: '11px', fontWeight: 'bold', lineHeight: '1.6'}}>
+                     {t('termsLabel')}<br/>
+                     {settings.terms1 || t('terms1')}<br/>
+                     {settings.terms2 || t('terms2')}
+                   </div>
+                   <div style={{fontFamily: '"Kalam", cursive', fontSize: '18px', color: '#0f3c88', opacity: 0.8, paddingRight: '40px'}}>
+                     Thank You - Visit Again!
+                   </div>
+                 </div>
               </div>
 
               <div style={{width: '32%'}}>
@@ -213,29 +226,37 @@ export default function PrintableBill({ bill }) {
                 </div>
                 
                 {/* Stamp & Signature Section */}
-                <div style={{borderTop: '2px solid #000', padding: '8px', textAlign: 'center', minHeight: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', position: 'relative'}}>
+                <div style={{borderTop: '2px solid #000', padding: '8px', textAlign: 'center', minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', position: 'relative'}}>
                    {/* The requested Stamp */}
-                   <div style={{
+                   <div className="stamp-animation" style={{
                      position: 'absolute',
-                     top: '5px',
+                     top: '40%',
+                     left: '50%',
+                     transform: 'translate(-50%, -50%) rotate(-5deg)',
                      color: '#0f3c88',
                      border: '2px dotted #0f3c88',
                      borderRadius: '8px',
-                     padding: '5px 8px',
-                     transform: 'rotate(-5deg)',
-                     opacity: 0.9,
-                     background: 'rgba(238, 221, 130, 0.5)',
+                     padding: '4px 10px',
+                     opacity: 0.7,
+                     background: 'rgba(238, 221, 130, 0.4)',
                      fontWeight: 'bold',
-                     fontSize: '12px'
+                     fontSize: '11px',
+                     zIndex: 0,
+                     pointerEvents: 'none',
+                     whiteSpace: 'nowrap'
                    }}>
-                     {settings.stampName || 'SHREE HARI DRESSES & CUTPIECE'}
+                     {settings.stampName || 'SHREE HARI DRESSES & CUTPIS'}
                    </div>
 
-                   {settings.signature && (
-                     <img src={settings.signature} alt="Signature" style={{maxHeight: '60px', marginBottom: '5px', zIndex: 0}} />
-                   )}
+                   <div style={{height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1}}>
+                    {settings.signature && (
+                      <img src={settings.signature} alt="Signature" style={{maxHeight: '50px'}} />
+                    )}
+                   </div>
                    
-                   <span style={{fontWeight: 'bold', fontSize: '13px', zIndex: 1}}>{settings.shopName || t('shopName')}</span>
+                   <div style={{fontWeight: 'bold', fontSize: '12px', zIndex: 1, borderTop: '1px solid rgba(0,0,0,0.3)', width: '85%', paddingTop: '4px'}}>
+                     Authorized Signatory
+                   </div>
                 </div>
               </div>
           </div>
@@ -245,7 +266,29 @@ export default function PrintableBill({ bill }) {
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap');
         
+        .stamp-animation {
+          animation: stampSlam 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes stampSlam {
+          0% { 
+            transform: translate(-50%, -50%) rotate(-25deg) scale(4); 
+            opacity: 0; 
+            filter: blur(10px);
+          }
+          100% { 
+            transform: translate(-50%, -50%) rotate(-5deg) scale(1); 
+            opacity: 0.7; 
+            filter: blur(0);
+          }
+        }
+
         @media print {
+          .stamp-animation {
+            animation: none !important;
+            opacity: 0.7 !important;
+            transform: translate(-50%, -50%) rotate(-5deg) scale(1) !important;
+          }
           html, body {
             background: white !important;
           }

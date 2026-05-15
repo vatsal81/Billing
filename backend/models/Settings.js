@@ -1,14 +1,14 @@
 const mongoose = require('mongoose');
 
 const settingsSchema = mongoose.Schema({
-    shopName: { type: String, default: 'શ્રી હરિ ડ્રેસીસ & કટપીસ' },
+    shopName: { type: String, default: 'SHREE HARI DRESSES & CUTPIS' },
     shopSubTitle: { type: String, default: 'Wholesale & Retail' },
-    shopAddress: { type: String, default: 'માધવ પાર્ક ૧, શ્રી હરિ કોમ્પલેક્ષની બાજુમાં, આલાપ રોયલ પામની પાછળ, બાપાસીતારામ ચોક, મવડી, રાજકોટ - ૩૬૦ ૦૦૪.' },
+    shopAddress: { type: String, default: 'Madhav Park 1, Next to Shree Hari Complex,\nBehind Alap Royal Palm, Bapasitaram Chowk, Mavdi, Rajkot - 390 004.' },
     gstin: { type: String, default: '24BRNPM8073Q1ZU' },
     stateInfo: { type: String, default: 'State : Gujarat    Code : 24' },
-    terms1: { type: String, default: '૧. ન્યાયક્ષેત્ર રાજકોટ રહેશે.' },
-    terms2: { type: String, default: '૨. ભુલચૂક લેવી દેવી.' },
-    stampName: { type: String, default: 'શ્રી હરિ ડ્રેસીસ & કટપીસ' },
+    terms1: { type: String, default: '1. Subject to Rajkot Jurisdiction.' },
+    terms2: { type: String, default: '2. E. & O.E.' },
+    stampName: { type: String, default: 'SHREE HARI DRESSES & CUTPIS' },
     logo: { type: String, default: '' },
     signature: { type: String, default: '' }
 }, { timestamps: true });

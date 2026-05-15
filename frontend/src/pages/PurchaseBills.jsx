@@ -833,7 +833,7 @@ const PurchaseBills = () => {
                                                         <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} /></td>
                                                         <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} /></td>
                                                         <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} /></td>
-                                                        <td style={{ textAlign: 'right', fontWeight: '800', color: 'var(--accent-primary)' }}>₹{item.amount.toFixed(2)}</td>
+                                                        <td style={{ textAlign: 'right', fontWeight: '800', color: 'var(--accent-primary)' }}>Rs.{item.amount.toFixed(2)}</td>
                                                         <td style={{ textAlign: 'center' }}>
                                                             <button type="button" style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => handleRemoveItem(index)}>
                                                                 <Trash2 size={16} />
@@ -880,14 +880,14 @@ const PurchaseBills = () => {
                                                         <input type="number" className="input-field" step="any" value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
-                                                        <label className="input-label" style={{ fontSize: '0.75rem' }}>RATE (₹)</label>
+                                                        <label className="input-label" style={{ fontSize: '0.75rem' }}>RATE (Rs.)</label>
                                                         <input type="number" className="input-field" step="any" required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} />
                                                     </div>
                                                 </div>
 
                                                 <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Subtotal:</span>
-                                                    <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent-primary)' }}>₹{item.amount.toFixed(2)}</span>
+                                                    <span style={{ fontSize: '1.1rem', fontWeight: '800', color: 'var(--accent-primary)' }}>Rs.{item.amount.toFixed(2)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1128,7 +1128,7 @@ const PurchaseBills = () => {
 
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>SUB TOTAL</span>
-                                                    <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>₹{newBill.subTotal.toFixed(2)}</span>
+                                                    <span style={{ fontSize: '1.1rem', fontWeight: 800 }}>Rs.{newBill.subTotal.toFixed(2)}</span>
                                                 </div>
 
                                                 <div style={{ background: '#fffbeb', padding: '12px 16px', borderRadius: '20px', border: '1px solid #fef3c7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1145,7 +1145,7 @@ const PurchaseBills = () => {
                                                                     type="button"
                                                                     onClick={() => setNewBill(prev => ({ ...prev, discountMode: 'amount' }))}
                                                                     style={{ padding: '2px 8px', fontSize: '0.7rem', borderRadius: '6px', background: newBill.discountMode === 'amount' ? '#b45309' : 'transparent', color: newBill.discountMode === 'amount' ? 'white' : '#b45309', border: 'none', fontWeight: 700, cursor: 'pointer' }}
-                                                                >₹</button>
+                                                                >Rs.</button>
                                                             </div>
                                                         </div>
                                                         <span style={{ fontSize: '0.7rem', color: '#b45309', fontWeight: 600 }}>{newBill.discountMode === 'percent' ? 'Apply Percentage' : 'Apply Flat Amount'}</span>
@@ -1171,7 +1171,7 @@ const PurchaseBills = () => {
                                                                 </>
                                                             ) : (
                                                                 <>
-                                                                    <span style={{ position: 'absolute', left: '10px', fontWeight: 900, color: '#b45309', fontSize: '0.9rem', pointerEvents: 'none' }}>₹</span>
+                                                                    <span style={{ position: 'absolute', left: '10px', fontWeight: 900, color: '#b45309', fontSize: '0.9rem', pointerEvents: 'none' }}>Rs.</span>
                                                                     <input
                                                                         type="number"
                                                                         step="any"
@@ -1194,7 +1194,7 @@ const PurchaseBills = () => {
                                                 {newBill.discountAmount > 0 && newBill.discountMode === 'percent' && (
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
                                                         <span style={{ fontSize: '0.85rem', color: '#b45309', fontWeight: 600 }}>Discount Value</span>
-                                                        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#b45309' }}>- ₹{newBill.discountAmount.toFixed(2)}</span>
+                                                        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#b45309' }}>- Rs.{newBill.discountAmount.toFixed(2)}</span>
                                                     </div>
                                                 )}
 
@@ -1210,17 +1210,17 @@ const PurchaseBills = () => {
                                                         <>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                                                                 <span style={{ color: 'var(--text-secondary)' }}>CGST ({newBill.gstRate / 2}%)</span>
-                                                                <span style={{ fontWeight: 600 }}>₹{newBill.cgst.toFixed(2)}</span>
+                                                                <span style={{ fontWeight: 600 }}>Rs.{newBill.cgst.toFixed(2)}</span>
                                                             </div>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                                                                 <span style={{ color: 'var(--text-secondary)' }}>SGST ({newBill.gstRate / 2}%)</span>
-                                                                <span style={{ fontWeight: 600 }}>₹{newBill.sgst.toFixed(2)}</span>
+                                                                <span style={{ fontWeight: 600 }}>Rs.{newBill.sgst.toFixed(2)}</span>
                                                             </div>
                                                         </>
                                                     ) : (
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
                                                             <span style={{ color: 'var(--text-secondary)' }}>IGST ({newBill.gstRate}%)</span>
-                                                            <span style={{ fontWeight: 600 }}>₹{newBill.igst.toFixed(2)}</span>
+                                                            <span style={{ fontWeight: 600 }}>Rs.{newBill.igst.toFixed(2)}</span>
                                                         </div>
                                                     )}
 
@@ -1242,7 +1242,7 @@ const PurchaseBills = () => {
 
                                                 <div style={{ background: 'var(--accent-gradient)', padding: '20px', borderRadius: '16px', color: 'white', marginTop: '8px', boxShadow: '0 10px 20px -5px rgba(3, 105, 161, 0.4)' }}>
                                                     <div style={{ fontSize: '0.8rem', opacity: 0.8, fontWeight: 600, marginBottom: '4px' }}>FINAL TOTAL AMOUNT</div>
-                                                    <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>₹{newBill.totalAmount.toFixed(2)}</div>
+                                                    <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>Rs.{newBill.totalAmount.toFixed(2)}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1399,7 +1399,7 @@ const PurchaseBills = () => {
                                                 </td>
                                                 <td>
                                                     <span className="text-primary font-bold">
-                                                        ₹{(bill.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                                                        Rs.{(bill.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                                                     </span>
                                                 </td>
                                                 <td>
@@ -1466,7 +1466,7 @@ const PurchaseBills = () => {
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
-                                                <div style={{ color: 'var(--accent-primary)', fontWeight: 800, fontSize: '1.1rem' }}>₹{(bill.totalAmount || 0).toLocaleString('en-IN')}</div>
+                                                <div style={{ color: 'var(--accent-primary)', fontWeight: 800, fontSize: '1.1rem' }}>Rs.{(bill.totalAmount || 0).toLocaleString('en-IN')}</div>
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(bill.billDate).toLocaleDateString('en-IN')}</div>
                                             </div>
                                         </div>
