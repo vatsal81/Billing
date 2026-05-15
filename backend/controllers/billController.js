@@ -36,7 +36,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
 
     for (const p of shuffledProducts) {
         if (selectedProducts.length < targetItemCount && (currentSubtotal + p.price) <= targetSubtotal) {
-            const fullName = p.nameEnglish ? `${p.name} (${p.nameEnglish})` : p.name;
+            const fullName = p.name;
             selectedItemsMap[p._id] = {
                 product: p._id,
                 name: fullName,
