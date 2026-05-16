@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { fetchProducts, createProduct, deleteProduct, updateProduct } from '../utils/api';
-import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart, Pencil, X } from 'lucide-react';
+import { fetchProducts, createProduct, deleteProduct, updateProduct, fetchSuppliers } from '../utils/api';
+import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart, Pencil, X, Building, Hash } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import Modal from '../components/Modal';
 import './Inventory.css';
@@ -42,37 +42,69 @@ export default function Inventory() {
   const [editPurchaseRate, setEditPurchaseRate] = useState('');
   const [editStock, setEditStock] = useState('');
   const [editThreshold, setEditThreshold] = useState('');
+  const [editSupplier, setEditSupplier] = useState('');
+  const [editInvoice, setEditInvoice] = useState('');
+  const [suppliers, setSuppliers] = useState([]);
 
 
-  const loadProducts = async (isInitial = false) => {
+  const loadProducts = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      const hasCachedData = window.inventoryCache && window.inventoryCache.length > 0;
+      
+      // Only show loader if we don't have cached data OR if it's a manual refresh
+      if (!hasCachedData || isRefresh) {
+        setLoading(true);
+      } else if (hasCachedData) {
+        // If we have cached data, set it immediately so UI is ready
+        setProducts(window.inventoryCache);
+        setFilteredProducts(window.inventoryCache);
+      }
+
       const data = await fetchProducts();
-      setProducts(data);
-      setFilteredProducts(data);
+      const productsData = Array.isArray(data) ? data : [];
+      setProducts(productsData);
+      setFilteredProducts(productsData);
+      
+      // Update cache
+      window.inventoryCache = productsData;
       
       // Check for unpriced items
-      const unpriced = data.filter(p => !p.price || p.price === 0);
+      const unpriced = productsData.filter(p => !p.price || p.price === 0);
       setUnpricedItems(unpriced);
-      if (isInitial && unpriced.length > 0) {
+      if (isRefresh && unpriced.length > 0) {
         setShowUnpricedAlert(true);
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message);
+      if (window.inventoryCache) {
+        setProducts(window.inventoryCache);
+        setFilteredProducts(window.inventoryCache);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const loadSuppliers = async () => {
+    try {
+      const data = await fetchSuppliers();
+      setSuppliers(data);
+    } catch (err) {
+      console.error('Error fetching suppliers:', err);
+    }
+  };
+
   useEffect(() => {
     loadProducts(true);
+    loadSuppliers();
   }, []);
 
   const handleExportCSV = () => {
     if (products.length === 0) return;
     
-    const headers = ['Name', 'HSN Code', 'Purchase Rate', 'Selling Price', 'Stock Amount', 'Low Stock Threshold'];
+    const headers = ['ID', 'Name', 'HSN Code', 'Purchase Rate', 'Selling Price', 'Stock Amount', 'Low Stock Threshold'];
     const rows = products.map(p => [
+      `"${p.productId || ''}"`,
       `"${p.nameEnglish || p.name}"`,
       `"${p.hsnCode || ''}"`,
       p.purchaseRate || 0,
@@ -98,7 +130,8 @@ export default function Inventory() {
     const results = products.filter(p => 
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.nameEnglish && p.nameEnglish.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (p.hsnCode && p.hsnCode.toLowerCase().includes(searchTerm.toLowerCase()))
+      (p.hsnCode && p.hsnCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.productId && p.productId.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     setFilteredProducts(results);
   }, [searchTerm, products]);
@@ -175,6 +208,8 @@ export default function Inventory() {
     setEditPurchaseRate(product.purchaseRate || '');
     setEditStock(product.stockAmount || '');
     setEditThreshold(product.lowStockThreshold || 5);
+    setEditSupplier(product.lastSupplier || '');
+    setEditInvoice(product.lastInvoice || '');
     setIsEditModalOpen(true);
   };
 
@@ -191,7 +226,9 @@ export default function Inventory() {
         price: Number(editPrice),
         purchaseRate: Number(editPurchaseRate),
         stockAmount: Number(editStock),
-        lowStockThreshold: Number(editThreshold)
+        lowStockThreshold: Number(editThreshold),
+        lastSupplier: editSupplier,
+        lastInvoice: editInvoice
       });
       
       await loadProducts();
@@ -280,7 +317,7 @@ export default function Inventory() {
           <button className="btn btn-secondary" onClick={handleExportCSV} disabled={products.length === 0}>
             <Download size={18} /> Export CSV
           </button>
-          <button className="btn btn-secondary" onClick={loadProducts}>
+          <button className="btn btn-secondary" onClick={() => loadProducts(true)}>
             <RefreshCw size={18} /> {t('refresh')}
           </button>
         </div>
@@ -321,47 +358,47 @@ export default function Inventory() {
               />
             </div>
             <div className="form-grid">
-              <div className="input-group" style={{flex: 1}}>
+              <div className="input-group">
                 <label className="input-label">Purchase Rate</label>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="decimal"
                   className="input-field" 
                   placeholder="e.g. 400"
                   value={purchaseRate ?? ''}
-                  onChange={(e) => setPurchaseRate(e.target.value)}
-                  min="0"
-                  step="0.01"
+                  onChange={(e) => setEditPurchaseRate(e.target.value)}
                 />
               </div>
-              <div className="input-group" style={{flex: 1}}>
+              <div className="input-group">
                 <label className="input-label">Selling Price <span style={{color: 'var(--danger)'}}>*</span></label>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="decimal"
                   className="input-field" 
                   placeholder="e.g. 500"
                   value={price ?? ''}
                   onChange={(e) => setPrice(e.target.value)}
                   required
-                  min="0.01"
-                  step="0.01"
                 />
               </div>
             </div>
             <div className="form-grid">
-              <div className="input-group" style={{flex: 1}}>
+              <div className="input-group">
                 <label className="input-label">Init Stock</label>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="numeric"
                   className="input-field" 
                   value={stock ?? ''}
                   onChange={(e) => setStock(e.target.value)}
                   required
                 />
               </div>
-              <div className="input-group" style={{flex: 1}}>
+              <div className="input-group">
                 <label className="input-label">Low Alert At</label>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="numeric"
                   className="input-field" 
                   value={threshold ?? ''}
                   onChange={(e) => setThreshold(e.target.value)}
@@ -423,12 +460,28 @@ export default function Inventory() {
                         <Package size={22} strokeWidth={2.5} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
-                        <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                          {p.nameEnglish || p.name}
-                        </h4>
-                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                           <h4 className="text-truncate" style={{ margin: 0, fontSize: '1.15rem', fontWeight: '800', color: 'var(--text-primary)' }}>
+                             {p.nameEnglish || p.name}
+                           </h4>
+                           <span style={{ 
+                             fontSize: '0.65rem', 
+                             background: 'var(--accent-primary)', 
+                             color: 'white', 
+                             padding: '1px 6px', 
+                             borderRadius: '4px', 
+                             fontWeight: '800',
+                             letterSpacing: '0.02em',
+                             flexShrink: 0
+                           }}>{p.productId}</span>
+                        </div>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
                           HSN: {p.hsnCode || 'N/A'}
                         </span>
+                        <div style={{ display: 'flex', gap: '10px', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px', flexWrap: 'wrap' }}>
+                           <span className="last-purchase-badge" style={{display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.03)', padding: '2px 6px', borderRadius: '4px'}}><Building size={12} /> {p.lastSupplier || 'No Supplier'}</span>
+                           <span className="last-purchase-badge" style={{display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(0,0,0,0.03)', padding: '2px 6px', borderRadius: '4px'}}><Hash size={12} /> {p.lastInvoice || 'N/A'}</span>
+                        </div>
                       </div>
                     </div>
 
@@ -449,8 +502,9 @@ export default function Inventory() {
                     <div className="receipt-right">
                       {editingPrice === p._id ? (
                         <div style={{display: 'flex', gap: '6px', marginBottom: '2px'}}>
-                          <input 
-                            type="number" 
+                                                    <input 
+                            type="text" 
+                            inputMode="decimal"
                             className="input-field" 
                             style={{width: '70px', padding: '2px 6px', height: '26px', margin: 0, fontSize: '0.85rem'}}
                             value={newPrice ?? ''}
@@ -590,8 +644,9 @@ export default function Inventory() {
               </label>
               <div style={{ padding: '8px 20px', background: 'var(--bg-card)', borderRadius: '16px', border: '2px solid var(--border-color)', display: 'flex', alignItems: 'center', transition: 'all 0.2s', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }} onFocus={(e) => e.currentTarget.style.borderColor = 'var(--accent-primary)'} onBlur={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}>
                 <span style={{ fontSize: '1.6rem', color: 'var(--accent-primary)', fontWeight: '800', marginRight: '12px' }}>+</span>
-                <input 
-                  type="number" 
+                                <input 
+                  type="text" 
+                  inputMode="numeric"
                   style={{ 
                     fontSize: '2.2rem', 
                     textAlign: 'center', 
@@ -786,6 +841,10 @@ export default function Inventory() {
           </div>
         )}
       >
+        <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+           <span style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--text-secondary)' }}>Product ID:</span>
+           <span style={{ fontSize: '1rem', fontWeight: '900', color: 'var(--accent-primary)', letterSpacing: '0.05em' }}>{selectedProduct?.productId}</span>
+        </div>
         <form onSubmit={handleUpdateProduct}>
           <div className="input-group">
             <label className="input-label">Item Name (English)</label>
@@ -840,15 +899,44 @@ export default function Inventory() {
               />
             </div>
             <div className="input-group" style={{ flex: 1 }}>
-              <label className="input-label">Low Alert Threshold</label>
+              <label className="input-label">Low Stock Alert</label>
               <input
                 type="number"
                 className="input-field"
                 value={editThreshold ?? ''}
                 onChange={(e) => setEditThreshold(e.target.value)}
-                required
               />
             </div>
+          </div>
+
+          <div style={{ padding: '16px', background: 'rgba(3, 105, 161, 0.05)', borderRadius: '16px', marginTop: '8px', border: '1px solid rgba(3, 105, 161, 0.1)' }}>
+             <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', fontWeight: '800', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last Purchase Info</h4>
+             <div style={{ display: 'flex', gap: '16px' }}>
+                <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+                   <label className="input-label">Supplier Name</label>
+                   <input
+                     type="text"
+                     className="input-field"
+                     list="edit-suppliers-list"
+                     value={editSupplier ?? ''}
+                     onChange={(e) => setEditSupplier(e.target.value)}
+                     placeholder="Type merchant name..."
+                   />
+                   <datalist id="edit-suppliers-list">
+                      {suppliers.map(s => <option key={s._id} value={s.name} />)}
+                   </datalist>
+                </div>
+                <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+                   <label className="input-label">Invoice Number</label>
+                   <input
+                     type="text"
+                     className="input-field"
+                     value={editInvoice ?? ''}
+                     onChange={(e) => setEditInvoice(e.target.value)}
+                     placeholder="e.g. FS/1234"
+                   />
+                </div>
+             </div>
           </div>
         </form>
       </Modal>

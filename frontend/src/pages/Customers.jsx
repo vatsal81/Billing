@@ -355,7 +355,7 @@ const CustomerModals = ({
                     <button type="button" className="btn btn-secondary" onClick={() => setActiveModal(null)}>Cancel</button>
                     <button type="submit" className="btn btn-primary"><Save size={15} /> Confirm Receipt</button>
                 </>}>
-                <div className="s-field"><label>Received Amount (Rs.)</label><input type="number" required placeholder="0.00" autoFocus value={payment.amount ?? ''} onChange={e => setPayment({ ...payment, amount: e.target.value })} /></div>
+                <div className="s-field"><label>Received Amount (Rs.)</label><input type="text" inputMode="decimal" required placeholder="0.00" autoFocus value={payment.amount ?? ''} onChange={e => setPayment({ ...payment, amount: e.target.value })} /></div>
                 <div className="s-field"><label>Description / Note</label><input type="text" placeholder="e.g. Received via PhonePe" value={payment.description ?? ''} onChange={e => setPayment({ ...payment, description: e.target.value })} /></div>
                 <div className="s-field"><label>Payment Date</label><input type="date" required value={payment.date ?? ''} onChange={e => setPayment({ ...payment, date: e.target.value })} /></div>
             </ModalOverlay>

@@ -103,7 +103,7 @@ export default function Expenses() {
             </div>
             <div className="input-group">
               <label className="input-label">Amount (Rs.)</label>
-              <input type="number" className="input-field" value={amount ?? ''} onChange={e => setAmount(e.target.value)} required />
+              <input type="text" inputMode="decimal" className="input-field" value={amount ?? ''} onChange={e => setAmount(e.target.value)} required />
             </div>
             <div className="input-group">
               <label className="input-label">Date</label>

@@ -33,6 +33,7 @@ const purchaseBillSchema = mongoose.Schema({
     broker: { type: String },
 
     items: [{
+        productId: String,
         name: String,
         nameEnglish: String,
         hsnCode: String,

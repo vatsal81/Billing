@@ -461,7 +461,7 @@ const Suppliers = () => {
                         <div className="s-field"><label>Phone</label><input type="text" value={formData.phone ?? ''} onChange={e => setFormData({ ...formData, phone: e.target.value })} /></div>
                         <div className="s-field" style={{ gridColumn: 'span 2' }}><label>Address</label><input type="text" value={formData.address ?? ''} onChange={e => setFormData({ ...formData, address: e.target.value })} /></div>
                         <div className="s-field"><label>City</label><input type="text" value={formData.city ?? ''} onChange={e => setFormData({ ...formData, city: e.target.value })} /></div>
-                        <div className="s-field"><label>Opening Balance</label><input type="number" value={formData.balance ?? ''} onChange={e => setFormData({ ...formData, balance: e.target.value })} /></div>
+                                                <div className="s-field"><label>Opening Balance</label><input type="text" inputMode="decimal" value={formData.balance ?? ''} onChange={e => setFormData({ ...formData, balance: e.target.value })} /></div>
                     </div>
                 </Modal>
             )}
@@ -472,7 +472,7 @@ const Suppliers = () => {
                 }>
                     <div className="s-field" style={{ marginBottom: '16px' }}>
                         <label>Amount (Rs.) *</label>
-                        <input type="number" value={paymentData.amount ?? ''} onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })} required autoFocus />
+                                                <input type="text" inputMode="decimal" value={paymentData.amount ?? ''} onChange={e => setPaymentData({ ...paymentData, amount: e.target.value })} required autoFocus />
                     </div>
                     <div className="s-field" style={{ marginBottom: '16px' }}>
                         <label>Description / Note</label>

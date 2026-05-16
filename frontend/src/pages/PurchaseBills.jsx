@@ -85,17 +85,30 @@ const PurchaseBills = () => {
         loadSuppliers();
     }, []);
 
-    const loadBills = async () => {
+    const loadBills = async (isRefresh = false) => {
         try {
-            setLoading(true);
-
-            // Artificial delay for 'premium professional loader' experience
-            await new Promise(resolve => setTimeout(resolve, 2500));
+            const hasCachedData = window.purchaseBillsCache && window.purchaseBillsCache.length > 0;
+            
+            // Only show loader if we don't have cached data OR if it's a manual refresh
+            if (!hasCachedData || isRefresh) {
+                setLoading(true);
+                // Artificial delay for 'premium professional loader' experience
+                await new Promise(resolve => setTimeout(resolve, 2500));
+            } else if (hasCachedData) {
+                // If we have cached data, set it immediately so UI is ready
+                setBills(window.purchaseBillsCache);
+            }
 
             const data = await fetchPurchaseBills();
-            setBills(Array.isArray(data) ? data : []);
+            const billsData = Array.isArray(data) ? data : [];
+            setBills(billsData);
+            
+            // Update cache for next time
+            window.purchaseBillsCache = billsData;
         } catch (error) {
             console.error('Error fetching bills:', error);
+            // If error and we have cache, at least keep showing old data
+            if (window.purchaseBillsCache) setBills(window.purchaseBillsCache);
         } finally {
             setLoading(false);
         }
@@ -142,17 +155,13 @@ const PurchaseBills = () => {
         setIsDeletingProcess(true);
 
         try {
-            // Artificial delay for 'premium professional loader' experience
-            await new Promise(resolve => setTimeout(resolve, 2500));
-
             await deletePurchaseBill(billToDelete._id);
-            setBills(bills.filter(b => b._id !== billToDelete._id));
             setBillToDelete(null);
-        } catch (error) {
-            console.error('Error deleting bill:', error);
-            setErrorMessage('Failed to delete bill: ' + error.message);
-        } finally {
             setIsDeletingProcess(false);
+            loadBills(); // This will show the "Fetching" loader for 2.5s
+        } catch (error) {
+            setIsDeletingProcess(false);
+            setErrorMessage('Failed to delete bill: ' + error.message);
         }
     };
 
@@ -491,7 +500,10 @@ const PurchaseBills = () => {
             }
 
             // Artificially wait to show the beautiful loader
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Start loading bills in background immediately
+            loadBills();
 
             setSaving(false);
             setShowSuccess(true);
@@ -502,7 +514,6 @@ const PurchaseBills = () => {
                 setIsAdding(false);
                 setIsEditing(false);
                 setEditingId(null);
-                loadBills();
                 loadSuppliers();
                 resetForm();
                 setBillPreview(null);
@@ -901,9 +912,9 @@ const PurchaseBills = () => {
                                                             <input type="text" className="input-field" style={{ padding: '6px 10px', fontSize: '0.85rem' }} required value={item.nameEnglish ?? ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="Product Name" />
                                                         </td>
                                                         <td><input type="text" className="input-field" style={{ padding: '6px 10px' }} value={item.hsnCode ?? ''} onChange={(e) => handleItemChange(index, 'hsnCode', e.target.value)} placeholder="HSN" /></td>
-                                                        <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} /></td>
-                                                        <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} /></td>
-                                                        <td><input type="number" className="input-field" style={{ padding: '6px 10px' }} step="any" required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} /></td>
+                                                                                                                <td><input type="text" inputMode="decimal" className="input-field" style={{ padding: '6px 10px' }} value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} /></td>
+                                                                                                                <td><input type="text" inputMode="decimal" className="input-field" style={{ padding: '6px 10px' }} value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} /></td>
+                                                                                                                <td><input type="text" inputMode="decimal" className="input-field" style={{ padding: '6px 10px' }} required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} /></td>
                                                         <td style={{ textAlign: 'right', fontWeight: '800', color: 'var(--accent-primary)' }}>Rs.{item.amount.toFixed(2)}</td>
                                                         <td style={{ textAlign: 'center' }}>
                                                             <button type="button" style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => handleRemoveItem(index)}>
@@ -941,18 +952,18 @@ const PurchaseBills = () => {
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>PCS</label>
-                                                        <input type="number" className="input-field" step="any" value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} />
+                                                                                                                <input type="text" inputMode="decimal" className="input-field" value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} />
                                                     </div>
                                                 </div>
 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>METERS</label>
-                                                        <input type="number" className="input-field" step="any" value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} />
+                                                                                                                <input type="text" inputMode="decimal" className="input-field" value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>RATE (Rs.)</label>
-                                                        <input type="number" className="input-field" step="any" required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} />
+                                                                                                                <input type="text" inputMode="decimal" className="input-field" required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} />
                                                     </div>
                                                 </div>
 
@@ -1225,9 +1236,9 @@ const PurchaseBills = () => {
                                                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                                             {newBill.discountMode === 'percent' ? (
                                                                 <>
-                                                                    <input
-                                                                        type="number"
-                                                                        step="any"
+                                                                                                                                        <input
+                                                                        type="text"
+                                                                        inputMode="decimal"
                                                                         className="input-field"
                                                                         style={{ width: '85px', padding: '8px 25px 8px 12px', textAlign: 'right', fontSize: '1rem', fontWeight: 800, background: 'white', borderRadius: '12px', border: '2px solid #fbbf24' }}
                                                                         value={newBill.discountPercent === 0 ? '' : newBill.discountPercent}
@@ -1243,9 +1254,9 @@ const PurchaseBills = () => {
                                                             ) : (
                                                                 <>
                                                                     <span style={{ position: 'absolute', left: '10px', fontWeight: 900, color: '#b45309', fontSize: '0.9rem', pointerEvents: 'none' }}>Rs.</span>
-                                                                    <input
-                                                                        type="number"
-                                                                        step="any"
+                                                                                                                                        <input
+                                                                        type="text"
+                                                                        inputMode="decimal"
                                                                         className="input-field"
                                                                         style={{ width: '100px', padding: '8px 12px 8px 25px', textAlign: 'right', fontSize: '1rem', fontWeight: 800, background: 'white', borderRadius: '12px', border: '2px solid #fbbf24' }}
                                                                         value={newBill.discountAmount === 0 ? '' : newBill.discountAmount}
@@ -1297,7 +1308,7 @@ const PurchaseBills = () => {
 
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0' }}>
                                                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>ROUND OFF</span>
-                                                        <input type="number" step="any" className="input-field" style={{ width: '80px', padding: '4px 8px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 700 }} value={newBill.roundOff ?? ''} onChange={(e) => {
+                                                                                                                <input type="text" inputMode="decimal" className="input-field" style={{ width: '80px', padding: '4px 8px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 700 }} value={newBill.roundOff ?? ''} onChange={(e) => {
                                                             const rawValue = e.target.value;
                                                             const rVal = parseFloat(rawValue) || 0;
                                                             const newTotal = Number((newBill.subTotal + newBill.igst + newBill.cgst + newBill.sgst + rVal).toFixed(2));

@@ -8,30 +8,45 @@
 
 @media (min-width: 1024px) {
   .inventory-grid {
-    grid-template-columns: minmax(350px, 1fr) 2.5fr;
+    grid-template-columns: 350px 1fr;
   }
 }
 
 .inventory-form-card {
   padding: 24px;
   height: fit-content;
-  margin: 0;
+  position: sticky;
+  top: 24px;
 }
 
 .inventory-list-card {
   padding: 24px;
-  margin: 0;
+  min-width: 0;
 }
 
-@media (max-width: 768px) {
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .inventory-grid {
+    gap: 16px;
+  }
+
   .inventory-form-card,
   .inventory-list-card {
     padding: 16px;
+    border-radius: 12px;
   }
   
-  .inventory-list-card {
-    margin: 0 -8px; /* Slight negative margin to take more space on mobile */
-    border-radius: 0;
+  .inventory-form-card {
+    position: static;
   }
 }
 
@@ -41,7 +56,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
   position: relative;
   overflow: hidden;
   transition: var(--transition);
@@ -50,9 +65,9 @@
 .receipt-left {
   display: flex;
   align-items: center;
-  gap: 16px;
-  flex: 1 1 auto;
-  min-width: 0; /* Ensures text truncation works */
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
 .receipt-actions {
@@ -69,57 +84,77 @@
   gap: 4px;
 }
 
-@media (max-width: 640px) {
+/* Tablet / Large Mobile */
+@media (max-width: 850px) {
   .inventory-receipt-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 20px;
+    flex-wrap: wrap;
   }
-
-  .receipt-left {
-    width: 100%;
-  }
-
+  
   .receipt-actions {
     width: 100%;
-    justify-content: flex-start;
-    border-top: 1px solid var(--border-color);
-    padding-top: 12px;
     order: 3;
+    justify-content: flex-start;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
   }
-
+  
+  .receipt-left {
+    flex: 1;
+  }
+  
   .receipt-right {
-    width: 100%;
-    flex-direction: row !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    order: 2;
+    flex: 0;
+  }
+}
+
+/* Mobile Small */
+@media (max-width: 500px) {
+  .inventory-receipt-card {
+    padding: 12px;
+  }
+  
+  .receipt-left {
+    gap: 8px;
+  }
+  
+  .receipt-left h4 {
+    font-size: 1rem !important;
+  }
+  
+  .receipt-actions button {
+    flex: 1;
+    padding: 8px !important;
+    font-size: 0.8rem !important;
   }
 
   .receipt-right h3 {
     font-size: 1.1rem !important;
   }
 
-  .receipt-actions button {
-    flex: 1;
+  .last-purchase-badge {
+    font-size: 0.65rem !important;
+    padding: 1px 4px !important;
   }
 }
 
-/* Search Bar Responsiveness */
-.inventory-search-container {
-  flex: 1;
-  max-width: 300px;
-}
-
-@media (max-width: 480px) {
-  .inventory-search-container {
-    max-width: 100% !important;
+/* Modal Responsiveness */
+@media (max-width: 640px) {
+  .modal-content {
+    width: 95% !important;
+    margin: 10px !important;
+    padding: 20px !important;
+  }
+  
+  .restock-input-large {
+    font-size: 1.8rem !important;
   }
 }
 
-.inventory-form-card {
-  transition: var(--transition);
+/* Utility for wrapping text in badges */
+.text-truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .action-btn-hover {
@@ -135,9 +170,18 @@
   transform: translateY(0);
 }
 
-/* Hide on very small screens */
-@media (max-width: 380px) {
-  .hide-on-mobile-small {
+.hide-on-mobile {
+  display: none;
+}
+
+@media (min-width: 641px) {
+  .hide-on-mobile {
+    display: inline;
+  }
+}
+
+@media (max-width: 400px) {
+  .hide-on-extra-small {
     display: none !important;
   }
 }

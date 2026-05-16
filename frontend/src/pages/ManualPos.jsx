@@ -446,7 +446,7 @@ const ManualPos = () => {
                       <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Rs.{item.price} x {item.quantity}</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <input type="number" className="input-field" style={{ width: '60px', padding: '6px' }} value={item.quantity} onChange={(e) => updateQuantity(item.product, parseInt(e.target.value))} />
+                      <input type="text" inputMode="numeric" className="input-field" style={{ width: '60px', padding: '6px' }} value={item.quantity} onChange={(e) => updateQuantity(item.product, parseInt(e.target.value) || 0)} />
                       <button onClick={() => removeFromCart(item.product)} style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={18} /></button>
                     </div>
                   </div>

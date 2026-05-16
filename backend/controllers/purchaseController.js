@@ -86,18 +86,29 @@ const addPurchaseBill = async (req, res) => {
 
         // Update stock and sync inventory
         const unpricedProducts = [];
+        const itemsWithIds = [];
+        
         for (const item of items) {
-            let product = await Product.findOne({ name: item.name });
+            let product = await Product.findOne({ 
+                $or: [
+                    { name: item.name },
+                    { nameEnglish: item.nameEnglish },
+                    { productId: item.productId }
+                ]
+            });
 
             if (product) {
                 product.stockAmount += (Number(item.meters) || Number(item.pcs) || 0);
                 product.purchaseRate = Number(item.rate);
-                // If the product exists but nameEnglish was empty, update it
+                product.lastSupplier = supplierName;
+                product.lastInvoice = billNumber;
                 if (!product.nameEnglish && item.nameEnglish) {
                     product.nameEnglish = item.nameEnglish;
                 }
                 await product.save();
                 
+                itemsWithIds.push({ ...item, productId: product.productId });
+
                 if (!product.price || product.price === 0) {
                     unpricedProducts.push(product);
                 }
@@ -108,11 +119,18 @@ const addPurchaseBill = async (req, res) => {
                     hsnCode: item.hsnCode,
                     price: 0,
                     purchaseRate: Number(item.rate),
-                    stockAmount: (Number(item.meters) || Number(item.pcs) || 0)
+                    stockAmount: (Number(item.meters) || Number(item.pcs) || 0),
+                    lastSupplier: supplierName,
+                    lastInvoice: billNumber
                 });
+                itemsWithIds.push({ ...item, productId: newProduct.productId });
                 unpricedProducts.push(newProduct);
             }
         }
+
+        // Update the bill with items that have product IDs
+        purchaseBill.items = itemsWithIds;
+        await purchaseBill.save();
 
         // Update Supplier Balance and Create Ledger Entry
         supplier.balance = (Number(supplier.balance) || 0) + Number(totalAmount);
@@ -312,16 +330,26 @@ const updatePurchaseBill = async (req, res) => {
 
         // 4. Apply new stock
         const unpricedProducts = [];
+        const itemsWithIds = [];
         for (const item of items) {
-            let product = await Product.findOne({ name: item.name });
+            let product = await Product.findOne({ 
+                $or: [
+                    { name: item.name },
+                    { nameEnglish: item.nameEnglish },
+                    { productId: item.productId }
+                ]
+            });
 
             if (product) {
                 product.stockAmount += (Number(item.meters) || Number(item.pcs) || 0);
                 product.purchaseRate = item.rate;
+                product.lastSupplier = supplierName;
+                product.lastInvoice = billNumber;
                 if (!product.nameEnglish && item.nameEnglish) {
                     product.nameEnglish = item.nameEnglish;
                 }
                 await product.save();
+                itemsWithIds.push({ ...item, productId: product.productId });
                 if (!product.price || product.price === 0) unpricedProducts.push(product);
             } else {
                 const newProduct = await Product.create({
@@ -330,11 +358,16 @@ const updatePurchaseBill = async (req, res) => {
                     hsnCode: item.hsnCode,
                     price: 0,
                     purchaseRate: item.rate,
-                    stockAmount: (Number(item.meters) || Number(item.pcs) || 0)
+                    stockAmount: (Number(item.meters) || Number(item.pcs) || 0),
+                    lastSupplier: supplierName,
+                    lastInvoice: billNumber
                 });
+                itemsWithIds.push({ ...item, productId: newProduct.productId });
                 unpricedProducts.push(newProduct);
             }
         }
+        oldBill.items = itemsWithIds;
+        await oldBill.save();
 
         // 5. Apply new supplier balance
         if (currentSupplier) {

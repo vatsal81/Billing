@@ -299,8 +299,9 @@ export default function Dashboard() {
             </div>
 
             <div>
-              <input 
-                type="number" 
+                            <input 
+                type="text" 
+                inputMode="decimal"
                 className="input-field" 
                 style={{
                   fontSize: 'min(10vw, 2.2rem)', 
@@ -316,8 +317,6 @@ export default function Dashboard() {
                 value={targetAmount}
                 onChange={(e) => setTargetAmount(e.target.value)}
                 required
-                min="1"
-                step="0.01"
               />
               <p style={{color: 'var(--text-secondary)', marginTop: '8px', fontSize: '0.9rem', textAlign: 'center'}}>
                 {t('finalTotalHint')}
