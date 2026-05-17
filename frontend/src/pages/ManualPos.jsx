@@ -1661,6 +1661,9 @@ const ManualPos = () => {
             <span style={{ color: '#64748b', textAlign: 'right' }}>GST (5%):</span>
             <span style={{ textAlign: 'right', fontWeight: 600 }}>Rs. {taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
 
+            <span style={{ color: '#64748b', textAlign: 'right' }}>Total (with GST):</span>
+            <span style={{ textAlign: 'right', fontWeight: 600 }}>Rs. {(discountedSubtotal + taxAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+
             <span style={{ color: '#64748b', textAlign: 'right', alignSelf: 'center' }}>Round Off:</span>
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
               <input 
@@ -1684,7 +1687,7 @@ const ManualPos = () => {
               />
             </div>
             
-            <span style={{ color: '#0f172a', textAlign: 'right', fontWeight: 800, fontSize: '1.1rem' }}>Grand Total:</span>
+            <span style={{ color: '#0f172a', textAlign: 'right', fontWeight: 800, fontSize: '1.1rem' }}>Final Amount:</span>
             <span style={{ color: billType === 'return' ? '#ef4444' : '#0369a1', textAlign: 'right', fontWeight: 800, fontSize: '1.2rem' }}>
               {billType === 'return' ? '-' : ''}Rs. {grandTotal.toLocaleString('en-IN')}
             </span>

@@ -53,6 +53,19 @@ export default function PrintableBill({ bill }) {
   };
 
   const finalTotal = bill.actualTotal || bill.targetAmount || 0;
+  
+  const originalSubtotal = bill.items ? bill.items.reduce((sum, item) => sum + (item.price * item.quantity * (item.meter || 1)), 0) : 0;
+  
+  let discountValue = 0;
+  if (bill.discountType === 'percentage') {
+      discountValue = originalSubtotal * ((bill.discountAmount || 0) / 100);
+  } else if (bill.discountType === 'flat') {
+      discountValue = bill.discountAmount || 0;
+  }
+  
+  const discountedSubtotal = originalSubtotal - discountValue;
+  const gstAmount = (bill.cgst || 0) + (bill.sgst || 0);
+  const totalWithGst = discountedSubtotal + gstAmount;
 
   return (
     <div id="printable-bill-wrapper" ref={wrapperRef} style={{
@@ -208,26 +221,32 @@ export default function PrintableBill({ bill }) {
               <div style={{width: '32%'}}>
                 <div style={{display: 'flex', borderBottom: '1px solid #000', padding: '4px 8px'}}>
                   <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('subtotal')}</span>
-                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{bill.totalAmount?.toFixed(2) || (finalTotal * 0.9523).toFixed(2)}</span>
+                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{originalSubtotal.toFixed(2)}</span>
                 </div>
+                {discountValue > 0 && (
+                  <div style={{display: 'flex', borderBottom: '1px solid #000', padding: '4px 8px'}}>
+                    <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px', color: '#10b981'}}>Discount ({bill.discountType === 'percentage' ? `${bill.discountAmount}%` : 'Flat'})</span>
+                    <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#10b981', fontSize: '15px'}}>-{discountValue.toFixed(2)}</span>
+                  </div>
+                )}
                 <div style={{display: 'flex', borderBottom: '1px solid #000', padding: '4px 8px'}}>
                   <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('cgst')}</span>
-                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{bill.cgst?.toFixed(2) || ((finalTotal * 0.9523) * 0.025).toFixed(2)}</span>
+                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{(bill.cgst || 0).toFixed(2)}</span>
                 </div>
                 <div style={{display: 'flex', borderBottom: '1px solid #000', padding: '4px 8px'}}>
                   <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('sgst')}</span>
-                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{bill.sgst?.toFixed(2) || ((finalTotal * 0.9523) * 0.025).toFixed(2)}</span>
+                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{(bill.sgst || 0).toFixed(2)}</span>
                 </div>
                 <div style={{display: 'flex', borderBottom: '1px solid #000', padding: '4px 8px'}}>
-                  <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('igst')}</span>
-                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}></span>
+                  <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>Total (with GST)</span>
+                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{totalWithGst.toFixed(2)}</span>
                 </div>
                 <div style={{display: 'flex', borderBottom: '2px solid #000', padding: '4px 8px'}}>
                   <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('roundOff')}</span>
                   <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{(bill.roundOff > 0 ? '+' : '')}{(bill.roundOff || 0).toFixed(2)}</span>
                 </div>
                 <div style={{display: 'flex', padding: '8px'}}>
-                  <span style={{width: '50%', fontWeight: 'bold', fontSize: '16px'}}>{t('total')}</span>
+                  <span style={{width: '50%', fontWeight: 'bold', fontSize: '16px'}}>Final Amount</span>
                   <span style={{width: '50%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '18px', fontWeight: 'bold'}}>{finalTotal.toFixed(0)}/-</span>
                 </div>
                 
