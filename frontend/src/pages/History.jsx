@@ -278,44 +278,6 @@ export default function History() {
 
   return (
     <div className="animate-fade-in">
-      <style>{`
-        @keyframes pulse-soft {
-          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
-          70% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
-          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
-        }
-        .premium-profit-badge {
-          position: relative;
-          overflow: hidden;
-          background: linear-gradient(135deg, rgba(22, 163, 74, 0.12) 0%, rgba(16, 185, 129, 0.04) 100%);
-          border: 1px solid rgba(22, 163, 74, 0.25);
-          border-radius: 8px;
-          padding: 4px 10px;
-          font-size: 0.8rem;
-          font-weight: 800;
-          color: #16a34a;
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          box-shadow: 0 2px 8px rgba(22, 163, 74, 0.05);
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          cursor: default;
-        }
-        .premium-profit-badge:hover {
-          transform: translateY(-2px) scale(1.04);
-          border-color: rgba(22, 163, 74, 0.5);
-          box-shadow: 0 6px 15px rgba(22, 163, 74, 0.15);
-          background: linear-gradient(135deg, rgba(22, 163, 74, 0.2) 0%, rgba(16, 185, 129, 0.08) 100%);
-        }
-        .profit-pulse-dot {
-          width: 6px;
-          height: 6px;
-          background-color: #22c55e;
-          border-radius: 50%;
-          display: inline-block;
-          animation: pulse-soft 2s infinite ease-in-out;
-        }
-      `}</style>
       <header className="page-header">
         <div>
           <h2>{t('histTitle')}</h2>
@@ -611,19 +573,11 @@ export default function History() {
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                           Inv #{invNumber} • {dateObj.toLocaleDateString('en-IN')} {dateObj.toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}
                         </span>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px', alignItems: 'center' }}>
-                          {bill.uniqueInvoiceId && (
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
-                              {bill.uniqueInvoiceId}
-                            </span>
-                          )}
-                          {bill.profit !== undefined && !isVoid && (
-                            <span className="premium-profit-badge">
-                              <span className="profit-pulse-dot"></span>
-                              💰 Profit: Rs.{bill.profit.toLocaleString('en-IN')}
-                            </span>
-                          )}
-                        </div>
+                        {bill.uniqueInvoiceId && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '4px', alignSelf: 'flex-start', marginTop: '2px' }}>
+                            {bill.uniqueInvoiceId}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -655,9 +609,21 @@ export default function History() {
                       <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '900', letterSpacing: '-0.5px', color: isVoid ? 'var(--text-secondary)' : (bill.billType === 'return' ? '#ef4444' : 'var(--success)') }}>
                         {bill.billType === 'return' ? '-' : ''}Rs.{(bill.actualTotal || 0).toLocaleString('en-IN')}
                       </h3>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                        Incl. ₹{totalTaxes.toFixed(2)} Tax
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end', marginTop: '2px' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                          Incl. ₹{totalTaxes.toFixed(2)} Tax
+                        </span>
+                        {!isVoid && bill.profit !== undefined && (
+                          <span style={{ 
+                            fontSize: '0.8rem', 
+                            color: bill.profit >= 0 ? 'var(--success)' : 'var(--danger)', 
+                            fontWeight: '700',
+                            marginTop: '1px'
+                          }}>
+                            Profit: ₹{Number(bill.profit).toLocaleString('en-IN')}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                   </div>

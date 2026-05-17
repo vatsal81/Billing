@@ -535,23 +535,32 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
 // @route   GET /api/bills
 // @access  Private
 exports.getBills = asyncHandler(async (req, res) => {
-    const bills = await Bill.find().populate('items.product').sort({ createdAt: -1 });
+    const bills = await Bill.find().sort({ createdAt: -1 });
     
+    // Fetch all products to get their purchase rates
+    const products = await Product.find({}, 'purchaseRate');
+    const productMap = {};
+    products.forEach(p => {
+        productMap[p._id.toString()] = p.purchaseRate || 0;
+    });
+
     const billsWithProfit = bills.map(bill => {
         let billCOGS = 0;
-        if (bill.items && Array.isArray(bill.items)) {
+        if (bill.status !== 'void') {
             bill.items.forEach(item => {
-                const purchaseRate = item.product?.purchaseRate || item.purchaseRate || 0;
-                billCOGS += purchaseRate * (item.quantity || 0);
+                const purchaseRate = item.product ? (productMap[item.product.toString()] || 0) : 0;
+                const meter = item.meter ? parseFloat(item.meter) : 1;
+                billCOGS += purchaseRate * item.quantity * meter;
             });
         }
-        const profit = Number((bill.actualTotal - billCOGS).toFixed(2));
+        const profit = bill.status === 'void' ? 0 : Number((bill.totalAmount - billCOGS).toFixed(2));
+        
         return {
             ...bill.toObject(),
             profit
         };
     });
-    
+
     res.json(billsWithProfit);
 });
 
@@ -559,21 +568,27 @@ exports.getBills = asyncHandler(async (req, res) => {
 // @route   GET /api/bills/:id
 // @access  Private
 exports.getBillById = asyncHandler(async (req, res) => {
-    const bill = await Bill.findById(req.params.id).populate('items.product');
+    const bill = await Bill.findById(req.params.id);
     if (!bill) {
         res.status(404);
         throw new Error("Bill not found");
     }
     
     let billCOGS = 0;
-    if (bill.items && Array.isArray(bill.items)) {
+    if (bill.status !== 'void') {
+        const products = await Product.find({}, 'purchaseRate');
+        const productMap = {};
+        products.forEach(p => {
+            productMap[p._id.toString()] = p.purchaseRate || 0;
+        });
         bill.items.forEach(item => {
-            const purchaseRate = item.product?.purchaseRate || item.purchaseRate || 0;
-            billCOGS += purchaseRate * (item.quantity || 0);
+            const purchaseRate = item.product ? (productMap[item.product.toString()] || 0) : 0;
+            const meter = item.meter ? parseFloat(item.meter) : 1;
+            billCOGS += purchaseRate * item.quantity * meter;
         });
     }
-    const profit = Number((bill.actualTotal - billCOGS).toFixed(2));
-    
+    const profit = bill.status === 'void' ? 0 : Number((bill.totalAmount - billCOGS).toFixed(2));
+
     res.json({
         ...bill.toObject(),
         profit
