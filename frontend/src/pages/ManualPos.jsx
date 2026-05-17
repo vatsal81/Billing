@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchProducts, generateManualBill, searchCustomers, createCustomer, getFrontendUrl, createProduct } from '../utils/api';
-import { User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save, Keyboard, UserPlus, RefreshCcw, PauseCircle, PlayCircle, ScanLine, Tag, Coins, Smartphone, CreditCard, Calendar, ChevronDown } from 'lucide-react';
+import { User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save, Keyboard, UserPlus, RefreshCcw, PauseCircle, PlayCircle, ScanLine, Tag, Coins, Smartphone, CreditCard, Calendar, ChevronDown, AlertCircle, AlertTriangle } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import PrintableBill from '../components/PrintableBill';
 import '../index.css';
@@ -34,6 +34,42 @@ const ManualPos = () => {
   const [heldBills, setHeldBills] = useState([]); // Feature 4
   const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
   const [showDiscountDropdown, setShowDiscountDropdown] = useState(false);
+  
+  const [dialog, setDialog] = useState({
+      isOpen: false,
+      title: '',
+      message: '',
+      type: 'alert',
+      onConfirm: null,
+      onCancel: null
+  });
+
+  const showCustomAlert = (message, title = "System Notification") => {
+      setDialog({
+          isOpen: true,
+          title,
+          message,
+          type: 'alert',
+          onConfirm: () => setDialog(prev => ({ ...prev, isOpen: false }))
+      });
+  };
+
+  const showCustomConfirm = (message, onConfirm, onCancel = null, title = "Confirm Action") => {
+      setDialog({
+          isOpen: true,
+          title,
+          message,
+          type: 'confirm',
+          onConfirm: () => {
+              setDialog(prev => ({ ...prev, isOpen: false }));
+              if (onConfirm) onConfirm();
+          },
+          onCancel: () => {
+              setDialog(prev => ({ ...prev, isOpen: false }));
+              if (onCancel) onCancel();
+          }
+      });
+  };
   
   // Quick Add State
   const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
@@ -78,7 +114,7 @@ const ManualPos = () => {
 
   const holdCurrentBill = () => {
       // Feature 4: Hold Bill
-      if (rows.length === 1 && !rows[0].itemName) return alert("Nothing to hold");
+      if (rows.length === 1 && !rows[0].itemName) return showCustomAlert("There are no valid items in the cart to hold.", "Empty Cart");
       const billData = {
           id: Date.now(),
           time: new Date().toLocaleTimeString(),
@@ -111,6 +147,23 @@ const ManualPos = () => {
       localStorage.setItem('erp_held_bills', JSON.stringify(updatedHeld));
   };
 
+  const [showHeldDropdown, setShowHeldDropdown] = useState(false);
+
+  const deleteHeldBill = (id, e) => {
+      e.stopPropagation();
+      showCustomConfirm(
+          "Are you sure you want to permanently discard this held bill?",
+          () => {
+              const updatedHeld = heldBills.filter(b => b.id !== id);
+              setHeldBills(updatedHeld);
+              localStorage.setItem('erp_held_bills', JSON.stringify(updatedHeld));
+              if (updatedHeld.length === 0) setShowHeldDropdown(false);
+          },
+          null,
+          "Discard Held Bill"
+      );
+  };
+
   // Close autocomplete on click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -123,10 +176,13 @@ const ManualPos = () => {
       if (!event.target.closest('.discount-dropdown-container')) {
         setShowDiscountDropdown(false);
       }
+      if (!event.target.closest('.held-dropdown-container')) {
+        setShowHeldDropdown(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [heldBills]);
 
   // Customer logic
   useEffect(() => {
@@ -164,7 +220,7 @@ const ManualPos = () => {
       setShowAddModal(false);
       setNewCustomer({ name: '', address: '', phone: '' });
     } catch (err) {
-      alert('Failed to save customer');
+      showCustomAlert("Failed to save new customer. Please check input parameters.", "Error");
     } finally {
       setSavingCustomer(false);
     }
@@ -192,7 +248,7 @@ const ManualPos = () => {
       setShowQuickAddProduct(false);
       setQuickAddData({ name: '', price: '', hsnCode: '' });
     } catch (err) {
-      alert('Failed to save product');
+      showCustomAlert("Failed to save quick product details. Please check the price/HSN formats.", "Error");
     } finally {
       setSavingProduct(false);
     }
@@ -451,12 +507,12 @@ const ManualPos = () => {
 
   const handleCheckout = async () => {
     if (!customerId && !customerName) {
-        return alert("Please select or add a customer before generating the bill.");
+        return showCustomAlert("Please select or add a customer before generating the bill.", "Customer Selection Required");
     }
     
     const validItems = rows.filter(r => r.itemName.trim() !== '' && (parseFloat(r.rate) > 0));
     
-    if (validItems.length === 0) return alert("Please add at least one valid item to the bill.");
+    if (validItems.length === 0) return showCustomAlert("Please add at least one valid item to the bill.", "Empty Invoice Items");
     
     try {
       setLoading(true);
@@ -710,13 +766,113 @@ const ManualPos = () => {
             <div className="pos-erp-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               {/* Feature 6 & 5 & 4 toggles */}
               {heldBills.length > 0 && (
-                <div style={{ position: 'relative', display: 'flex' }}>
-                    <button onClick={() => {
-                        const bill = heldBills[0];
-                        if(confirm(`Resume held bill for ${bill.customerName}?`)) resumeBill(bill);
-                    }} className="erp-pill-btn bg-amber">
+                <div className="held-dropdown-container" style={{ position: 'relative', display: 'flex' }}>
+                    <button 
+                      onClick={() => setShowHeldDropdown(!showHeldDropdown)} 
+                      className="erp-pill-btn bg-amber"
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                    >
                        <PlayCircle size={14}/> Resume Hold ({heldBills.length})
                     </button>
+                    
+                    {showHeldDropdown && (
+                      <div 
+                        style={{
+                          position: 'absolute',
+                          top: 'calc(100% + 8px)',
+                          left: 0,
+                          width: '320px',
+                          background: 'rgba(255, 255, 255, 0.98)',
+                          backdropFilter: 'blur(12px)',
+                          border: '1px solid rgba(226, 232, 240, 0.9)',
+                          borderRadius: '14px',
+                          boxShadow: '0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                          padding: '12px',
+                          zIndex: 150,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          animation: 'slideDownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', marginBottom: '2px' }}>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Held Bills Stack</span>
+                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{heldBills.length} active</span>
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '220px', overflowY: 'auto' }} className="custom-scrollbar">
+                          {heldBills.map((bill) => {
+                            const sub = bill.rows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+                            let discSub = sub;
+                            const dAmt = parseFloat(bill.discountAmount) || 0;
+                            if (bill.discountType === 'percentage') {
+                                discSub = sub - (sub * (dAmt / 100));
+                            } else if (bill.discountType === 'flat') {
+                                discSub = sub - dAmt;
+                            }
+                            if (discSub < 0) discSub = 0;
+                            const total = Math.round(discSub + (discSub * 0.05));
+                            const validRowsCount = bill.rows.filter(r => r.itemName.trim() !== '').length;
+                            
+                            return (
+                              <div 
+                                key={bill.id}
+                                onClick={() => { resumeBill(bill); setShowHeldDropdown(false); }}
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '8px 10px',
+                                  background: '#f8fafc',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '10px',
+                                  cursor: 'pointer',
+                                  transition: 'all 0.15s ease'
+                                }}
+                                className="dropdown-item-hover"
+                              >
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, marginRight: '8px' }}>
+                                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1e293b' }}>
+                                    {bill.customerName}
+                                  </div>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', gap: '8px' }}>
+                                    <span>{validRowsCount} items</span>
+                                    <span>•</span>
+                                    <span>{bill.time || 'Held'}</span>
+                                  </div>
+                                </div>
+                                
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#d97706', fontFamily: 'monospace' }}>
+                                    Rs.{total.toLocaleString('en-IN')}
+                                  </span>
+                                  <button
+                                    onClick={(e) => deleteHeldBill(bill.id, e)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: '#94a3b8',
+                                      cursor: 'pointer',
+                                      padding: '4px',
+                                      borderRadius: '4px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      transition: 'all 0.15s ease'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                                    onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                                    title="Discard Bill"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                 </div>
               )}
 
@@ -1765,7 +1921,121 @@ const ManualPos = () => {
             font-size: 1rem !important;
           }
         }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleUp {
+          from { transform: scale(0.9) translateY(10px); opacity: 0; }
+          to { transform: scale(1) translateY(0); opacity: 1; }
+        }
       `}</style>
+
+      {/* Custom Premium Alert & Confirm Dialog Modal */}
+      {dialog.isOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 99999,
+          animation: 'fadeIn 0.2s ease-out forwards'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            border: '1px solid #f1f5f9',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
+            width: 'calc(100% - 32px)',
+            maxWidth: '380px',
+            overflow: 'hidden',
+            animation: 'scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards'
+          }}>
+            <div style={{ padding: '24px 20px', textAlign: 'center' }}>
+              {/* Icon Container */}
+              <div style={{
+                width: '52px',
+                height: '52px',
+                borderRadius: '50%',
+                background: dialog.type === 'confirm' ? '#fef3c7' : '#fee2e2',
+                color: dialog.type === 'confirm' ? '#d97706' : '#ef4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px auto'
+              }}>
+                {dialog.type === 'confirm' ? <AlertCircle size={26} /> : <AlertTriangle size={26} />}
+              </div>
+              
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0' }}>
+                {dialog.title}
+              </h3>
+              
+              <p style={{ fontSize: '0.85rem', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+                {dialog.message}
+              </p>
+            </div>
+            
+            <div style={{
+              background: '#f8fafc',
+              padding: '12px 16px',
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'flex-end',
+              borderTop: '1px solid #cbd5e1'
+            }}>
+              {dialog.type === 'confirm' && (
+                <button
+                  onClick={() => {
+                    if (dialog.onCancel) dialog.onCancel();
+                    setDialog(prev => ({ ...prev, isOpen: false }));
+                  }}
+                  className="btn btn-secondary"
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: 'white',
+                    border: '1px solid #cbd5e1',
+                    color: '#475569',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (dialog.onConfirm) dialog.onConfirm();
+                }}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: dialog.type === 'confirm' ? '#d97706' : '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {dialog.type === 'confirm' ? 'Confirm' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
