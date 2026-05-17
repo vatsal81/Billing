@@ -674,86 +674,6 @@ const ManualPos = () => {
         .erp-pill-btn:hover {
           transform: translateY(-1px) !important;
         }
-        
-        /* Mobile Responsive Adjustments */
-        @media (max-width: 768px) {
-          .animate-pos-wrapper {
-            height: auto !important;
-            overflow: visible !important;
-            padding: 8px !important;
-          }
-          .pos-erp-container {
-            height: auto !important;
-            overflow: visible !important;
-            padding: 10px !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .pos-erp-header-top {
-            flex-direction: column !important;
-            align-items: flex-start !important;
-            gap: 12px !important;
-          }
-          .pos-erp-actions {
-            flex-direction: row !important;
-            flex-wrap: wrap !important;
-            gap: 8px !important;
-            width: 100% !important;
-            border-bottom: 1px solid #e2e8f0 !important;
-            padding-bottom: 12px !important;
-          }
-          .pos-action-input {
-            margin-left: 0 !important;
-            border-left: none !important;
-            padding-left: 0 !important;
-            flex: 1 1 130px !important;
-          }
-          .pos-action-input div {
-            width: 100% !important;
-          }
-          .premium-date-input {
-            width: 100% !important;
-          }
-          .premium-select-trigger {
-            width: 100% !important;
-          }
-          
-          /* Grid adjustments */
-          .erp-table-wrapper {
-            max-height: 400px !important;
-            overflow-x: auto !important;
-            border-radius: 8px !important;
-            border: 1px solid #cbd5e1 !important;
-          }
-          
-          /* Footer */
-          .erp-footer {
-            flex-direction: column-reverse !important;
-            gap: 16px !important;
-            align-items: stretch !important;
-            padding: 12px !important;
-          }
-          .erp-footer-actions {
-            flex-direction: column !important;
-            width: 100% !important;
-            gap: 8px !important;
-          }
-          .erp-footer-actions button, .erp-footer-actions .btn {
-            width: 100% !important;
-            justify-content: center !important;
-            padding: 12px !important;
-            display: flex !important;
-            align-items: center !important;
-          }
-          .erp-totals {
-            width: 100% !important;
-            border-left: none !important;
-            padding-left: 0 !important;
-            padding-top: 12px !important;
-            border-top: 1px solid #cbd5e1 !important;
-            grid-template-columns: 1fr 1fr !important;
-          }
-        }
       `}</style>
       {/* Premium Full-Screen Loading Overlay */}
       {loading && (
@@ -1701,53 +1621,148 @@ const ManualPos = () => {
         .modal-content {
           background: white; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden;
         }
-        
-        /* Mobile Responsiveness */
+             /* Mobile Responsiveness & Screen Space Optimization */
         @media (max-width: 768px) {
+          .animate-pos-wrapper {
+            height: auto !important;
+            overflow: visible !important;
+            padding: 4px !important;
+          }
+          .pos-erp-container {
+            height: auto !important;
+            overflow: visible !important;
+            padding: 6px !important;
+            margin: 0 !important;
+            border-radius: 8px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 6px !important;
+          }
+          .pos-erp-header {
+            padding: 8px !important;
+            margin-bottom: 4px !important;
+            border-radius: 6px !important;
+          }
           .pos-erp-header-top {
-            flex-direction: column;
+            flex-direction: column !important;
             align-items: stretch !important;
-            gap: 12px;
+            gap: 6px !important;
+            margin-bottom: 4px !important;
+          }
+          .pos-erp-header-top h2 {
+            font-size: 0.95rem !important;
+            margin-bottom: 2px !important;
           }
           .pos-erp-actions {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 4px !important;
+            width: 100% !important;
+            border-bottom: 1px solid #cbd5e1 !important;
+            padding-bottom: 6px !important;
           }
-          .pos-erp-actions > button, .pos-erp-actions > div {
-             width: 100%;
+          .erp-pill-btn {
+            font-size: 0.72rem !important;
+            padding: 4px 8px !important;
+            border-radius: 6px !important;
           }
-          .pos-erp-actions > div.pos-action-input {
-            grid-column: 1 / -1;
+          .pos-action-input {
+            margin-left: 0 !important;
             border-left: none !important;
             padding-left: 0 !important;
-            margin-left: 0 !important;
-            justify-content: space-between;
+            flex: 1 1 calc(50% - 4px) !important;
+            margin-top: 2px !important;
           }
-          .pos-erp-actions input, .pos-erp-actions select {
-            flex: 1;
+          .pos-action-input div {
+            width: 100% !important;
           }
-          .erp-footer {
-            flex-direction: column-reverse;
-            gap: 16px;
-            align-items: stretch !important;
-            padding: 12px !important;
+          .premium-date-input, .premium-select-trigger {
+            width: 100% !important;
+            padding: 4px 8px !important;
+            font-size: 0.78rem !important;
+            height: 32px !important;
           }
-          .erp-footer-actions {
-            justify-content: space-between;
-            width: 100%;
+          .premium-date-input {
+            padding-left: 26px !important;
           }
-          .erp-footer-actions button {
-            flex: 1;
-            justify-content: center;
-            padding: 12px 6px !important;
-            font-size: 0.85rem !important;
+          
+          /* Tighten Customer selection */
+          .pos-erp-header + div {
+            margin: 2px 0 !important;
           }
-          .erp-totals {
-            width: 100%;
+          .pos-erp-header + div > div {
+            padding: 6px 10px !important;
+            border-radius: 6px !important;
+          }
+          .pos-erp-header + div > div font-size {
+            font-size: 0.78rem !important;
+          }
+          
+          /* Table Grid Compactness & Height Expansion */
+          .erp-table-wrapper {
+            min-height: 280px !important;
+            max-height: 48vh !important;
+            overflow-x: auto !important;
+            border-radius: 6px !important;
+            border: 1px solid #cbd5e1 !important;
+            background: white !important;
           }
           .erp-table th, .erp-table td {
-            white-space: nowrap;
+            padding: 4px 6px !important;
+            font-size: 0.78rem !important;
+            white-space: nowrap !important;
+          }
+          .erp-input {
+            padding: 4px 6px !important;
+            font-size: 0.78rem !important;
+            height: 28px !important;
+            border-radius: 4px !important;
+          }
+          
+          /* Footer & Totals Section at Bottom */
+          .erp-footer {
+            flex-direction: column-reverse !important;
+            gap: 8px !important;
+            align-items: stretch !important;
+            padding: 8px 10px !important;
+            border-radius: 6px !important;
+            background: #f8fafc !important;
+            margin-top: 4px !important;
+          }
+          .erp-footer-actions {
+            flex-direction: row !important;
+            width: 100% !important;
+            gap: 6px !important;
+            display: flex !important;
+          }
+          .erp-footer-actions button, .erp-footer-actions .btn {
+            flex: 1 !important;
+            width: auto !important;
+            justify-content: center !important;
+            padding: 8px 2px !important;
+            display: flex !important;
+            align-items: center !important;
+            font-size: 0.75rem !important;
+            white-space: nowrap !important;
+            gap: 4px !important;
+            height: 34px !important;
+          }
+          .erp-totals {
+            width: 100% !important;
+            border-left: none !important;
+            padding-left: 0 !important;
+            padding-top: 6px !important;
+            border-top: 1px solid #cbd5e1 !important;
+            grid-template-columns: 1fr auto !important;
+            gap: 2px 16px !important;
+            font-size: 0.78rem !important;
+          }
+          .erp-totals span[style*="font-size: 1.1rem"] {
+            font-size: 0.95rem !important;
+          }
+          .erp-totals span[style*="font-size: 1.2rem"] {
+            font-size: 1rem !important;
           }
         }
       `}</style>
