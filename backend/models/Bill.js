@@ -8,6 +8,7 @@ const billSchema = mongoose.Schema({
         price: Number,
         hsnCode: String,
         quantity: Number,
+        meter: Number, // New field for fabric cut length
         total: Number
     }],
     totalAmount: { type: Number, required: true },
@@ -24,7 +25,14 @@ const billSchema = mongoose.Schema({
 
     customerPhone: { type: String },
     paymentMode: { type: String, enum: ['cash', 'online', 'credit'], default: 'cash' },
+    
+    // New ERP features
+    discountAmount: { type: Number, default: 0 },
+    discountType: { type: String, enum: ['percentage', 'flat', 'none'], default: 'none' },
+    billType: { type: String, enum: ['sale', 'return'], default: 'sale' },
+
     status: { type: String, default: 'active' }, 
+    uniqueInvoiceId: { type: String, unique: true, sparse: true }
 }, { timestamps: true });
 
 billSchema.index({ serialNumber: -1 });

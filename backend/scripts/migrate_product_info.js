@@ -7,23 +7,40 @@ dotenv.config();
 
 const migrate = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/shreehari');
+        await mongoose.connect(process.env.MONGO_URI);
         console.log('Connected to MongoDB');
 
         const products = await Product.find();
         console.log(`Processing ${products.length} products...`);
 
+        // Fetch all bills to search locally (more efficient than many queries)
+        const allBills = await PurchaseBill.find().sort({ billDate: -1 });
+        console.log(`Searching through ${allBills.length} purchase bills...`);
+
         for (const product of products) {
-            // Find the latest purchase bill containing this product
-            const latestBill = await PurchaseBill.findOne({
-                'items.name': product.name
-            }).sort({ billDate: -1 });
+            const pName = (product.name || "").trim().toLowerCase();
+            const pNameEng = (product.nameEnglish || "").trim().toLowerCase();
+
+            // Find latest bill where any item name matches (case-insensitive, trimmed)
+            const latestBill = allBills.find(bill =>
+                bill.items.some(item => {
+                    const itemName = (item.name || "").trim().toLowerCase();
+                    const itemNameEng = (item.nameEnglish || "").trim().toLowerCase();
+
+                    return (pName && itemName === pName) ||
+                        (pNameEng && itemNameEng === pNameEng) ||
+                        (pNameEng && itemName === pNameEng) ||
+                        (pName && itemNameEng === pName);
+                })
+            );
 
             if (latestBill) {
                 product.lastSupplier = latestBill.supplierName;
                 product.lastInvoice = latestBill.billNumber;
                 await product.save();
-                console.log(`Updated ${product.name} with ${latestBill.supplierName} (${latestBill.billNumber})`);
+                console.log(`[FOUND] Updated ${product.nameEnglish || product.name} -> ${latestBill.supplierName}`);
+            } else {
+                console.log(`[MISSING] No bill found for: ${product.nameEnglish || product.name}`);
             }
         }
 

@@ -78,7 +78,10 @@ export default function PrintableBill({ bill }) {
           {/* Top Header */}
           <div style={{display: 'flex', borderBottom: '2px solid #000'}}>
             <div style={{width: '35%', borderRight: '2px solid #000', padding: '8px', fontSize: '13px', lineHeight: '1.4'}}>
-              <div style={{textAlign: 'center', fontWeight: 'bold', marginBottom: '8px'}}>{t('taxInvoice')}<br/>{t('cashDebit')}</div>
+              <div style={{textAlign: 'center', fontWeight: 'bold', marginBottom: '8px'}}>
+                {bill.billType === 'return' ? 'CREDIT NOTE / RETURN' : t('taxInvoice')}<br/>
+                {bill.paymentMode === 'online' ? 'ONLINE / GPAY' : (bill.paymentMode === 'credit' ? 'UDHAAR / CREDIT' : 'CASH')}
+              </div>
               <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
                 <span>{t('original')}</span>
                 <span>{t('duplicate')}</span>
@@ -135,8 +138,9 @@ export default function PrintableBill({ bill }) {
           <table style={{width: '100%', borderCollapse: 'collapse', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column'}}>
             <thead>
               <tr style={{borderBottom: '2px solid #000', fontSize: '14px', fontWeight: 'bold', display: 'flex', width: '100%'}}>
-                <th style={{padding: '8px', borderRight: '1px solid #000', width: '45%'}}>{t('tableCol1')}</th>
+                <th style={{padding: '8px', borderRight: '1px solid #000', width: '35%'}}>{t('tableCol1')}</th>
                 <th style={{padding: '8px', borderRight: '1px solid #000', width: '15%'}}>{t('tableCol2')}</th>
+                <th style={{padding: '8px', borderRight: '1px solid #000', width: '10%'}}>Mtr</th>
                 <th style={{padding: '8px', borderRight: '1px solid #000', width: '10%'}}>{t('tableCol3')}</th>
                 <th style={{padding: '8px', borderRight: '2px solid #000', width: '12%'}}>{t('tableCol4')}</th>
                 <th style={{padding: '8px', width: '18%'}}>{t('tableCol5')}</th>
@@ -145,19 +149,21 @@ export default function PrintableBill({ bill }) {
             <tbody style={{flexGrow: 1, display: 'flex', flexDirection: 'column', width: '100%'}}>
               {bill.items.map((item, idx) => (
                 <tr key={idx} style={{display: 'flex', width: '100%', fontSize: '16px', fontFamily: '"Kalam", cursive', color: '#0f3c88'}}>
-                  <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '45%', textAlign: 'left'}}>{item.name}</td>
+                  <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '35%', textAlign: 'left'}}>{item.name}</td>
                   <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '15%', textAlign: 'center'}}>{item.hsnCode || ''}</td>
+                  <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '10%', textAlign: 'center'}}>{item.meter || '-'}</td>
                   <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '10%'}}>{item.quantity}</td>
                   <td style={{padding: '6px 8px', borderRight: '2px solid #000', width: '12%', textAlign: 'right'}}>{item.price.toFixed(0)}</td>
-                  <td style={{padding: '6px 8px', width: '18%', textAlign: 'right'}}>{(item.price * item.quantity).toFixed(0)}</td>
+                  <td style={{padding: '6px 8px', width: '18%', textAlign: 'right'}}>{(item.price * item.quantity * (item.meter || 1)).toFixed(0)}</td>
                 </tr>
               ))}
               
               {/* Filler rows to stretch the table */}
               {Array.from({length: Math.max(1, 8 - bill.items.length)}).map((_, i) => (
                  <tr key={`empty-${i}`} style={{display: 'flex', width: '100%', flexGrow: i === 0 ? 1 : 0}}>
-                   <td style={{padding: '12px', borderRight: '1px solid #000', width: '45%'}}>&nbsp;</td>
+                   <td style={{padding: '12px', borderRight: '1px solid #000', width: '35%'}}>&nbsp;</td>
                    <td style={{borderRight: '1px solid #000', width: '15%'}}></td>
+                   <td style={{borderRight: '1px solid #000', width: '10%'}}></td>
                    <td style={{borderRight: '1px solid #000', width: '10%'}}></td>
                    <td style={{borderRight: '2px solid #000', width: '12%'}}></td>
                    <td style={{width: '18%'}}></td>
@@ -202,7 +208,7 @@ export default function PrintableBill({ bill }) {
               <div style={{width: '32%'}}>
                 <div style={{display: 'flex', borderBottom: '1px solid #000', padding: '4px 8px'}}>
                   <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('subtotal')}</span>
-                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{bill.subTotal?.toFixed(2) || (finalTotal * 0.9523).toFixed(2)}</span>
+                  <span style={{width: '35%', textAlign: 'right', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px'}}>{bill.totalAmount?.toFixed(2) || (finalTotal * 0.9523).toFixed(2)}</span>
                 </div>
                 <div style={{display: 'flex', borderBottom: '1px solid #000', padding: '4px 8px'}}>
                   <span style={{width: '65%', fontWeight: 'bold', fontSize: '13px'}}>{t('cgst')}</span>

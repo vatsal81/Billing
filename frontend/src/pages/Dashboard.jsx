@@ -17,6 +17,7 @@ export default function Dashboard() {
 
   const [customerPhone, setCustomerPhone] = useState('');
   const [paymentMode, setPaymentMode] = useState('cash');
+  const [billDate, setBillDate] = useState(new Date().toISOString().split('T')[0]);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,6 +73,11 @@ export default function Dashboard() {
     e.preventDefault();
     if (!targetAmount || targetAmount <= 0) return;
     
+    if (!customerId && !customerName) {
+      setError("Please select or add a customer to generate a bill.");
+      return;
+    }
+    
     try {
       setLoading(true);
       setError(null);
@@ -85,7 +91,8 @@ export default function Dashboard() {
         customerName,
         customerAddress,
         customerPhone,
-        paymentMode
+        paymentMode,
+        billDate
       });
 
       setBill(generatedBill);
@@ -283,8 +290,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="pos-form-row">
-              <div className="input-group" style={{flex: 1, marginBottom: 0}}>
+            <div className="pos-form-row form-grid" style={{ gap: '16px', gridTemplateColumns: '1fr 1fr' }}>
+              <div className="input-group" style={{marginBottom: 0}}>
                 <label className="input-label">Payment Mode</label>
                 <select 
                   className="input-field" 
@@ -295,6 +302,15 @@ export default function Dashboard() {
                   <option value="online">Online / UPI</option>
                   <option value="credit">Credit (Udhaar)</option>
                 </select>
+              </div>
+              <div className="input-group" style={{marginBottom: 0}}>
+                <label className="input-label">Bill Date</label>
+                <input 
+                  type="date"
+                  className="input-field" 
+                  value={billDate} 
+                  onChange={(e) => setBillDate(e.target.value)}
+                />
               </div>
             </div>
 

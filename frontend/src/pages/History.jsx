@@ -516,10 +516,16 @@ export default function History() {
                         <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '800', color: 'var(--text-primary)', textDecoration: isVoid ? 'line-through' : 'none', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                           {bill.customerName || <span style={{fontStyle: 'italic'}}>{t('walkInCash')}</span>}
                           {isVoid && <span style={{color: 'var(--danger)', fontSize: '0.75rem', marginLeft: '8px', textDecoration: 'none', padding: '2px 8px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '12px'}}>VOID</span>}
+                          {bill.billType === 'return' && !isVoid && <span style={{color: '#ef4444', fontSize: '0.75rem', marginLeft: '8px', padding: '2px 8px', background: '#fee2e2', borderRadius: '12px'}}>RETURN</span>}
                         </h4>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                           Inv #{invNumber} • {dateObj.toLocaleDateString('en-IN')} {dateObj.toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}
                         </span>
+                        {bill.uniqueInvoiceId && (
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '4px', alignSelf: 'flex-start', marginTop: '2px' }}>
+                            {bill.uniqueInvoiceId}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -543,8 +549,8 @@ export default function History() {
 
                     {/* Right: Amount */}
                     <div className="receipt-right" style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '900', letterSpacing: '-0.5px', color: isVoid ? 'var(--text-secondary)' : 'var(--success)' }}>
-                        Rs.{(bill.actualTotal || 0).toLocaleString('en-IN')}
+                      <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '900', letterSpacing: '-0.5px', color: isVoid ? 'var(--text-secondary)' : (bill.billType === 'return' ? '#ef4444' : 'var(--success)') }}>
+                        {bill.billType === 'return' ? '-' : ''}Rs.{(bill.actualTotal || 0).toLocaleString('en-IN')}
                       </h3>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
                         Incl. ₹{totalTaxes.toFixed(2)} Tax

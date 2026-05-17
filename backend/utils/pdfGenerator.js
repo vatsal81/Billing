@@ -140,7 +140,10 @@ const buildSingleBillHTML = (bill, settings = {}) => {
             <div class="bill-inner-border">
                 <div class="header-section">
                 <div class="header-left">
-                    <div style="text-align: center; font-weight: bold; margin-bottom: 8px;">TAX INVOICE<br/>CASH / DEBIT</div>
+                    <div style="text-align: center; font-weight: bold; margin-bottom: 8px;">
+                        ${bill.billType === 'return' ? 'CREDIT NOTE / RETURN' : 'TAX INVOICE'}<br/>
+                        ${bill.paymentMode === 'online' ? 'ONLINE / GPAY' : (bill.paymentMode === 'credit' ? 'UDHAAR / CREDIT' : 'CASH')}
+                    </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                         <span>Original</span>
                         <span>Duplicate</span>

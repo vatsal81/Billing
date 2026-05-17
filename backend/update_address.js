@@ -16,7 +16,7 @@ const updateSettings = async () => {
         await Settings.findOneAndUpdate(
             {}, 
             updates, 
-            { upsert: true }
+            { upsert: true, returnDocument: 'after' }
         );
         
         console.log('All settings updated successfully!');

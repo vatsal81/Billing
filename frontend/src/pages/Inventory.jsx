@@ -95,7 +95,7 @@ export default function Inventory() {
   };
 
   useEffect(() => {
-    loadProducts(true);
+    loadProducts(false);
     loadSuppliers();
   }, []);
 

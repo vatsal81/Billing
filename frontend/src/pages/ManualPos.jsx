@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { fetchProducts, generateManualBill, searchCustomers, createCustomer, getFrontendUrl } from '../utils/api';
-import { ShoppingCart, User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { fetchProducts, generateManualBill, searchCustomers, createCustomer, getFrontendUrl, createProduct } from '../utils/api';
+import { User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save, Keyboard, UserPlus, RefreshCcw, PauseCircle, PlayCircle, ScanLine, Tag, Coins, Smartphone, CreditCard, Calendar, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import PrintableBill from '../components/PrintableBill';
 import '../index.css';
@@ -8,37 +8,63 @@ import '../index.css';
 const ManualPos = () => {
   const { t } = useLanguage();
   const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
+  
+  // Customer State
   const [customerId, setCustomerId] = useState(null);
   const [customerName, setCustomerName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerBalance, setCustomerBalance] = useState(0); 
   const [paymentMode, setPaymentMode] = useState('cash');
-  const [bill, setBill] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [billDate, setBillDate] = useState(new Date().toLocaleDateString('en-CA')); // YYYY-MM-DD
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  
   const [showAddModal, setShowAddModal] = useState(false);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: '', address: '', phone: '' });
-  const [animatingItems, setAnimatingItems] = useState({});
+  const [activeCustomerIndex, setActiveCustomerIndex] = useState(-1);
+
+  // ERP Features State
+  const [discountAmount, setDiscountAmount] = useState(''); // Feature 1
+  const [discountType, setDiscountType] = useState('none'); // Feature 1
+  const [billType, setBillType] = useState('sale'); // Feature 6
+  const [barcodeMode, setBarcodeMode] = useState(false); // Feature 5
+  const [heldBills, setHeldBills] = useState([]); // Feature 4
+  const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
+  const [showDiscountDropdown, setShowDiscountDropdown] = useState(false);
+  
+  // Quick Add State
+  const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
+  const [quickAddData, setQuickAddData] = useState({ name: '', price: '', hsnCode: '' });
+  const [savingProduct, setSavingProduct] = useState(false);
+
+  // Grid State
+  const getEmptyRow = () => ({ id: Date.now() + Math.random(), productId: null, itemName: '', hsnCode: '', meter: '', quantity: 1, rate: '', amount: 0, stockAmount: 0 });
+  const [rows, setRows] = useState([getEmptyRow()]);
+  const [activeRowId, setActiveRowId] = useState(null);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [activeDropdownIndex, setActiveDropdownIndex] = useState(-1);
+
+  // App State
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [bill, setBill] = useState(null);
   const [isSharingProcess, setIsSharingProcess] = useState(false);
   const [sharingBillNo, setSharingBillNo] = useState('');
-
-  const handleAddClick = (p, e) => {
-    if (e) e.stopPropagation();
-    addToCart(p);
-    setAnimatingItems(prev => ({ ...prev, [p._id]: true }));
-    setTimeout(() => {
-      setAnimatingItems(prev => ({ ...prev, [p._id]: false }));
-    }, 500); // Checkmark displays for 500ms
-  };
+  
+  const autocompleteRef = useRef(null);
 
   useEffect(() => {
     loadProducts();
+    // Load held bills
+    const savedHeld = localStorage.getItem('erp_held_bills');
+    if (savedHeld) {
+        try {
+            setHeldBills(JSON.parse(savedHeld));
+        } catch(e) {}
+    }
   }, []);
 
   const loadProducts = async () => {
@@ -50,117 +76,59 @@ const ManualPos = () => {
     }
   };
 
-  const addToCart = (product) => {
-    const existing = cart.find(item => item.product === product._id);
-    if (existing) {
-      setCart(cart.map(item =>
-        item.product === product._id ? { ...item, quantity: item.quantity + 1 } : item
-      ));
-    } else {
-      const fullName = product.name;
-      setCart([...cart, { product: product._id, name: fullName, price: product.price, hsnCode: product.hsnCode, quantity: 1 }]);
-    }
-  };
-
-  const removeFromCart = (id) => {
-    setCart(cart.filter(item => item.product !== id));
-  };
-
-  const updateQuantity = (id, q) => {
-    if (q < 1) return;
-    setCart(cart.map(item => item.product === id ? { ...item, quantity: q } : item));
-  };
-
-  const calculateTotal = () => {
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const tax = subtotal * 0.05; // 5% GST
-    return Math.round(subtotal + tax);
-  };
-
-  const handleCheckout = async () => {
-    if (cart.length === 0) return alert("Cart is empty");
-    try {
-      setLoading(true);
-      
-      // Artificial delay to show the premium processing animation
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      
+  const holdCurrentBill = () => {
+      // Feature 4: Hold Bill
+      if (rows.length === 1 && !rows[0].itemName) return alert("Nothing to hold");
       const billData = {
-        items: cart,
-        customerId,
-        customerName,
-        customerAddress,
-        customerPhone,
-        paymentMode
+          id: Date.now(),
+          time: new Date().toLocaleTimeString(),
+          customerName: customerName || 'Walk-in',
+          customerId, customerAddress, customerPhone, customerBalance,
+          paymentMode, billType, discountAmount, discountType, billDate,
+          rows
       };
-      const res = await generateManualBill(billData);
-      setBill(res);
-      setLoading(false);
-    } catch (e) {
-      setError(e.response?.data?.message || e.message);
-      setLoading(false);
-    }
+      const updatedHeld = [...heldBills, billData];
+      setHeldBills(updatedHeld);
+      localStorage.setItem('erp_held_bills', JSON.stringify(updatedHeld));
+      clearForm();
   };
 
-  const handleWhatsApp = async (bill) => {
-    if (!customerPhone) {
-        alert("No phone number recorded for this customer.");
-        return;
-    }
-
-    const invNumber = bill.serialNumber 
-      ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') 
-      : bill._id.substring(bill._id.length - 4).toUpperCase();
-
-    setSharingBillNo(invNumber);
-    setIsSharingProcess(true);
-    
-    // Professional 2.5s delay for WhatsApp animation
-    await new Promise(resolve => setTimeout(resolve, 2500));
-
-    const viewLink = `${getFrontendUrl()}/view-bill/${bill._id}`;
-    
-    // Determine Customer Type
-    let type = 'FIRST_TIME';
-    const totalAmount = bill.actualTotal || 0;
-    if (totalAmount >= 18000) type = 'VIP';
-    // Note: In ManualPos, we might not have the full customer object with totalSpent easily accessible in the same way, 
-    // but we can check if customerId was provided to assume they are at least known.
-    else if (customerId) type = 'REGULAR';
-
-    let emotionalOpening = 'It Is A Pleasure To Welcome You To Our Brand Family. We Are Honored To Have Been Part Of Your First Experience With Us.';
-    let quote = 'Elegance Is The Only Beauty That Never Fades.';
-    let closing = 'We Look Forward To Curating Your Next Masterpiece.';
-
-    if (type === 'VIP') {
-      emotionalOpening = 'Your Exceptional Taste And Loyalty Place You Among Our Most Valued Guests. It Is A Privilege To Serve Someone With Your Discerning Style.';
-      quote = 'Luxury Must Be Comfortable, Otherwise It Is Not Luxury.';
-      closing = 'We Are Dedicated To Providing You With The Absolute Best In Quality And Service.';
-    } else if (type === 'REGULAR') {
-      emotionalOpening = 'It Is A Joy To See You Again. We Deeply Value Your Continued Trust And The Relationship We Have Built Together.';
-      quote = 'Fashion Fades, Only Style Remains The Same.';
-      closing = 'May Your New Attire Bring You Endless Confidence And Joy.';
-    }
-
-    const text = `*SHREE HARI DRESSES & CUTPIECE*\n-----------------------------------------------------------\n\nDear *${customerName}*,\n\n${emotionalOpening}\n\n*PURCHASE DETAILS*\n-----------------------------------------------------------\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : Rs.${(totalAmount || 0).toLocaleString('en-IN')}\n-----------------------------------------------------------\n\nView Your Invoice:\n${viewLink}\n\n"${quote}"\n\n${closing}\n\nShree Hari Dresses & Cutpiece\nVisit Us Again - Your Next Favorite Look Is Waiting\n-----------------------------------------------------------`;
-
-    const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
-    window.open(waUrl, '_blank');
-    
-    setIsSharingProcess(false);
-    setSharingBillNo('');
+  const resumeBill = (heldBill) => {
+      setRows(heldBill.rows);
+      setCustomerId(heldBill.customerId);
+      setCustomerName(heldBill.customerName);
+      setCustomerAddress(heldBill.customerAddress);
+      setCustomerPhone(heldBill.customerPhone);
+      setCustomerBalance(heldBill.customerBalance || 0);
+      setPaymentMode(heldBill.paymentMode);
+      setBillType(heldBill.billType);
+      setDiscountAmount(heldBill.discountAmount);
+      setDiscountType(heldBill.discountType);
+      if (heldBill.billDate) setBillDate(heldBill.billDate);
+      
+      const updatedHeld = heldBills.filter(b => b.id !== heldBill.id);
+      setHeldBills(updatedHeld);
+      localStorage.setItem('erp_held_bills', JSON.stringify(updatedHeld));
   };
 
-  const clearForm = () => {
-    setBill(null);
-    setCart([]);
-    setCustomerId(null);
-    setCustomerName('');
-    setCustomerAddress('');
-    setCustomerPhone('');
-    setPaymentMode('cash');
-  };
+  // Close autocomplete on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target)) {
+        setActiveRowId(null);
+      }
+      if (!event.target.closest('.payment-dropdown-container')) {
+        setShowPaymentDropdown(false);
+      }
+      if (!event.target.closest('.discount-dropdown-container')) {
+        setShowDiscountDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
+  // Customer logic
   useEffect(() => {
     if (searchTerm.length > 1 && showSuggestions) {
       const fetchC = async () => {
@@ -181,14 +149,10 @@ const ManualPos = () => {
     setCustomerName(c.name);
     setCustomerAddress(c.address || '');
     if (c.phone) setCustomerPhone(c.phone);
+    setCustomerBalance(c.balance || 0); // Feature 3
     setSuggestions([]);
     setShowSuggestions(false);
-  };
-
-  const handleNewCustomer = () => {
-    setShowAddModal(true);
-    setSuggestions([]);
-    setShowSuggestions(false);
+    setSearchTerm('');
   };
 
   const handleSaveCustomer = async (e) => {
@@ -206,296 +170,513 @@ const ManualPos = () => {
     }
   };
 
+  const handleSaveQuickProduct = async (e) => {
+    e.preventDefault();
+    setSavingProduct(true);
+    try {
+      const pData = {
+          name: quickAddData.name,
+          nameEnglish: quickAddData.name,
+          price: parseFloat(quickAddData.price),
+          hsnCode: quickAddData.hsnCode,
+          stockAmount: 100 // default stock
+      };
+      const created = await createProduct(pData);
+      setProducts(prev => [...prev, created]);
+      
+      // Auto select it in the active row
+      if (activeRowId) {
+          handleProductSelect(activeRowId, created, document.querySelector(`.erp-table input[value="${quickAddData.name}"]`));
+      }
+      
+      setShowQuickAddProduct(false);
+      setQuickAddData({ name: '', price: '', hsnCode: '' });
+    } catch (err) {
+      alert('Failed to save product');
+    } finally {
+      setSavingProduct(false);
+    }
+  };
+
+  const clearCustomer = () => {
+    setCustomerId(null);
+    setCustomerName('');
+    setCustomerAddress('');
+    setCustomerPhone('');
+    setCustomerBalance(0);
+  };
+
+  // Grid Logic
+  const handleRowChange = (id, field, value) => {
+    if (field === 'itemName') {
+      setActiveDropdownIndex(-1);
+    }
+    
+    setRows(prevRows => {
+      const newRows = [...prevRows];
+      const rowIndex = newRows.findIndex(r => r.id === id);
+      if (rowIndex === -1) return prevRows;
+      
+      const row = { ...newRows[rowIndex] };
+      
+      if (field === 'itemName') {
+        row.itemName = value;
+        row.productId = null;
+        row.stockAmount = 0;
+      } else if (field === 'quantity' || field === 'rate' || field === 'meter') {
+        const val = parseFloat(value);
+        row[field] = isNaN(val) ? '' : val;
+        
+        const qty = parseFloat(row.quantity) || 0;
+        const rate = parseFloat(row.rate) || 0;
+        const meter = row.meter === '' ? 1 : (parseFloat(row.meter) || 0); // Default multiplier is 1 if empty
+        row.amount = Math.round(qty * rate * meter * 100) / 100;
+      } else {
+        row[field] = value;
+      }
+      
+      newRows[rowIndex] = row;
+      return newRows;
+    });
+  };
+
+  const handleProductSelect = (rowId, product, inputElement) => {
+    setRows(prevRows => {
+      const newRows = [...prevRows];
+      const rowIndex = newRows.findIndex(r => r.id === rowId);
+      if (rowIndex === -1) return prevRows;
+      
+      const rate = parseFloat(product.price) || 0;
+      const qty = parseFloat(newRows[rowIndex].quantity) || 1;
+      
+      newRows[rowIndex] = {
+        ...newRows[rowIndex],
+        productId: product._id,
+        itemName: product.nameEnglish || product.name,
+        hsnCode: product.hsnCode || '',
+        rate: rate,
+        quantity: qty,
+        amount: Math.round(qty * rate * 100) / 100,
+        stockAmount: product.stockAmount || product.currentStock || 0 // Feature 2
+      };
+      
+      if (rowIndex === newRows.length - 1) {
+        newRows.push(getEmptyRow());
+      }
+      
+      return newRows;
+    });
+    setActiveRowId(null);
+    setActiveDropdownIndex(-1);
+    
+    if (inputElement && !barcodeMode) {
+        setTimeout(() => moveFocus(inputElement, 'RIGHT'), 10);
+    }
+  };
+
+  const moveFocus = (currentElement, direction) => {
+      if (!currentElement) return;
+      
+      const currentTd = currentElement.closest('td');
+      const currentRow = currentElement.closest('tr');
+      if (!currentTd || !currentRow) return;
+
+      const allRows = Array.from(currentRow.parentNode.children);
+      const rowIndex = allRows.indexOf(currentRow);
+      const allCells = Array.from(currentRow.children);
+      const colIndex = allCells.indexOf(currentTd);
+
+      let targetInput = null;
+
+      if (direction === 'UP' && rowIndex > 0) {
+        const targetRow = allRows[rowIndex - 1];
+        targetInput = targetRow.children[colIndex].querySelector('input:not([readOnly])');
+      } else if (direction === 'DOWN' && rowIndex < allRows.length - 1) {
+        const targetRow = allRows[rowIndex + 1];
+        targetInput = targetRow.children[colIndex].querySelector('input:not([readOnly])');
+      } else if (direction === 'LEFT') {
+        const inputs = Array.from(document.querySelectorAll('.erp-table input:not([readOnly])'));
+        const idx = inputs.indexOf(currentElement);
+        if (idx > 0) targetInput = inputs[idx - 1];
+      } else if (direction === 'RIGHT') {
+        const inputs = Array.from(document.querySelectorAll('.erp-table input:not([readOnly])'));
+        const idx = inputs.indexOf(currentElement);
+        if (idx > -1 && idx < inputs.length - 1) targetInput = inputs[idx + 1];
+      }
+
+      if (targetInput) {
+        targetInput.focus();
+        if (targetInput.type === 'text' || targetInput.type === 'number') {
+          setTimeout(() => targetInput.select(), 10);
+        }
+      }
+  };
+
+  const handleKeyDown = (e, rowId, field, rowIndex) => {
+    const suggestionsList = getFilteredProducts(productSearchTerm);
+    const isDropdownOpen = activeRowId === rowId && suggestionsList.length > 0;
+
+    if (field === 'itemName') {
+      if (e.key === 'Enter') {
+          e.preventDefault();
+          if (isDropdownOpen) {
+              if (activeDropdownIndex >= 0 && activeDropdownIndex < suggestionsList.length) {
+                handleProductSelect(rowId, suggestionsList[activeDropdownIndex], e.target);
+              } else if (suggestionsList.length > 0) {
+                handleProductSelect(rowId, suggestionsList[0], e.target);
+              }
+              
+              // Feature 5: Barcode Mode
+              if (barcodeMode && suggestionsList.length > 0) {
+                  setTimeout(() => {
+                      const nextRowInputs = document.querySelectorAll('.erp-table tr');
+                      if (nextRowInputs[rowIndex + 2]) { // +2 because header is index 0
+                          const nextItemInput = nextRowInputs[rowIndex + 2].querySelector('input[placeholder*="Type"]');
+                          if (nextItemInput) nextItemInput.focus();
+                      }
+                  }, 50);
+              }
+          } else {
+             setTimeout(() => moveFocus(e.target, 'RIGHT'), 10);
+          }
+          return;
+      }
+      
+      if (isDropdownOpen) {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActiveDropdownIndex(prev => {
+               const nextIdx = prev < suggestionsList.length - 1 ? prev + 1 : prev;
+               setTimeout(() => {
+                  const el = document.getElementById(`dropdown-item-${nextIdx}`);
+                  if (el) el.scrollIntoView({ block: 'nearest' });
+               }, 10);
+               return nextIdx;
+            });
+            return;
+          }
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActiveDropdownIndex(prev => {
+               const nextIdx = prev > 0 ? prev - 1 : 0;
+               setTimeout(() => {
+                  const el = document.getElementById(`dropdown-item-${nextIdx}`);
+                  if (el) el.scrollIntoView({ block: 'nearest' });
+               }, 10);
+               return nextIdx;
+            });
+            return;
+          }
+      }
+    }
+
+    if (!isDropdownOpen) {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveFocus(e.target, 'UP');
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveFocus(e.target, 'DOWN');
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        if (e.target.type === 'number' || e.target.selectionStart === 0) {
+           e.preventDefault();
+           moveFocus(e.target, 'LEFT');
+           return;
+        }
+      }
+      if (e.key === 'ArrowRight') {
+        if (e.target.type === 'number' || e.target.selectionEnd === e.target.value.length) {
+           e.preventDefault();
+           moveFocus(e.target, 'RIGHT');
+           return;
+        }
+      }
+    }
+
+    if (e.key === 'Enter' || e.key === 'Tab') {
+       if (field === 'rate' && rowIndex === rows.length - 1) {
+          if (rows[rowIndex].itemName || rows[rowIndex].amount > 0) {
+             setRows(prev => {
+                const newRows = [...prev, getEmptyRow()];
+                setTimeout(() => moveFocus(e.target, 'RIGHT'), 50);
+                return newRows;
+             });
+             if (e.key === 'Enter') e.preventDefault();
+             return;
+          }
+       }
+       
+       if (e.key === 'Enter') {
+         e.preventDefault();
+         setTimeout(() => moveFocus(e.target, 'RIGHT'), 10);
+       }
+    }
+    // Shortcut to save
+    if (e.key === 'F2') {
+       e.preventDefault();
+       handleCheckout();
+    }
+  };
+
+  const removeRow = (id) => {
+    setRows(prev => {
+        if (prev.length === 1) return [getEmptyRow()];
+        return prev.filter(r => r.id !== id);
+    });
+  };
+
+  // Calculations
+  const calculateSubtotal = () => {
+    return rows.reduce((sum, row) => sum + (parseFloat(row.amount) || 0), 0);
+  };
+  
+  const rawSubtotal = calculateSubtotal();
+  let discountedSubtotal = rawSubtotal;
+  
+  // Apply Discount
+  const dAmount = parseFloat(discountAmount) || 0;
+  if (discountType === 'percentage') {
+      discountedSubtotal = rawSubtotal - (rawSubtotal * (dAmount / 100));
+  } else if (discountType === 'flat') {
+      discountedSubtotal = rawSubtotal - dAmount;
+  }
+  if (discountedSubtotal < 0) discountedSubtotal = 0;
+
+  const taxAmount = discountedSubtotal * 0.05; // 5% GST
+  const grandTotal = Math.round(discountedSubtotal + taxAmount);
+
+  const handleCheckout = async () => {
+    if (!customerId && !customerName) {
+        return alert("Please select or add a customer before generating the bill.");
+    }
+    
+    const validItems = rows.filter(r => r.itemName.trim() !== '' && (parseFloat(r.rate) > 0));
+    
+    if (validItems.length === 0) return alert("Please add at least one valid item to the bill.");
+    
+    try {
+      setLoading(true);
+      
+      // Artificial delay to show the premium processing animation just like Smart Bill
+      await new Promise(resolve => setTimeout(resolve, 3200));
+      
+      const billData = {
+        items: validItems.map(r => ({ 
+          product: r.productId || null,
+          name: r.itemName, 
+          price: parseFloat(r.rate) || 0, 
+          hsnCode: r.hsnCode || '', 
+          quantity: parseFloat(r.quantity) || 1,
+          meter: r.meter ? parseFloat(r.meter) : undefined
+        })),
+        customerId,
+        customerName: customerName || 'Cash Sale',
+        customerAddress,
+        customerPhone,
+        paymentMode,
+        discountAmount: dAmount,
+        discountType,
+        billType,
+        billDate
+      };
+      
+      const res = await generateManualBill(billData);
+      setBill(res);
+      setLoading(false);
+      
+      // Update local stock for used items immediately to avoid waiting for reload
+      if (res && res.items) {
+         setProducts(prev => prev.map(p => {
+             const soldItem = res.items.find(i => i.product === p._id);
+             if (soldItem) {
+                 const diff = billType === 'return' ? soldItem.quantity : -soldItem.quantity;
+                 return { ...p, stockAmount: p.stockAmount + diff, currentStock: p.stockAmount + diff };
+             }
+             return p;
+         }));
+      }
+
+    } catch (e) {
+      setError(e.response?.data?.message || e.message);
+      setLoading(false);
+    }
+  };
+
+  const clearForm = () => {
+    setBill(null);
+    setRows([getEmptyRow()]);
+    clearCustomer();
+    setPaymentMode('cash');
+    setDiscountAmount('');
+    setDiscountType('none');
+    setBillType('sale');
+    setBillDate(new Date().toLocaleDateString('en-CA'));
+  };
+
+  const handleWhatsApp = async (bill) => {
+    if (!customerPhone) {
+        alert("No phone number recorded for this customer.");
+        return;
+    }
+
+    const invNumber = bill.serialNumber 
+      ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') 
+      : bill._id.substring(bill._id.length - 4).toUpperCase();
+
+    setSharingBillNo(invNumber);
+    setIsSharingProcess(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const viewLink = `${getFrontendUrl()}/view-bill/${bill._id}`;
+    const totalAmount = bill.actualTotal || 0;
+    
+    const text = `*SHREE HARI DRESSES & CUTPIECE*\n-----------------------------------------------------------\n\nDear *${bill.customerName || 'Customer'}*,\n\nThank you for shopping with us!\n\n*PURCHASE DETAILS*\n-----------------------------------------------------------\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : Rs.${totalAmount.toLocaleString('en-IN')}\n-----------------------------------------------------------\n\nView Your Invoice:\n${viewLink}\n\nVisit Us Again!\n-----------------------------------------------------------`;
+
+    const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, '_blank');
+    
+    setIsSharingProcess(false);
+    setSharingBillNo('');
+  };
+
+  const getFilteredProducts = (searchTerm) => {
+    if (!searchTerm) return products.slice(0, 50);
+    const term = searchTerm.toLowerCase();
+    return products.filter(p => 
+      (p.nameEnglish && p.nameEnglish.toLowerCase().includes(term)) || 
+      (p.name && p.name.toLowerCase().includes(term)) ||
+      (p.hsnCode && p.hsnCode.toLowerCase().includes(term))
+    ).slice(0, 50);
+  };
+
   return (
-    <div className="animate-fade-in no-print" style={{ 
+    <div className="animate-fade-in" style={{ 
       flex: 1, 
       display: 'flex', 
       flexDirection: 'column',
-      overflow: 'hidden',
+      padding: '16px',
       height: '100%',
-      padding: '8px' // Decreased from all sides
+      overflow: 'hidden',
+      background: '#e2e8f0' 
     }}>
-      <header className="page-header no-print" style={{ marginBottom: '12px' }}>
-        <div>
-          <h2 className="text-gradient" style={{ fontSize: 'min(6vw, 1.8rem)' }}>{t('manualTitle')}</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{t('manualSubtitle')}</p>
-        </div>
-      </header>
-
-      {error && (
-        <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
-          {error}
-        </div>
-      )}
-
-      <div className="pos-container" style={{ 
-        flex: 1, 
-        overflow: 'hidden',
-        display: 'grid',
-        gridTemplateColumns: window.innerWidth > 1024 ? '1.2fr 1fr' : '1fr',
-        gap: '12px', // Compact gap
-        minHeight: 0
-      }}>
-        {/* Left Side: Product Selection */}
-        <div className="glass-panel custom-scrollbar" style={{ 
-          padding: '12px', // Compact padding
-          overflowY: 'auto',
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          borderRadius: '12px'
-        }}>
-          <h3 style={{ marginBottom: '12px', fontSize: '1rem' }}>{t('stockList')}</h3>
-          <div style={{ 
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
-            gap: '16px' 
-          }}>
-            {products.map((p, index) => (
-              <div key={p._id}
-                style={{
-                  background: 'var(--bg-primary)',
-                  borderRadius: 'var(--radius-xl)',
-                  border: '1px solid var(--border-color)',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  transition: 'var(--transition)',
-                  boxShadow: '0 4px 15px rgba(0,0,0,0.02)',
-                  position: 'relative',
-                  animation: `fadeInUp 0.5s ease-out forwards`,
-                  animationDelay: `${index * 0.05}s`,
-                  opacity: 0,
-                  transform: 'translateY(10px)'
-                }} 
-              >
-                {/* Minimalist Top Layout */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '800', margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
-                    {p.nameEnglish || p.name}
-                  </h4>
-                </div>
-                
-                <div style={{ width: '100%', height: '1px', background: 'var(--border-color)', opacity: 0.3, margin: '2px 0' }}></div>
-                
-                {/* Bottom Action Row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                  <span style={{ color: 'var(--accent-primary)', fontWeight: '900', fontSize: '1.1rem', letterSpacing: '-0.5px' }}>Rs.{p.price}</span>
-                  
-                  <button 
-                    type="button"
-                    onClick={(e) => handleAddClick(p, e)}
-                    style={{
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: 'var(--radius-md)',
-                      background: animatingItems[p._id] ? 'var(--success)' : 'var(--accent-gradient)',
-                      color: 'white',
-                      border: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: animatingItems[p._id] ? '0 4px 12px rgba(5, 150, 105, 0.4)' : '0 4px 12px rgba(3, 105, 161, 0.2)',
-                      transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                      cursor: 'pointer',
-                      transform: animatingItems[p._id] ? 'scale(1.15)' : 'scale(1)'
-                    }} 
-                    className="action-btn-hover"
-                  >
-                    {animatingItems[p._id] ? <Check size={20} strokeWidth={3} /> : <Plus size={20} strokeWidth={3} />}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Side: Live Cart & Form */}
-        <div className="glass-panel" style={{ 
-          padding: '12px', // Compact padding
-          display: 'flex', 
-          flexDirection: 'column',
-          overflowY: 'auto',
-          height: '100%',
-          borderRadius: '12px'
-        }}>
-          <h3 style={{ marginBottom: '12px', fontSize: '1rem' }}>{t('yourBill')}</h3>
-
-          <div className="pos-form-row">
-            <div className="input-group" style={{ flex: 1, position: 'relative' }}>
-              <label className="input-label"><User size={14} style={{ display: 'inline', marginBottom: '-2px' }} /> {t('customerName')}</label>
-              
-              {customerId ? (
-                <div style={{
-                  padding: '12px 16px', 
-                  background: 'rgba(99, 102, 241, 0.05)', 
-                  border: '1px solid rgba(99, 102, 241, 0.2)', 
-                  borderRadius: '8px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: 'var(--text-primary)'}}>{customerName}</div>
-                    <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', gap: '12px'}}>
-                      {customerPhone && <span><Phone size={12}/> {customerPhone}</span>}
-                      {customerAddress && <span><MapPin size={12}/> {customerAddress}</span>}
-                    </div>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setCustomerId(null);
-                      setCustomerName('');
-                      setCustomerAddress('');
-                      setCustomerPhone('');
-                      setSearchTerm('');
-                    }}
-                    style={{
-                      background: 'rgba(239, 68, 68, 0.1)', 
-                      color: 'var(--danger)', 
-                      border: 'none', 
-                      padding: '6px 12px', 
-                      borderRadius: '6px', 
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <X size={14}/> Change
-                  </button>
-                </div>
-              ) : (
-                <div className="form-grid" style={{ gap: '12px', display: 'grid' }}>
-                  <div style={{ position: 'relative', width: '100%' }}>
-                    <input
-                      type="text"
-                      className="input-field"
-                      placeholder={t('searchCustPlaceholder') || "Search customer..."}
-                      value={searchTerm}
-                      onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setShowSuggestions(true);
-                      }}
-                      onFocus={() => setShowSuggestions(true)}
-                      onBlur={() => setTimeout(() => setShowSuggestions(false), 250)}
-                    />
-                    {suggestions.length > 0 && showSuggestions && searchTerm.length > 1 && (
-                      <ul className="glass-panel" style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        zIndex: 50,
-                        listStyle: 'none',
-                        margin: '8px 0 0 0',
-                        padding: '8px',
-                        maxHeight: '220px',
-                        overflowY: 'auto',
-                        boxShadow: 'var(--glass-shadow)',
-                        background: 'white'
-                      }}>
-                        {suggestions.map(c => (
-                          <li key={c._id}
-                            onClick={() => selectCustomer(c)}
-                            className="hover-row"
-                            style={{ padding: '12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>{c.name}</span>
-                            {(c.address || c.phone) && <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{c.phone} {c.address}</span>}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={handleNewCustomer}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}
-                  >
-                    <Plus size={18} /> New Customer
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="pos-form-row">
-            <div className="input-group" style={{ flex: 1 }}>
-              <label className="input-label">Payment Mode</label>
-              <select className="input-field" value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
-                <option value="cash">Cash</option>
-                <option value="online">Online / UPI</option>
-                <option value="credit">Credit (Udhaar)</option>
-              </select>
-            </div>
-          </div>
-
-          <div style={{ flex: 1, borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '10px' }}>
-            {cart.length === 0 ? (
-              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0' }}>{t('cartEmpty')}</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {cart.map(item => (
-                  <div key={item.product} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px' }}>
-                    <div>
-                      <h4 style={{ fontSize: '0.95rem' }}>{item.name}</h4>
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Rs.{item.price} x {item.quantity}</p>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <input type="text" inputMode="numeric" className="input-field" style={{ width: '60px', padding: '6px' }} value={item.quantity} onChange={(e) => updateQuantity(item.product, parseInt(e.target.value) || 0)} />
-                      <button onClick={() => removeFromCart(item.product)} style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={18} /></button>
-                    </div>
-                  </div>
-                ))}
-                <div style={{ borderTop: '2px solid var(--border-color)', paddingTop: '15px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h3 style={{ fontSize: '1.2rem' }}>{t('total')} (incl. GST)</h3>
-                  <h3 style={{ fontSize: '1.5rem', color: 'var(--accent-primary)' }}>Rs.{(calculateTotal() || 0).toLocaleString('en-IN')}</h3>
-                </div>
-                <button 
-                  className="btn btn-primary hover-lift" 
-                  style={{ 
-                    width: '100%', 
-                    marginTop: '16px',
-                    padding: '12px',
-                    fontSize: '1rem',
-                    fontWeight: '800',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    background: 'var(--accent-gradient)',
-                    borderRadius: 'var(--radius-md)',
-                    boxShadow: '0 4px 12px rgba(3, 105, 161, 0.2)',
-                    border: 'none',
-                    letterSpacing: '0.5px'
-                  }} 
-                  onClick={handleCheckout} 
-                  disabled={loading || cart.length === 0}
-                >
-                  {loading ? (
-                    <>
-                      <div style={{ width: '22px', height: '22px', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                      {t('calculating') || 'Processing...'}
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart size={22} strokeWidth={2.5} />
-                      {t('checkoutBtn')}
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
+      <style>{`
+        @keyframes slideDownFade {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .dropdown-item-hover {
+          transition: all 0.2s ease;
+        }
+        .dropdown-item-hover:hover {
+          background: #f8fafc !important;
+          transform: translateX(3px);
+        }
+        .premium-select-trigger {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .premium-select-trigger:hover {
+          border-color: #cbd5e1 !important;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px -2px rgba(0,0,0,0.05) !important;
+        }
+        .premium-select-trigger:active {
+          transform: translateY(0);
+        }
+        .premium-date-input {
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .premium-date-input:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+        }
+        .premium-date-input:hover {
+          border-color: #cbd5e1 !important;
+        }
+        
+        /* Premium Table Inputs */
+        .erp-input {
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 6px !important;
+          padding: 6px 10px !important;
+          font-size: 0.85rem !important;
+          font-weight: 500 !important;
+          color: #334155 !important;
+          transition: all 0.15s ease-in-out !important;
+          outline: none !important;
+          background: transparent !important;
+        }
+        .erp-input:focus {
+          border-color: #0ea5e9 !important;
+          background: white !important;
+          box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15) !important;
+        }
+        .erp-input:hover:not(:focus) {
+          border-color: #cbd5e1 !important;
+          background: rgba(255, 255, 255, 0.5) !important;
+        }
+        .erp-input.right {
+          font-family: 'Courier New', Courier, monospace !important;
+          font-weight: 700 !important;
+        }
+        
+        /* Premium Customer Search Input */
+        .pos-erp-header input[type="text"] {
+          border: 1px solid #cbd5e1 !important;
+          border-radius: 8px !important;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+          transition: all 0.2s ease !important;
+          outline: none !important;
+        }
+        .pos-erp-header input[type="text"]:focus {
+          border-color: #6366f1 !important;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+        }
+        
+        /* Button Modernizations */
+        .btn-primary, .btn-secondary {
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          letter-spacing: 0.2px !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        }
+        .btn-primary:hover {
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25) !important;
+        }
+        .btn-primary:active {
+          transform: translateY(0) !important;
+        }
+        .btn-secondary:hover {
+          background: #f1f5f9 !important;
+          border-color: #cbd5e1 !important;
+          transform: translateY(-1px) !important;
+        }
+        .btn-secondary:active {
+          transform: translateY(0) !important;
+        }
+        .erp-pill-btn {
+          border-radius: 8px !important;
+          font-weight: 600 !important;
+          transition: all 0.2s ease !important;
+        }
+        .erp-pill-btn:hover {
+          transform: translateY(-1px) !important;
+        }
+      `}</style>
       {/* Premium Full-Screen Loading Overlay */}
-      {loading && !bill && (
+      {loading && (
         <div className="premium-loader-overlay">
           <div className="receipt-scanner">
             <div className="receipt-lines">
@@ -508,174 +689,683 @@ const ManualPos = () => {
           </div>
           <h2 className="loader-title">Generating Bill...</h2>
           <p className="loader-subtitle">
-            Finalizing items and calculating taxes.<br/>Please wait a moment.
+            Processing items and calculating taxes.<br/>Please wait a moment.
           </p>
         </div>
       )}
 
-      {bill && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          background: 'rgba(0,0,0,0.92)', 
-          zIndex: 2000, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          padding: 'min(5vw, 40px)', 
-          overflowY: 'auto',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <div className="no-print" style={{ 
-            width: '100%', 
-            maxWidth: '500px', 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(3, 1fr)', 
-            gap: '8px', 
-            marginBottom: '16px'
-          }}>
-            <button 
-              className="btn" 
-              style={{ 
-                background: 'rgba(34, 197, 94, 0.1)', 
-                color: '#22c55e', 
-                border: '1px solid #22c55e', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '10px 4px',
-                fontSize: '0.8rem',
-                fontWeight: '700'
-              }} 
-              onClick={() => handleWhatsApp(bill)}
-            >
-              <MessageCircle size={14} /> WhatsApp
-            </button>
-            <button 
-              className="btn btn-primary" 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '10px 4px',
-                fontSize: '0.8rem',
-                fontWeight: '700'
-              }} 
-              onClick={() => window.print()}
-            >
-              <Printer size={14} /> Print
-            </button>
-            <button 
-              className="btn btn-secondary" 
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '10px 4px',
-                fontSize: '0.8rem',
-                fontWeight: '700'
-              }} 
-              onClick={clearForm}
-            >
-              <X size={14} /> Close
-            </button>
-          </div>
-          <div style={{ width: '100%', maxWidth: '800px', display: 'flex', justifyContent: 'center' }}><PrintableBill bill={bill} /></div>
-        </div>
-      )}
-
-      {/* Premium WhatsApp Share Loader */}
-      {isSharingProcess && (
-        <div className="modal-overlay" style={{ zIndex: 13000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(15px)' }}>
-            <div style={{ textAlign: 'center' }}>
-                <div className="whatsapp-anim-container">
-                    <div className="wa-circle-pulse"></div>
-                    <div className="wa-icon-wrapper">
-                        <MessageCircle size={60} color="white" fill="#25D366" />
-                    </div>
-                    <div className="wa-particles">
-                        <span></span><span></span><span></span>
-                    </div>
-                </div>
-                <h2 className="loader-title" style={{ color: '#075E54', marginTop: '30px' }}>Sharing Bill #{sharingBillNo}...</h2>
-                <p className="loader-subtitle" style={{ color: '#128C7E', fontWeight: '600' }}>
-                    Encrypting bill details and connecting to WhatsApp Secure Gateway.
-                </p>
-                <div className="wa-progress-line">
-                    <div className="wa-progress-fill"></div>
-                </div>
-            </div>
-        </div>
-      )}
-
-      {/* Add Customer Modal */}
-      {showAddModal && (
-        <div style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          bottom: 0, 
-          background: 'rgba(0,0,0,0.6)', 
-          zIndex: 9000, 
-          padding: '16px',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
-          paddingTop: window.innerWidth < 768 ? '60px' : '20px',
-          overflowY: 'auto'
-        }} onClick={e => e.target === e.currentTarget && setShowAddModal(false)}>
-          <div className="modal-content" style={{ 
-            maxWidth: '360px', // Ultra-compact professional width
-            width: '92%', 
-            background: 'var(--bg-primary)', 
-            borderRadius: '10px', 
-            boxShadow: '0 15px 30px rgba(0, 0, 0, 0.15)',
-            maxHeight: '70vh',
-            display: 'flex',
-            flexDirection: 'column',
-            border: '1px solid var(--border-color)'
-          }}>
-            <div className="modal-header" style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h2 style={{ fontSize: '1.05rem', fontWeight: '800' }}>Quick Add</h2>
-                <p style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Store new customer details</p>
-              </div>
-              <button type="button" className="close-btn" onClick={() => setShowAddModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={16} /></button>
+      <div className="pos-erp-container">
+        
+        {/* Header Section */}
+        <div className={`pos-erp-header ${billType === 'return' ? 'return-mode' : ''}`}>
+          <div className="pos-erp-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div>
+              <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: billType === 'return' ? '#991b1b' : '#0f172a' }}>
+                {billType === 'return' ? <RefreshCcw size={18}/> : <Keyboard size={18}/>} 
+                {billType === 'return' ? 'Sales Return POS' : 'Manual POS'} 
+                <span style={{fontSize: '0.8rem', fontWeight: 'normal', color: billType === 'return' ? '#ef4444' : '#64748b'}}>(Press F2 to Save)</span>
+              </h2>
             </div>
             
-            <form onSubmit={handleSaveCustomer} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div className="modal-body" style={{ padding: '16px', overflowY: 'auto', flex: 1 }}>
-                <div className="form-grid" style={{ marginBottom: '12px', gridTemplateColumns: '1fr' }}>
-                  <div className="input-group" style={{ marginBottom: '10px' }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Customer Name *</label>
-                    <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} required placeholder="Rahul Patel" value={newCustomer.name ?? ''} onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })} />
-                  </div>
+            <div className="pos-erp-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {/* Feature 6 & 5 & 4 toggles */}
+              {heldBills.length > 0 && (
+                <div style={{ position: 'relative', display: 'flex' }}>
+                    <button onClick={() => {
+                        const bill = heldBills[0];
+                        if(confirm(`Resume held bill for ${bill.customerName}?`)) resumeBill(bill);
+                    }} className="erp-pill-btn bg-amber">
+                       <PlayCircle size={14}/> Resume Hold ({heldBills.length})
+                    </button>
                 </div>
+              )}
 
-                <div className="input-group" style={{ marginBottom: '12px' }}>
-                  <label className="input-label" style={{ fontSize: '0.7rem' }}>Phone Number</label>
-                  <input type="text" className="input-field" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="9898088844" value={newCustomer.phone ?? ''} onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })} />
-                </div>
+              <button 
+                onClick={() => setBarcodeMode(!barcodeMode)} 
+                className={`erp-pill-btn ${barcodeMode ? 'bg-indigo' : 'bg-gray'}`}
+              >
+                <ScanLine size={14}/> Barcode Mode {barcodeMode ? 'ON' : 'OFF'}
+              </button>
 
-                <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
-                  <div className="input-group" style={{ marginBottom: '10px' }}>
-                    <label className="input-label" style={{ fontSize: '0.7rem' }}>Address</label>
-                    <textarea className="input-field" rows="1" style={{ padding: '8px', fontSize: '0.9rem' }} placeholder="Full address..." value={newCustomer.address ?? ''} onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}></textarea>
-                  </div>
+              <button 
+                onClick={() => setBillType(prev => prev === 'sale' ? 'return' : 'sale')} 
+                className={`erp-pill-btn ${billType === 'return' ? 'bg-red' : 'bg-blue'}`}
+              >
+                <RefreshCcw size={14}/> {billType === 'return' ? 'Return Mode' : 'Sales Mode'}
+              </button>
+
+              <div className="pos-action-input" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px', borderLeft: '1px solid #cbd5e1', paddingLeft: '16px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Date:</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Calendar size={14} style={{ position: 'absolute', left: '10px', color: '#64748b', pointerEvents: 'none' }} />
+                  <input 
+                    type="date"
+                    style={{ 
+                      padding: '6px 10px 6px 30px', 
+                      borderRadius: '8px', 
+                      border: '1px solid #cbd5e1', 
+                      fontSize: '0.85rem', 
+                      outline: 'none',
+                      fontWeight: 600,
+                      color: '#334155',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s ease',
+                      width: '140px'
+                    }} 
+                    className="premium-date-input"
+                    value={billDate} 
+                    onChange={(e) => setBillDate(e.target.value)}
+                  />
                 </div>
               </div>
 
-              <div className="modal-footer" style={{ padding: '10px 16px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                <button type="button" className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={savingCustomer} style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Save size={12} /> {savingCustomer ? 'Saving...' : 'Save & Select'}
+              <div className="pos-action-input payment-dropdown-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px', borderLeft: '1px solid #cbd5e1', paddingLeft: '16px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Payment:</label>
+                <div style={{ position: 'relative' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setShowPaymentDropdown(!showPaymentDropdown)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      background: 'white',
+                      border: '1px solid #cbd5e1',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      color: '#334155',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s ease',
+                      outline: 'none',
+                      minWidth: '150px',
+                      justifyContent: 'space-between'
+                    }}
+                    className="premium-select-trigger"
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {paymentMode === 'cash' && <Coins size={14} style={{ color: '#10b981' }} />}
+                      {paymentMode === 'online' && <Smartphone size={14} style={{ color: '#6366f1' }} />}
+                      {paymentMode === 'credit' && <CreditCard size={14} style={{ color: '#ef4444' }} />}
+                      <span>
+                        {paymentMode === 'cash' ? 'Cash' : 
+                         paymentMode === 'online' ? 'Online / UPI' : 'Credit (Udhaar)'}
+                      </span>
+                    </div>
+                    <ChevronDown size={14} style={{ opacity: 0.7, transform: showPaymentDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                  </button>
+                  
+                  {showPaymentDropdown && (
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 6px)',
+                        right: 0,
+                        width: '180px',
+                        background: 'rgba(255, 255, 255, 0.98)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(226, 232, 240, 0.9)',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                        padding: '6px',
+                        zIndex: 100,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        animation: 'slideDownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => { setPaymentMode('cash'); setShowPaymentDropdown(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 12px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          background: paymentMode === 'cash' ? '#f0fdf4' : 'transparent',
+                          color: paymentMode === 'cash' ? '#166534' : '#475569',
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                        className="dropdown-item-hover"
+                      >
+                        <Coins size={14} style={{ color: '#10b981' }} />
+                        <span>Cash</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setPaymentMode('online'); setShowPaymentDropdown(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 12px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          background: paymentMode === 'online' ? '#e0e7ff' : 'transparent',
+                          color: paymentMode === 'online' ? '#3730a3' : '#475569',
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                        className="dropdown-item-hover"
+                      >
+                        <Smartphone size={14} style={{ color: '#6366f1' }} />
+                        <span>Online / UPI</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setPaymentMode('credit'); setShowPaymentDropdown(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 12px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          background: paymentMode === 'credit' ? '#fef2f2' : 'transparent',
+                          color: paymentMode === 'credit' ? '#991b1b' : '#475569',
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                        className="dropdown-item-hover"
+                      >
+                        <CreditCard size={14} style={{ color: '#ef4444' }} />
+                        <span>Credit (Udhaar)</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Details Row */}
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            {customerId || customerName ? (
+              <div style={{ 
+                flex: 1, 
+                background: '#f1f5f9', 
+                border: '1px solid #cbd5e1', 
+                borderRadius: '6px', 
+                padding: '10px 16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: '#0f172a' }}><User size={14} style={{ display: 'inline', marginBottom: '-2px' }}/> {customerName}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#64748b', display: 'flex', gap: '16px', marginTop: '4px' }}>
+                    {customerPhone && <span><Phone size={12}/> {customerPhone}</span>}
+                    {customerAddress && <span><MapPin size={12}/> {customerAddress}</span>}
+                    {/* Feature 3: Balance Display */}
+                    {customerBalance !== 0 && (
+                        <span style={{ color: customerBalance > 0 ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                            Udhaar: Rs. {Math.abs(customerBalance).toLocaleString('en-IN')} {customerBalance > 0 ? 'Dr' : 'Cr'}
+                        </span>
+                    )}
+                  </div>
+                </div>
+                <button 
+                  onClick={clearCustomer}
+                  style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
+                  title="Clear Customer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', gap: '8px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Search size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    style={{ width: '100%', padding: '8px 12px 8px 32px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                    placeholder="Search customer by name or phone..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setShowSuggestions(true);
+                      setActiveCustomerIndex(-1);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onKeyDown={(e) => {
+                      if (showSuggestions && suggestions.length > 0) {
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          setActiveCustomerIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          setActiveCustomerIndex(prev => (prev > 0 ? prev - 1 : 0));
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (activeCustomerIndex >= 0 && activeCustomerIndex < suggestions.length) {
+                            selectCustomer(suggestions[activeCustomerIndex]);
+                          } else if (suggestions.length > 0) {
+                            selectCustomer(suggestions[0]);
+                          }
+                        }
+                      }
+                    }}
+                  />
+                  {showSuggestions && suggestions.length > 0 && (
+                    <ul style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, background: 'white',
+                      border: '1px solid #cbd5e1', zIndex: 50, listStyle: 'none', padding: 0, margin: '4px 0 0 0',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', borderRadius: '4px', maxHeight: '200px', overflowY: 'auto'
+                    }}>
+                      {suggestions.map((c, i) => (
+                        <li key={c._id} 
+                            onClick={() => selectCustomer(c)} 
+                            onMouseEnter={() => setActiveCustomerIndex(i)}
+                            style={{ 
+                              padding: '10px 12px', 
+                              borderBottom: '1px solid #f1f5f9', 
+                              cursor: 'pointer',
+                              background: i === activeCustomerIndex ? '#f0f9ff' : 'transparent'
+                            }}>
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem', color: i === activeCustomerIndex ? '#0369a1' : '#0f172a' }}>{c.name}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{c.phone} {c.address}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <button 
+                  onClick={() => setShowAddModal(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0 16px', background: '#e0e7ff', color: '#4338ca', border: '1px solid #c7d2fe', borderRadius: '4px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  <UserPlus size={16} /> New
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Data Grid Section */}
+        <div className="erp-table-wrapper custom-scrollbar">
+          <table className="erp-table">
+            <thead>
+              <tr>
+                <th style={{ width: '40px', minWidth: '40px', textAlign: 'center' }}>#</th>
+                <th style={{ minWidth: '180px' }}>Item Name</th>
+                <th style={{ width: '100px', minWidth: '90px' }}>HSN Code</th>
+                <th style={{ width: '80px', minWidth: '70px', textAlign: 'right' }}>Meter</th>
+                <th style={{ width: '80px', minWidth: '70px', textAlign: 'right' }}>Qty</th>
+                <th style={{ width: '100px', minWidth: '90px', textAlign: 'right' }}>Rate (Rs)</th>
+                <th style={{ width: '120px', minWidth: '100px', textAlign: 'right' }}>Amount</th>
+                <th style={{ width: '50px', minWidth: '50px', textAlign: 'center' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => {
+                // Feature 2: Stock warning logic
+                const isOverStock = billType === 'sale' && row.productId && row.stockAmount !== undefined && row.quantity > row.stockAmount;
+                
+                return (
+                <tr key={row.id}>
+                  <td style={{ textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>{index + 1}</td>
+                  <td style={{ position: 'relative' }}>
+                    <input 
+                      type="text" 
+                      className="erp-input"
+                      value={row.itemName}
+                      onChange={(e) => {
+                        handleRowChange(row.id, 'itemName', e.target.value);
+                        setActiveRowId(row.id);
+                        setProductSearchTerm(e.target.value);
+                      }}
+                      onFocus={() => {
+                        setActiveRowId(row.id);
+                        setProductSearchTerm(row.itemName);
+                      }}
+                      onKeyDown={(e) => handleKeyDown(e, row.id, 'itemName', index)}
+                      placeholder={barcodeMode ? "Scan or Type..." : "Type product name..."}
+                      style={{ background: barcodeMode ? '#f5f3ff' : 'transparent' }}
+                    />
+                    
+                    {/* Autocomplete Dropdown */}
+                    {activeRowId === row.id && (
+                      <div className="erp-autocomplete-dropdown custom-scrollbar" ref={autocompleteRef}>
+                        {getFilteredProducts(productSearchTerm).length > 0 ? (
+                            getFilteredProducts(productSearchTerm).map((p, i) => (
+                              <div 
+                                key={p._id} 
+                                id={`dropdown-item-${i}`}
+                                className={`erp-autocomplete-item ${i === activeDropdownIndex ? 'active' : ''}`}
+                                onClick={() => handleProductSelect(row.id, p, null)}
+                                onMouseEnter={() => setActiveDropdownIndex(i)}
+                              >
+                                <div style={{ fontWeight: 600, fontSize: '0.85rem', color: i === activeDropdownIndex ? '#0369a1' : '#0f172a' }}>{p.nameEnglish || p.name}</div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                                  <span style={{ color: p.currentStock <= 0 ? '#ef4444' : '' }}>Stock: {p.currentStock || p.stockAmount || 0}</span>
+                                  <span style={{ color: '#059669', fontWeight: 600 }}>Rs.{p.price}</span>
+                                </div>
+                              </div>
+                            ))
+                        ) : (
+                            // Feature 7: Quick Add
+                            productSearchTerm.trim().length > 1 && (
+                                <div 
+                                    className="erp-autocomplete-item active" 
+                                    onClick={() => {
+                                        setQuickAddData({ name: productSearchTerm, price: '', hsnCode: '' });
+                                        setShowQuickAddProduct(true);
+                                        setActiveRowId(null);
+                                    }}
+                                    style={{ color: '#0ea5e9', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}
+                                >
+                                   <Plus size={14}/> Add "{productSearchTerm}" to Inventory
+                                </div>
+                            )
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      className="erp-input" 
+                      value={row.hsnCode} 
+                      onChange={(e) => handleRowChange(row.id, 'hsnCode', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, row.id, 'hsnCode', index)}
+                      placeholder="HSN"
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="number" 
+                      className="erp-input right" 
+                      value={row.meter} 
+                      onChange={(e) => handleRowChange(row.id, 'meter', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, row.id, 'meter', index)}
+                      onWheel={(e) => e.target.blur()}
+                      min="0.01" step="0.01"
+                      placeholder="1"
+                    />
+                  </td>
+                  <td style={{ position: 'relative' }}>
+                    <input 
+                      type="number" 
+                      className={`erp-input right ${isOverStock ? 'overstock-warn' : ''}`} 
+                      value={row.quantity} 
+                      onChange={(e) => handleRowChange(row.id, 'quantity', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, row.id, 'quantity', index)}
+                      onWheel={(e) => e.target.blur()}
+                      min="1"
+                    />
+                    {isOverStock && <div className="stock-tooltip">Low Stock! (Avail: {row.stockAmount})</div>}
+                  </td>
+                  <td>
+                    <input 
+                      type="number" 
+                      className="erp-input right" 
+                      value={row.rate} 
+                      onChange={(e) => handleRowChange(row.id, 'rate', e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(e, row.id, 'rate', index)}
+                      onWheel={(e) => e.target.blur()}
+                      min="0" step="0.01"
+                    />
+                  </td>
+                  <td>
+                    <input 
+                      type="text" 
+                      className="erp-input right" 
+                      value={(billType === 'return' ? '-' : '') + row.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} 
+                      readOnly
+                      onKeyDown={(e) => handleKeyDown(e, row.id, 'amount', index)}
+                      style={{ background: '#f8fafc', color: '#334155', fontWeight: 600 }}
+                    />
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button 
+                      onClick={() => removeRow(row.id)}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.7 }}
+                      title="Remove Row"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </td>
+                </tr>
+              )})}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer Section */}
+        <div className="erp-footer">
+          <div className="erp-footer-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button 
+              className="btn btn-primary" 
+              style={{ background: billType === 'return' ? '#ef4444' : '#0ea5e9', border: 'none', padding: '10px 24px' }}
+              onClick={handleCheckout}
+              disabled={loading}
+            >
+              {loading ? 'Processing...' : <><Save size={18}/> {billType === 'return' ? 'Process Return (F2)' : 'Save Bill (F2)'}</>}
+            </button>
+            <button 
+              className="btn btn-secondary"
+              onClick={clearForm}
+              style={{ padding: '10px 16px' }}
+            >
+              Clear
+            </button>
+            <button 
+              className="btn"
+              onClick={holdCurrentBill}
+              style={{ padding: '10px 16px', background: '#f59e0b', color: 'white', border: 'none', display: 'flex', gap: '6px' }}
+            >
+              <PauseCircle size={16}/> Hold
+            </button>
+          </div>
+          
+          <div className="erp-totals">
+            {/* Feature 1: Global Discount UI */}
+            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <span style={{ color: '#64748b', fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}><Tag size={16}/> Discount</span>
+                
+                <div className="discount-dropdown-container" style={{ position: 'relative' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setShowDiscountDropdown(!showDiscountDropdown)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      background: 'white',
+                      border: '1px solid #cbd5e1',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      color: '#334155',
+                      cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s ease',
+                      outline: 'none',
+                      minWidth: '130px',
+                      justifyContent: 'space-between'
+                    }}
+                    className="premium-select-trigger"
+                  >
+                    <span>
+                      {discountType === 'none' ? 'None' : 
+                       discountType === 'percentage' ? '% Percent' : '₹ Flat Amt'}
+                    </span>
+                    <ChevronDown size={14} style={{ opacity: 0.7, transform: showDiscountDropdown ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }} />
+                  </button>
+                  
+                  {showDiscountDropdown && (
+                    <div 
+                      style={{
+                        position: 'absolute',
+                        bottom: 'calc(100% + 6px)',
+                        left: 0,
+                        width: '150px',
+                        background: 'rgba(255, 255, 255, 0.98)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(226, 232, 240, 0.9)',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+                        padding: '6px',
+                        zIndex: 100,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '4px',
+                        animation: 'slideDownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => { setDiscountType('none'); setDiscountAmount(''); setShowDiscountDropdown(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          background: discountType === 'none' ? '#f1f5f9' : 'transparent',
+                          color: '#475569',
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                        className="dropdown-item-hover"
+                      >
+                        None
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDiscountType('percentage'); setShowDiscountDropdown(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          background: discountType === 'percentage' ? '#e0f2fe' : 'transparent',
+                          color: '#0369a1',
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                        className="dropdown-item-hover"
+                      >
+                        % Percent
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setDiscountType('flat'); setShowDiscountDropdown(false); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          background: discountType === 'flat' ? '#f0fdf4' : 'transparent',
+                          color: '#166534',
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.15s ease'
+                        }}
+                        className="dropdown-item-hover"
+                      >
+                        ₹ Flat Amt
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {discountType !== 'none' && (
+                    <input 
+                        type="number" 
+                        placeholder="0"
+                        value={discountAmount}
+                        onChange={(e) => setDiscountAmount(e.target.value)}
+                        onWheel={(e) => e.target.blur()}
+                        style={{ 
+                            width: '90px', 
+                            padding: '8px 12px', 
+                            border: '1px solid #cbd5e1', 
+                            borderRadius: '6px',
+                            background: 'white', 
+                            textAlign: 'right', 
+                            fontSize: '0.9rem', 
+                            color: '#0f172a', 
+                            fontWeight: 600, 
+                            outline: 'none',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        }}
+                    />
+                )}
+            </div>
+
+            <span style={{ color: '#64748b', textAlign: 'right' }}>Subtotal:</span>
+            <span style={{ textAlign: 'right', fontWeight: 600 }}>Rs. {rawSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            
+            {discountType !== 'none' && dAmount > 0 && (
+               <>
+                 <span style={{ color: '#10b981', textAlign: 'right' }}>Discount ({discountType === 'percentage' ? `${dAmount}%` : 'Flat'}):</span>
+                 <span style={{ color: '#10b981', textAlign: 'right', fontWeight: 600 }}>- Rs. {(rawSubtotal - discountedSubtotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+               </>
+            )}
+
+            <span style={{ color: '#64748b', textAlign: 'right' }}>GST (5%):</span>
+            <span style={{ textAlign: 'right', fontWeight: 600 }}>Rs. {taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            
+            <span style={{ color: '#0f172a', textAlign: 'right', fontWeight: 800, fontSize: '1.1rem' }}>Grand Total:</span>
+            <span style={{ color: billType === 'return' ? '#ef4444' : '#0369a1', textAlign: 'right', fontWeight: 800, fontSize: '1.2rem' }}>
+              {billType === 'return' ? '-' : ''}Rs. {grandTotal.toLocaleString('en-IN')}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* New Customer Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" style={{ zIndex: 9000 }}>
+          <div className="modal-content" style={{ width: '400px' }}>
+            <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Add New Customer</h3>
+              <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18}/></button>
+            </div>
+            <form onSubmit={handleSaveCustomer} style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Customer Name *</label>
+                <input required type="text" style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '4px' }} value={newCustomer.name} onChange={e => setNewCustomer({...newCustomer, name: e.target.value})} />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Phone Number</label>
+                <input type="text" style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '4px' }} value={newCustomer.phone} onChange={e => setNewCustomer({...newCustomer, phone: e.target.value})} />
+              </div>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Address</label>
+                <textarea rows="2" style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '4px' }} value={newCustomer.address} onChange={e => setNewCustomer({...newCustomer, address: e.target.value})}></textarea>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', background: 'white', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={savingCustomer} style={{ padding: '8px 16px', border: 'none', background: '#0ea5e9', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>
+                  {savingCustomer ? 'Saving...' : 'Save & Select'}
                 </button>
               </div>
             </form>
@@ -683,70 +1373,302 @@ const ManualPos = () => {
         </div>
       )}
 
-      <style>{`
-        /* WhatsApp Premium Animation */
-        .whatsapp-anim-container {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .wa-circle-pulse {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border: 4px solid #25D366;
-            border-radius: 50%;
-            animation: waPulse 1.5s infinite ease-out;
-        }
-        @keyframes waPulse {
-            0% { transform: scale(0.8); opacity: 0.8; }
-            100% { transform: scale(1.4); opacity: 0; }
-        }
-        .wa-icon-wrapper {
-            position: relative;
-            z-index: 2;
-            animation: waFloat 2s infinite ease-in-out;
-        }
-        @keyframes waFloat {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        .wa-particles span {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: #25D366;
-            border-radius: 50%;
-            animation: waParticle 2s infinite linear;
-        }
-        @keyframes waParticle {
-            0% { transform: translate(0, 0) scale(1); opacity: 1; }
-            100% { transform: translate(var(--tw-tx, 40px), var(--tw-ty, -40px)) scale(0); opacity: 0; }
-        }
-        .wa-particles span:nth-child(1) { --tw-tx: 50px; --tw-ty: -30px; animation-delay: 0.2s; }
-        .wa-particles span:nth-child(2) { --tw-tx: -40px; --tw-ty: -50px; animation-delay: 0.6s; }
-        .wa-particles span:nth-child(3) { --tw-tx: 30px; --tw-ty: 40px; animation-delay: 1s; }
+      {/* Quick Add Product Modal */}
+      {showQuickAddProduct && (
+        <div className="modal-overlay" style={{ zIndex: 9000 }}>
+          <div className="modal-content" style={{ width: '400px' }}>
+            <div style={{ padding: '16px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Quick Add to Inventory</h3>
+              <button onClick={() => setShowQuickAddProduct(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18}/></button>
+            </div>
+            <form onSubmit={handleSaveQuickProduct} style={{ padding: '20px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Item Name</label>
+                <input required type="text" style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '4px', background: '#f1f5f9' }} value={quickAddData.name} readOnly />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>Sale Price (Rs) *</label>
+                <input required type="number" step="0.01" style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '4px' }} value={quickAddData.price} onChange={e => setQuickAddData({...quickAddData, price: e.target.value})} autoFocus />
+              </div>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>HSN Code</label>
+                <input type="text" style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '4px' }} value={quickAddData.hsnCode} onChange={e => setQuickAddData({...quickAddData, hsnCode: e.target.value})} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button type="button" onClick={() => setShowQuickAddProduct(false)} style={{ padding: '8px 16px', border: '1px solid #cbd5e1', background: 'white', borderRadius: '4px', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={savingProduct} style={{ padding: '8px 16px', border: 'none', background: '#0ea5e9', color: 'white', borderRadius: '4px', cursor: 'pointer' }}>
+                  {savingProduct ? 'Saving...' : 'Save Item & Select'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-        .wa-progress-line {
-            width: 200px;
-            height: 4px;
-            background: #DCF8C6;
-            border-radius: 10px;
-            margin: 20px auto 0;
-            overflow: hidden;
+      {/* Bill View Overlay */}
+      {bill && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          background: 'rgba(15, 23, 42, 0.95)', zIndex: 9999, 
+          display: 'flex', flexDirection: 'column', alignItems: 'center', 
+          padding: '40px 20px', overflowY: 'auto'
+        }}>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+            <button className="btn" style={{ background: '#25D366', color: 'white', border: 'none' }} onClick={() => handleWhatsApp(bill)}>
+              <MessageCircle size={16} /> WhatsApp
+            </button>
+            <button className="btn" style={{ background: '#3b82f6', color: 'white', border: 'none' }} onClick={() => window.print()}>
+              <Printer size={16} /> Print
+            </button>
+            <button className="btn" style={{ background: '#ef4444', color: 'white', border: 'none' }} onClick={clearForm}>
+              <X size={16} /> Close & New Bill
+            </button>
+          </div>
+          <div style={{ width: '100%', maxWidth: '800px', display: 'flex', justifyContent: 'center' }}>
+            <PrintableBill bill={bill} />
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ position: 'fixed', bottom: '20px', right: '20px', background: '#fef2f2', border: '1px solid #f87171', color: '#b91c1c', padding: '16px', borderRadius: '8px', zIndex: 10000, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+            <span>{error}</span>
+            <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b91c1c' }}><X size={16}/></button>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        /* Minimal inline styles for grid to ensure portability */
+        .pos-erp-container {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+          border: 1px solid #e2e8f0;
+          overflow: hidden;
         }
-        .wa-progress-fill {
-            width: 0%;
-            height: 100%;
-            background: #25D366;
-            animation: waFill 2.5s forwards linear;
+        .pos-erp-header {
+          padding: 16px 20px;
+          background: #f8fafc;
+          border-bottom: 1px solid #e2e8f0;
+          transition: background 0.3s;
         }
-        @keyframes waFill {
-            to { width: 100%; }
+        .pos-erp-header.return-mode {
+          background: #fef2f2;
+          border-bottom: 1px solid #fecaca;
+        }
+        .erp-pill-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 8px 16px;
+          border-radius: 6px;
+          border: none;
+          color: white;
+          font-size: 0.85rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .erp-pill-btn:hover { 
+          opacity: 0.9; 
+          transform: translateY(-1px);
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .erp-pill-btn:active {
+          transform: translateY(0);
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .bg-indigo { background: #6366f1; }
+        .bg-gray { background: #94a3b8; }
+        .bg-red { background: #ef4444; }
+        .bg-blue { background: #0ea5e9; }
+        .bg-amber { background: #f59e0b; }
+
+        .erp-table-wrapper {
+          flex: 1;
+          overflow: auto;
+          background: white;
+        }
+        .erp-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        .erp-table th {
+          color: #475569;
+          padding: 12px 16px;
+          text-align: left;
+          font-size: 0.8rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          background: #f1f5f9;
+          border-bottom: 2px solid #e2e8f0;
+        }
+        .return-mode .erp-table th {
+          background: #fee2e2;
+        }
+        .erp-table td {
+          padding: 0;
+          border-bottom: 1px solid #e2e8f0;
+          border-right: 1px solid #e2e8f0;
+        }
+        .erp-table td:last-child {
+          border-right: none;
+        }
+        .erp-table tr:hover td {
+          background: #f8fafc;
+        }
+        .erp-input {
+          width: 100%;
+          min-width: 0;
+          border: none;
+          padding: 12px 16px;
+          font-family: inherit;
+          font-size: 0.95rem;
+          background: transparent;
+          outline: none;
+          color: #0f172a;
+        }
+        .erp-input:focus {
+          background: #f0f9ff;
+          box-shadow: inset 0 0 0 2px #0ea5e9;
+        }
+        .erp-input.right {
+          text-align: right;
+        }
+        .erp-input.overstock-warn {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 600;
+        }
+        .stock-tooltip {
+            position: absolute;
+            bottom: -15px;
+            right: 5px;
+            font-size: 0.7rem;
+            color: #ef4444;
+            font-weight: 700;
+            pointer-events: none;
+        }
+        
+        /* Remove default number input spin buttons */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] {
+          -moz-appearance: textfield;
+        }
+
+        .erp-input::placeholder {
+          color: #94a3b8;
+          font-size: 0.85rem;
+        }
+        .erp-autocomplete-dropdown {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          width: 350px;
+          background: white;
+          border: 1px solid #cbd5e1;
+          border-radius: 0 0 6px 6px;
+          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+          z-index: 50;
+          max-height: 250px;
+          overflow-y: auto;
+        }
+        .erp-autocomplete-item {
+          padding: 10px 16px;
+          border-bottom: 1px solid #f1f5f9;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .erp-autocomplete-item:last-child {
+          border-bottom: none;
+        }
+        .erp-autocomplete-item:hover, .erp-autocomplete-item.active {
+          background: #f0f9ff;
+        }
+        .erp-footer {
+          padding: 16px 24px;
+          background: #f8fafc;
+          border-top: 1px solid #e2e8f0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .erp-totals {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 6px 24px;
+          align-items: center;
+        }
+        .modal-overlay {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.5); display: flex; justify-content: center; alignItems: center;
+        }
+        .modal-content {
+          background: white; border-radius: 8px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden;
+        }
+        
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+          .pos-erp-header-top {
+            flex-direction: column;
+            align-items: stretch !important;
+            gap: 12px;
+          }
+          .pos-erp-actions {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px !important;
+          }
+          .pos-erp-actions > button, .pos-erp-actions > div {
+             width: 100%;
+          }
+          .pos-erp-actions > div.pos-action-input {
+            grid-column: 1 / -1;
+            border-left: none !important;
+            padding-left: 0 !important;
+            margin-left: 0 !important;
+            justify-content: space-between;
+          }
+          .pos-erp-actions input, .pos-erp-actions select {
+            flex: 1;
+          }
+          .erp-footer {
+            flex-direction: column-reverse;
+            gap: 16px;
+            align-items: stretch !important;
+            padding: 12px !important;
+          }
+          .erp-footer-actions {
+            justify-content: space-between;
+            width: 100%;
+          }
+          .erp-footer-actions button {
+            flex: 1;
+            justify-content: center;
+            padding: 12px 6px !important;
+            font-size: 0.85rem !important;
+          }
+          .erp-totals {
+            width: 100%;
+          }
+          .erp-table th, .erp-table td {
+            white-space: nowrap;
+          }
         }
       `}</style>
     </div>

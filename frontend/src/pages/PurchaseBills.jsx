@@ -92,8 +92,6 @@ const PurchaseBills = () => {
             // Only show loader if we don't have cached data OR if it's a manual refresh
             if (!hasCachedData || isRefresh) {
                 setLoading(true);
-                // Artificial delay for 'premium professional loader' experience
-                await new Promise(resolve => setTimeout(resolve, 2500));
             } else if (hasCachedData) {
                 // If we have cached data, set it immediately so UI is ready
                 setBills(window.purchaseBillsCache);
