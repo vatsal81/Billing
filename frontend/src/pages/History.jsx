@@ -609,21 +609,9 @@ export default function History() {
                       <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: '900', letterSpacing: '-0.5px', color: isVoid ? 'var(--text-secondary)' : (bill.billType === 'return' ? '#ef4444' : 'var(--success)') }}>
                         {bill.billType === 'return' ? '-' : ''}Rs.{(bill.actualTotal || 0).toLocaleString('en-IN')}
                       </h3>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-end', marginTop: '2px' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                          Incl. ₹{totalTaxes.toFixed(2)} Tax
-                        </span>
-                        {!isVoid && bill.profit !== undefined && (
-                          <span style={{ 
-                            fontSize: '0.8rem', 
-                            color: bill.profit >= 0 ? 'var(--success)' : 'var(--danger)', 
-                            fontWeight: '700',
-                            marginTop: '1px'
-                          }}>
-                            Profit: ₹{Number(bill.profit).toLocaleString('en-IN')}
-                          </span>
-                        )}
-                      </div>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                        Incl. ₹{totalTaxes.toFixed(2)} Tax
+                      </span>
                     </div>
 
                   </div>

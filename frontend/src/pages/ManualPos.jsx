@@ -588,7 +588,8 @@ const ManualPos = () => {
          setProducts(prev => prev.map(p => {
              const soldItem = res.items.find(i => i.product === p._id);
              if (soldItem) {
-                 const diff = billType === 'return' ? soldItem.quantity : -soldItem.quantity;
+                 const qtyImpact = soldItem.quantity * (soldItem.meter || 1);
+                 const diff = billType === 'return' ? qtyImpact : -qtyImpact;
                  return { ...p, stockAmount: p.stockAmount + diff, currentStock: p.stockAmount + diff };
              }
              return p;

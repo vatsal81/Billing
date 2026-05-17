@@ -242,7 +242,8 @@ exports.generateBill = asyncHandler(async (req, res) => {
             amount: finalActualTotal,
             description: `Credit Sale - Bill #${bill.invoiceNumber || String(nextSerial).padStart(3, '0')}`,
             referenceId: bill._id,
-            balanceAfter: customer.balance
+            balanceAfter: customer.balance,
+            createdAt: bill.createdAt
         });
     }
 
@@ -354,7 +355,8 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
 
     for (let item of items) {
         if (item.product) {
-            const stockImpact = actualBillType === 'return' ? item.quantity : -item.quantity;
+            const itemQty = item.quantity * (item.meter || 1);
+            const stockImpact = actualBillType === 'return' ? itemQty : -itemQty;
             await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount: stockImpact } });
         }
     }
@@ -369,7 +371,8 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
             amount: finalTotal,
             description: `Manual ${actualBillType === 'return' ? 'Sales Return' : 'Credit Sale'} - Bill #${bill.invoiceNumber || String(nextSerial).padStart(3, '0')}`,
             referenceId: bill._id,
-            balanceAfter: customer.balance
+            balanceAfter: customer.balance,
+            createdAt: bill.createdAt
         });
     }
 
@@ -394,7 +397,8 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
     if (oldBill.status !== 'void') {
         for (let item of oldBill.items) {
             if (item.product) {
-                const revertQty = oldBill.billType === 'return' ? -item.quantity : item.quantity;
+                const itemQty = item.quantity * (item.meter || 1);
+                const revertQty = oldBill.billType === 'return' ? -itemQty : itemQty;
                 await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount: revertQty } });
             }
         }
@@ -499,16 +503,28 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
         const parsed = parseInt(String(invoiceNumber).replace(/\D/g, ''), 10);
         if (!isNaN(parsed)) oldBill.serialNumber = parsed;
     }
-    if (billDate) oldBill.createdAt = new Date(billDate);
+    if (billDate) {
+        oldBill.createdAt = new Date(billDate);
+    }
     oldBill.uniqueInvoiceId = generateUniqueInvoiceId(customerName, oldBill.createdAt, oldBill.invoiceNumber, oldBill.serialNumber, oldBill.paymentMode);
     oldBill.status = 'active'; // force reactivate if it was void
 
     const updatedBill = await oldBill.save();
+    
+    // Force direct DB update to bypass Mongoose timestamp plugin overriding createdAt
+    if (billDate) {
+        await Bill.collection.updateOne(
+            { _id: oldBill._id },
+            { $set: { createdAt: new Date(billDate) } }
+        );
+        updatedBill.createdAt = new Date(billDate);
+    }
 
     // 6. Apply new stock impacts
     for (let item of items) {
         if (item.product) {
-            const stockImpact = actualBillType === 'return' ? item.quantity : -item.quantity;
+            const itemQty = item.quantity * (item.meter || 1);
+            const stockImpact = actualBillType === 'return' ? itemQty : -itemQty;
             await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount: stockImpact } });
         }
     }
@@ -524,7 +540,8 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
             amount: finalTotal,
             description: `Manual Edit ${actualBillType === 'return' ? 'Sales Return' : 'Credit Sale'} - Bill #${updatedBill.invoiceNumber || String(oldBill.serialNumber).padStart(3, '0')}`,
             referenceId: updatedBill._id,
-            balanceAfter: customer.balance
+            balanceAfter: customer.balance,
+            createdAt: updatedBill.createdAt
         });
     }
 
@@ -536,32 +553,7 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
 // @access  Private
 exports.getBills = asyncHandler(async (req, res) => {
     const bills = await Bill.find().sort({ createdAt: -1 });
-    
-    // Fetch all products to get their purchase rates
-    const products = await Product.find({}, 'purchaseRate');
-    const productMap = {};
-    products.forEach(p => {
-        productMap[p._id.toString()] = p.purchaseRate || 0;
-    });
-
-    const billsWithProfit = bills.map(bill => {
-        let billCOGS = 0;
-        if (bill.status !== 'void') {
-            bill.items.forEach(item => {
-                const purchaseRate = item.product ? (productMap[item.product.toString()] || 0) : 0;
-                const meter = item.meter ? parseFloat(item.meter) : 1;
-                billCOGS += purchaseRate * item.quantity * meter;
-            });
-        }
-        const profit = bill.status === 'void' ? 0 : Number((bill.totalAmount - billCOGS).toFixed(2));
-        
-        return {
-            ...bill.toObject(),
-            profit
-        };
-    });
-
-    res.json(billsWithProfit);
+    res.json(bills);
 });
 
 // @desc    Get bill by ID
@@ -573,26 +565,7 @@ exports.getBillById = asyncHandler(async (req, res) => {
         res.status(404);
         throw new Error("Bill not found");
     }
-    
-    let billCOGS = 0;
-    if (bill.status !== 'void') {
-        const products = await Product.find({}, 'purchaseRate');
-        const productMap = {};
-        products.forEach(p => {
-            productMap[p._id.toString()] = p.purchaseRate || 0;
-        });
-        bill.items.forEach(item => {
-            const purchaseRate = item.product ? (productMap[item.product.toString()] || 0) : 0;
-            const meter = item.meter ? parseFloat(item.meter) : 1;
-            billCOGS += purchaseRate * item.quantity * meter;
-        });
-    }
-    const profit = bill.status === 'void' ? 0 : Number((bill.totalAmount - billCOGS).toFixed(2));
-
-    res.json({
-        ...bill.toObject(),
-        profit
-    });
+    res.json(bill);
 });
 
 // @desc    Void a bill
@@ -614,7 +587,8 @@ exports.voidBill = asyncHandler(async (req, res) => {
     await bill.save();
 
     for (let item of bill.items) {
-        await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount : item.quantity } });
+        const itemQty = item.quantity * (item.meter || 1);
+        await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount : itemQty } });
     }
 
     if (bill.paymentMode === 'credit' && (bill.customer || bill.customerName)) {
@@ -644,7 +618,8 @@ exports.deleteBill = asyncHandler(async (req, res) => {
 
     if (billToDelete.status !== 'void') {
         for (let item of billToDelete.items) {
-            await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount : item.quantity } });
+            const itemQty = item.quantity * (item.meter || 1);
+            await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount : itemQty } });
         }
     }
 

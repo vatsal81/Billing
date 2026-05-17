@@ -89,17 +89,36 @@ const addPurchaseBill = async (req, res) => {
         const itemsWithIds = [];
         
         for (const item of items) {
-            let product = await Product.findOne({ 
-                $or: [
-                    { name: item.name },
-                    { nameEnglish: item.nameEnglish },
-                    { productId: item.productId }
-                ]
-            });
+            const nameToSearch = (item.name || '').trim();
+            const nameEnglishToSearch = (item.nameEnglish || '').trim();
+            
+            let product = null;
+            if (item.productId) {
+                product = await Product.findOne({ productId: item.productId });
+            }
+            if (!product && nameToSearch) {
+                product = await Product.findOne({
+                    $or: [
+                        { name: { $regex: new RegExp(`^${nameToSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+                        { nameEnglish: { $regex: new RegExp(`^${nameToSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+                    ]
+                });
+            }
+            if (!product && nameEnglishToSearch) {
+                product = await Product.findOne({
+                    $or: [
+                        { name: { $regex: new RegExp(`^${nameEnglishToSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+                        { nameEnglish: { $regex: new RegExp(`^${nameEnglishToSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+                    ]
+                });
+            }
+
+            const markupPrice = Math.round((Number(item.rate) * 1.30) / 10) * 10;
 
             if (product) {
                 product.stockAmount += (Number(item.meters) || Number(item.pcs) || 0);
                 product.purchaseRate = Number(item.rate);
+                product.price = markupPrice; // Set 30% profit markup!
                 product.lastSupplier = supplierName;
                 product.lastInvoice = billNumber;
                 if (!product.nameEnglish && item.nameEnglish) {
@@ -108,23 +127,18 @@ const addPurchaseBill = async (req, res) => {
                 await product.save();
                 
                 itemsWithIds.push({ ...item, productId: product.productId });
-
-                if (!product.price || product.price === 0) {
-                    unpricedProducts.push(product);
-                }
             } else {
                 const newProduct = await Product.create({
                     name: item.name,
                     nameEnglish: item.nameEnglish || '',
                     hsnCode: item.hsnCode,
-                    price: 0,
+                    price: markupPrice, // Set 30% profit markup!
                     purchaseRate: Number(item.rate),
                     stockAmount: (Number(item.meters) || Number(item.pcs) || 0),
                     lastSupplier: supplierName,
                     lastInvoice: billNumber
                 });
                 itemsWithIds.push({ ...item, productId: newProduct.productId });
-                unpricedProducts.push(newProduct);
             }
         }
 
@@ -326,23 +340,39 @@ const updatePurchaseBill = async (req, res) => {
         oldBill.billImage = billImage;
         oldBill.ewayBillImage = ewayBillImage;
 
-        await oldBill.save();
-
         // 4. Apply new stock
-        const unpricedProducts = [];
         const itemsWithIds = [];
         for (const item of items) {
-            let product = await Product.findOne({ 
-                $or: [
-                    { name: item.name },
-                    { nameEnglish: item.nameEnglish },
-                    { productId: item.productId }
-                ]
-            });
+            const nameToSearch = (item.name || '').trim();
+            const nameEnglishToSearch = (item.nameEnglish || '').trim();
+            
+            let product = null;
+            if (item.productId) {
+                product = await Product.findOne({ productId: item.productId });
+            }
+            if (!product && nameToSearch) {
+                product = await Product.findOne({
+                    $or: [
+                        { name: { $regex: new RegExp(`^${nameToSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+                        { nameEnglish: { $regex: new RegExp(`^${nameToSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+                    ]
+                });
+            }
+            if (!product && nameEnglishToSearch) {
+                product = await Product.findOne({
+                    $or: [
+                        { name: { $regex: new RegExp(`^${nameEnglishToSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+                        { nameEnglish: { $regex: new RegExp(`^${nameEnglishToSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } }
+                    ]
+                });
+            }
+
+            const markupPrice = Math.round((Number(item.rate) * 1.30) / 10) * 10;
 
             if (product) {
                 product.stockAmount += (Number(item.meters) || Number(item.pcs) || 0);
-                product.purchaseRate = item.rate;
+                product.purchaseRate = Number(item.rate);
+                product.price = markupPrice; // Set 30% profit markup!
                 product.lastSupplier = supplierName;
                 product.lastInvoice = billNumber;
                 if (!product.nameEnglish && item.nameEnglish) {
@@ -350,20 +380,18 @@ const updatePurchaseBill = async (req, res) => {
                 }
                 await product.save();
                 itemsWithIds.push({ ...item, productId: product.productId });
-                if (!product.price || product.price === 0) unpricedProducts.push(product);
             } else {
                 const newProduct = await Product.create({
                     name: item.name,
                     nameEnglish: item.nameEnglish || '',
                     hsnCode: item.hsnCode,
-                    price: 0,
-                    purchaseRate: item.rate,
+                    price: markupPrice, // Set 30% profit markup!
+                    purchaseRate: Number(item.rate),
                     stockAmount: (Number(item.meters) || Number(item.pcs) || 0),
                     lastSupplier: supplierName,
                     lastInvoice: billNumber
                 });
                 itemsWithIds.push({ ...item, productId: newProduct.productId });
-                unpricedProducts.push(newProduct);
             }
         }
         oldBill.items = itemsWithIds;
@@ -389,6 +417,7 @@ const updatePurchaseBill = async (req, res) => {
             balanceAfter: currentSupplier ? Number(currentSupplier.balance) : Number(totalAmount)
         });
 
+        const unpricedProducts = [];
         res.json({ purchaseBill: oldBill, unpricedProducts });
     } catch (error) {
         res.status(400).json({ message: error.message });
