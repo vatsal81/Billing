@@ -573,11 +573,29 @@ export default function History() {
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                           Inv #{invNumber} • {dateObj.toLocaleDateString('en-IN')} {dateObj.toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'})}
                         </span>
-                        {bill.uniqueInvoiceId && (
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '4px', alignSelf: 'flex-start', marginTop: '2px' }}>
-                            {bill.uniqueInvoiceId}
-                          </span>
-                        )}
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px', alignItems: 'center' }}>
+                          {bill.uniqueInvoiceId && (
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                              {bill.uniqueInvoiceId}
+                            </span>
+                          )}
+                          {bill.profit !== undefined && !isVoid && (
+                            <span style={{ 
+                              fontSize: '0.75rem', 
+                              color: '#16a34a', 
+                              fontWeight: '700', 
+                              background: 'rgba(22, 163, 74, 0.1)', 
+                              padding: '2px 8px', 
+                              borderRadius: '6px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              border: '1px solid rgba(22, 163, 74, 0.2)'
+                            }}>
+                              💰 Profit: Rs.{bill.profit.toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 

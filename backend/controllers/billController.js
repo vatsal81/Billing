@@ -535,20 +535,49 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
 // @route   GET /api/bills
 // @access  Private
 exports.getBills = asyncHandler(async (req, res) => {
-    const bills = await Bill.find().sort({ createdAt: -1 });
-    res.json(bills);
+    const bills = await Bill.find().populate('items.product').sort({ createdAt: -1 });
+    
+    const billsWithProfit = bills.map(bill => {
+        let billCOGS = 0;
+        if (bill.items && Array.isArray(bill.items)) {
+            bill.items.forEach(item => {
+                const purchaseRate = item.product?.purchaseRate || item.purchaseRate || 0;
+                billCOGS += purchaseRate * (item.quantity || 0);
+            });
+        }
+        const profit = Number((bill.actualTotal - billCOGS).toFixed(2));
+        return {
+            ...bill.toObject(),
+            profit
+        };
+    });
+    
+    res.json(billsWithProfit);
 });
 
 // @desc    Get bill by ID
 // @route   GET /api/bills/:id
 // @access  Private
 exports.getBillById = asyncHandler(async (req, res) => {
-    const bill = await Bill.findById(req.params.id);
+    const bill = await Bill.findById(req.params.id).populate('items.product');
     if (!bill) {
         res.status(404);
         throw new Error("Bill not found");
     }
-    res.json(bill);
+    
+    let billCOGS = 0;
+    if (bill.items && Array.isArray(bill.items)) {
+        bill.items.forEach(item => {
+            const purchaseRate = item.product?.purchaseRate || item.purchaseRate || 0;
+            billCOGS += purchaseRate * (item.quantity || 0);
+        });
+    }
+    const profit = Number((bill.actualTotal - billCOGS).toFixed(2));
+    
+    res.json({
+        ...bill.toObject(),
+        profit
+    });
 });
 
 // @desc    Void a bill
