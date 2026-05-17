@@ -110,15 +110,28 @@ const buildSingleBillHTML = (bill, settings = {}) => {
     const formatDate = (date) => 
         date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-') : 'N/A';
 
+    const getInvoiceNumberValue = () => {
+        const inv = bill.invoiceNumber;
+        if (!inv) return bill.serialNumber || 1;
+        const match = inv.match(/\d+$/);
+        if (match) {
+            const parsed = parseInt(match[0], 10);
+            if (!isNaN(parsed)) return parsed;
+        }
+        const parsedAll = parseInt(inv.replace(/\D/g, ''), 10);
+        if (!isNaN(parsedAll)) return parsedAll;
+        return bill.serialNumber || 1;
+    };
+
     const renderBookNo = () => {
-        if (!bill.serialNumber) return "01";
-        const book = Math.floor((bill.serialNumber - 1) / 100) + 1;
+        const val = getInvoiceNumberValue();
+        const book = Math.floor((val - 1) / 100) + 1;
         return String(book).padStart(2, '0');
     };
 
     const renderBillNo = () => {
-        if (!bill.serialNumber) return "001";
-        const num = ((bill.serialNumber - 1) % 100) + 1;
+        const val = getInvoiceNumberValue();
+        const num = ((val - 1) % 100) + 1;
         return String(num).padStart(3, '0');
     };
 

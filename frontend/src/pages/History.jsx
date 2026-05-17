@@ -26,6 +26,7 @@ export default function History() {
   const [selectedBill, setSelectedBill] = useState(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [sortOrder, setSortOrder] = useState('inv_desc');
   const [generatingPdfBill, setGeneratingPdfBill] = useState(null);
   const [billToDelete, setBillToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -197,9 +198,9 @@ export default function History() {
   const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   const filteredBills = bills.filter(bill => {
-    const billNo = bill.serialNumber 
-      ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') 
-      : bill._id.substring(bill._id.length - 4).toUpperCase();
+    const billNo = bill.invoiceNumber || (bill.serialNumber 
+      ? String(bill.serialNumber).padStart(3, '0') 
+      : bill._id.substring(bill._id.length - 4).toUpperCase());
       
     let match = true;
     if (searchTerm) {
@@ -219,8 +220,32 @@ export default function History() {
     const bDate = new Date(bill.createdAt);
     if (startDate && bDate < new Date(startDate)) match = false;
     if (endDate && bDate > new Date(endDate + 'T23:59:59')) match = false;
-    
     return match;
+  });
+
+  const getNumericInvoiceValue = (bill) => {
+    const inv = bill.invoiceNumber;
+    if (!inv) return bill.serialNumber || 0;
+    const match = String(inv).match(/\d+$/);
+    if (match) {
+        const parsed = parseInt(match[0], 10);
+        return !isNaN(parsed) ? parsed : 0;
+    }
+    const parsedAll = parseInt(String(inv).replace(/\D/g, ''), 10);
+    return !isNaN(parsedAll) ? parsedAll : 0;
+  };
+
+  const sortedBills = [...filteredBills].sort((a, b) => {
+    if (sortOrder === 'date_desc') {
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    } else if (sortOrder === 'date_asc') {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    } else if (sortOrder === 'inv_desc') {
+      return getNumericInvoiceValue(b) - getNumericInvoiceValue(a);
+    } else if (sortOrder === 'inv_asc') {
+      return getNumericInvoiceValue(a) - getNumericInvoiceValue(b);
+    }
+    return 0;
   });
 
   const exportCSV = () => {
@@ -453,7 +478,7 @@ export default function History() {
           <h3>{t('recentReceipts')}</h3>
           <div className="header-actions" style={{ flex: 1, justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', width: '100%', justifyContent: 'flex-end' }}>
-              <input 
+               <input 
                 type="date" 
                 className="input-field" 
                 style={{ width: 'auto', flex: 1, minWidth: '130px' }} 
@@ -467,6 +492,25 @@ export default function History() {
                 value={endDate ?? ''} 
                 onChange={(e)=>setEndDate(e.target.value)} 
               />
+              <select
+                className="input-field"
+                style={{ 
+                  width: 'auto', 
+                  flex: '0 1 auto', 
+                  minWidth: '140px', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer',
+                  borderColor: 'var(--accent-primary)',
+                  color: 'var(--text-primary)'
+                }}
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+              >
+                <option value="inv_desc">↓ Invoice No: Highest</option>
+                <option value="inv_asc">↑ Invoice No: Lowest</option>
+                <option value="date_desc">↓ Date: Newest</option>
+                <option value="date_asc">↑ Date: Oldest</option>
+              </select>
               <div style={{position: 'relative', flex: 2, minWidth: '200px'}}>
                 <Search size={16} style={{position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)'}} />
                 <input 
@@ -491,11 +535,11 @@ export default function History() {
                 {bills.length === 0 ? t('noInvoices') : "No matching bills found"}
               </div>
             ) : (
-              filteredBills.map((bill, index) => {
+              sortedBills.map((bill, index) => {
                 const totalTaxes = bill.cgst + bill.sgst;
                 const dateObj = new Date(bill.createdAt);
                 const isVoid = bill.status === 'void';
-                const invNumber = bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase();
+                const invNumber = bill.invoiceNumber || (bill.serialNumber ? String(bill.serialNumber).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase());
                 
                 return (
                   <div key={bill._id} className="glass-panel hover-lift receipt-card" style={{

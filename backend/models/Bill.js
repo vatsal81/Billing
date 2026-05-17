@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const billSchema = mongoose.Schema({
     serialNumber: { type: Number },
+    invoiceNumber: { type: String },
     items: [{
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
         name: String,

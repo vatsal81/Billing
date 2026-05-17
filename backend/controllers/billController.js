@@ -7,6 +7,39 @@ const Settings = require('../models/Settings');
 const LedgerEntry = require('../models/LedgerEntry');
 const { generateBillPdf } = require('../utils/pdfGenerator');
 
+const generateUniqueInvoiceId = (customerName, billDate, invoiceNumber, serialNumber, paymentMode) => {
+    const nameParts = (customerName || 'CASH').trim().split(/\s+/);
+    let initials = 'CSH';
+    if (nameParts.length === 1 && nameParts[0].toUpperCase() !== 'CASH') {
+        initials = nameParts[0].substring(0, 2).toUpperCase();
+    } else if (nameParts.length >= 2) {
+        initials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+    }
+    initials = initials.replace(/[^A-Z]/g, '') || 'CSH';
+
+    const dateObj = billDate ? new Date(billDate) : new Date();
+    const datePart = `${String(dateObj.getDate()).padStart(2, '0')}${String(dateObj.getMonth()+1).padStart(2, '0')}${dateObj.getFullYear()}`;
+
+    let val = serialNumber || 1;
+    if (invoiceNumber) {
+        const match = String(invoiceNumber).match(/\d+$/);
+        if (match) {
+            const parsed = parseInt(match[0], 10);
+            if (!isNaN(parsed)) val = parsed;
+        } else {
+            const parsedAll = parseInt(String(invoiceNumber).replace(/\D/g, ''), 10);
+            if (!isNaN(parsedAll)) val = parsedAll;
+        }
+    }
+    const book = Math.floor((val - 1) / 100) + 1;
+    const num = ((val - 1) % 100) + 1;
+    const bookNo = String(book).padStart(2, '0');
+    const billNo = String(num).padStart(3, '0');
+
+    const payMode = (paymentMode === 'online' ? 'GPAY' : (paymentMode === 'credit' ? 'UDHAR' : 'CASH'));
+    return `${initials}-BK${bookNo}-B${billNo}-${datePart}-${payMode}`;
+};
+
 // @desc    Generate a smart bill
 // @route   POST /api/bills
 // @access  Private
@@ -31,6 +64,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
         throw new Error(`No stock available. Total products in DB: ${allProducts}`);
     }
 
+    const targetSubtotal = targetAmount * 0.9524; // User's precise inclusive subtotal formula (-4.76%)
     let bestResult = null;
     let closestDiff = Infinity;
 
@@ -42,7 +76,6 @@ exports.generateBill = asyncHandler(async (req, res) => {
         let selectedItemsMap = {}; 
         let selectedProducts = [];
         let currentSubtotal = 0;
-        const targetSubtotal = targetAmount / 1.05;
 
         for (const p of shuffledProducts) {
             if (selectedProducts.length < targetItemCount && (currentSubtotal + p.price) <= targetSubtotal) {
@@ -107,24 +140,24 @@ exports.generateBill = asyncHandler(async (req, res) => {
             }
         }
 
-        const cgst = currentSubtotal * 0.025;
-        const sgst = currentSubtotal * 0.025;
-        const preRound = currentSubtotal + cgst + sgst;
-        const finalActualTotal = Math.round(preRound);
-        const diff = Math.abs(finalActualTotal - targetAmount);
+        const diff = Math.abs(targetSubtotal - currentSubtotal);
 
         if (diff < closestDiff) {
             closestDiff = diff;
+            const cgst = currentSubtotal * 0.025;
+            const sgst = currentSubtotal * 0.025;
+            const preRound = currentSubtotal + cgst + sgst;
+
             bestResult = {
                 selectedItems: Object.values(selectedItemsMap).map(item => ({
                     ...item,
                     total: item.price * item.quantity
                 })),
                 currentSubtotal,
-                cgst,
-                sgst,
-                roundOff: finalActualTotal - preRound,
-                finalActualTotal
+                cgst: Number(cgst.toFixed(2)),
+                sgst: Number(sgst.toFixed(2)),
+                roundOff: Number((targetAmount - preRound).toFixed(2)),
+                finalActualTotal: targetAmount
             };
 
             if (diff === 0) {
@@ -167,25 +200,12 @@ exports.generateBill = asyncHandler(async (req, res) => {
         resolvedCustomerId = customer._id;
     }
 
-    const nameParts = (customerName || 'CASH').trim().split(/\s+/);
-    let initials = 'CSH';
-    if (nameParts.length === 1 && nameParts[0].toUpperCase() !== 'CASH') {
-        initials = nameParts[0].substring(0, 2).toUpperCase();
-    } else if (nameParts.length >= 2) {
-        initials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
-    }
-    initials = initials.replace(/[^A-Z]/g, '') || 'CSH';
-
-    const dateObj = req.body.billDate ? new Date(req.body.billDate) : new Date();
-    const datePart = `${String(dateObj.getDate()).padStart(2, '0')}${String(dateObj.getMonth()+1).padStart(2, '0')}${dateObj.getFullYear()}`;
-    const bookNo = String(Math.floor((nextSerial - 1) / 100) + 1).padStart(2, '0');
-    const billNo = String(((nextSerial - 1) % 100) + 1).padStart(3, '0');
-    const payMode = (paymentMode === 'online' ? 'GPAY' : (paymentMode === 'credit' ? 'UDHAR' : 'CASH'));
-    const uniqueInvoiceId = `${initials}-BK${bookNo}-B${billNo}-${datePart}-${payMode}`;
+    const uniqueInvoiceId = generateUniqueInvoiceId(customerName, req.body.billDate, null, nextSerial, paymentMode);
 
     const bill = await Bill.create({
         uniqueInvoiceId,
         serialNumber: nextSerial,
+        invoiceNumber: String(nextSerial).padStart(3, '0'),
         items: selectedItems,
         totalAmount: currentSubtotal,
         cgst: cgst,
@@ -220,7 +240,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
             partyName: customer.name,
             type: 'debit',
             amount: finalActualTotal,
-            description: `Credit Sale - Bill #${nextSerial}`,
+            description: `Credit Sale - Bill #${bill.invoiceNumber || String(nextSerial).padStart(3, '0')}`,
             referenceId: bill._id,
             balanceAfter: customer.balance
         });
@@ -234,7 +254,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
 // @access  Private
 exports.generateManualBill = asyncHandler(async (req, res) => {
     console.log("[DEBUG] generateManualBill req.body:", req.body);
-    const { items, customerId, customerName, customerNameGujarati, customerAddress, customerAddressGujarati, customerPhone, paymentMode, discountAmount, discountType, billType, billDate } = req.body;
+    const { items, customerId, customerName, customerNameGujarati, customerAddress, customerAddressGujarati, customerPhone, paymentMode, discountAmount, discountType, billType, billDate, invoiceNumber } = req.body;
 
     const actualBillType = billType || 'sale';
     const actualDiscountAmount = parseFloat(discountAmount) || 0;
@@ -271,7 +291,11 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
     const impactAmount = actualBillType === 'return' ? -finalTotal : finalTotal;
 
     const lastBill = await Bill.findOne().sort({ serialNumber: -1 });
-    const nextSerial = lastBill ? lastBill.serialNumber + 1 : 1;
+    let nextSerial = lastBill ? lastBill.serialNumber + 1 : 1;
+    if (invoiceNumber) {
+        const parsed = parseInt(String(invoiceNumber).replace(/\D/g, ''), 10);
+        if (!isNaN(parsed)) nextSerial = parsed;
+    }
 
     let resolvedCustomerId = null;
     if (customerId || customerName) {
@@ -297,25 +321,12 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
         resolvedCustomerId = customer._id;
     }
 
-    const nameParts = (customerName || 'CASH').trim().split(/\s+/);
-    let initials = 'CSH';
-    if (nameParts.length === 1 && nameParts[0].toUpperCase() !== 'CASH') {
-        initials = nameParts[0].substring(0, 2).toUpperCase();
-    } else if (nameParts.length >= 2) {
-        initials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
-    }
-    initials = initials.replace(/[^A-Z]/g, '') || 'CSH';
-
-    const dateObj = billDate ? new Date(billDate) : new Date();
-    const datePart = `${String(dateObj.getDate()).padStart(2, '0')}${String(dateObj.getMonth()+1).padStart(2, '0')}${dateObj.getFullYear()}`;
-    const bookNo = String(Math.floor((nextSerial - 1) / 100) + 1).padStart(2, '0');
-    const billNo = String(((nextSerial - 1) % 100) + 1).padStart(3, '0');
-    const payMode = (paymentMode === 'online' ? 'GPAY' : (paymentMode === 'credit' ? 'UDHAR' : 'CASH'));
-    const uniqueInvoiceId = `${initials}-BK${bookNo}-B${billNo}-${datePart}-${payMode}`;
+    const uniqueInvoiceId = generateUniqueInvoiceId(customerName, billDate, invoiceNumber, nextSerial, paymentMode);
 
     const bill = await Bill.create({
         uniqueInvoiceId,
         serialNumber: nextSerial,
+        invoiceNumber: invoiceNumber || String(nextSerial).padStart(3, '0'),
         items,
         totalAmount: subtotal,
         discountAmount: actualDiscountAmount,
@@ -356,7 +367,7 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
             partyName: customer.name,
             type: actualBillType === 'return' ? 'credit' : 'debit',
             amount: finalTotal,
-            description: `Manual ${actualBillType === 'return' ? 'Sales Return' : 'Credit Sale'} - Bill #${nextSerial}`,
+            description: `Manual ${actualBillType === 'return' ? 'Sales Return' : 'Credit Sale'} - Bill #${bill.invoiceNumber || String(nextSerial).padStart(3, '0')}`,
             referenceId: bill._id,
             balanceAfter: customer.balance
         });
@@ -370,7 +381,7 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
 // @access  Private
 exports.updateManualBill = asyncHandler(async (req, res) => {
     console.log("[DEBUG] updateManualBill req.body:", req.body);
-    const { items, customerId, customerName, customerNameGujarati, customerAddress, customerAddressGujarati, customerPhone, paymentMode, discountAmount, discountType, billType, billDate } = req.body;
+    const { items, customerId, customerName, customerNameGujarati, customerAddress, customerAddressGujarati, customerPhone, paymentMode, discountAmount, discountType, billType, billDate, invoiceNumber } = req.body;
     const billId = req.params.id;
 
     const oldBill = await Bill.findById(billId);
@@ -483,7 +494,13 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
     oldBill.customerAddressGujarati = customerAddressGujarati;
     oldBill.customerPhone = customerPhone;
     oldBill.paymentMode = paymentMode || 'cash';
+    if (invoiceNumber !== undefined) {
+        oldBill.invoiceNumber = invoiceNumber;
+        const parsed = parseInt(String(invoiceNumber).replace(/\D/g, ''), 10);
+        if (!isNaN(parsed)) oldBill.serialNumber = parsed;
+    }
     if (billDate) oldBill.createdAt = new Date(billDate);
+    oldBill.uniqueInvoiceId = generateUniqueInvoiceId(customerName, oldBill.createdAt, oldBill.invoiceNumber, oldBill.serialNumber, oldBill.paymentMode);
     oldBill.status = 'active'; // force reactivate if it was void
 
     const updatedBill = await oldBill.save();
@@ -505,7 +522,7 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
             partyName: customer.name,
             type: actualBillType === 'return' ? 'credit' : 'debit',
             amount: finalTotal,
-            description: `Manual Edit ${actualBillType === 'return' ? 'Sales Return' : 'Credit Sale'} - Bill #${oldBill.serialNumber}`,
+            description: `Manual Edit ${actualBillType === 'return' ? 'Sales Return' : 'Credit Sale'} - Bill #${updatedBill.invoiceNumber || String(oldBill.serialNumber).padStart(3, '0')}`,
             referenceId: updatedBill._id,
             balanceAfter: customer.balance
         });

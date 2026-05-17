@@ -33,6 +33,7 @@ const ManualPos = () => {
   const [billType, setBillType] = useState('sale'); // Feature 6
   const [barcodeMode, setBarcodeMode] = useState(false); // Feature 5
   const [heldBills, setHeldBills] = useState([]); // Feature 4
+  const [invoiceNum, setInvoiceNum] = useState('');
   const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
   const [showDiscountDropdown, setShowDiscountDropdown] = useState(false);
   
@@ -567,7 +568,8 @@ const ManualPos = () => {
         discountType,
         roundOff: customRoundOff !== '' ? parseFloat(customRoundOff) : undefined,
         billType,
-        billDate
+        billDate,
+        invoiceNumber: invoiceNum !== '' ? invoiceNum : undefined
       };
       
       let res;
@@ -617,6 +619,7 @@ const ManualPos = () => {
       setDiscountAmount(bill.discountAmount || '');
       setDiscountType(bill.discountType || 'none');
       setCustomRoundOff(bill.roundOff !== undefined ? String(bill.roundOff) : '');
+      setInvoiceNum(bill.invoiceNumber || String(bill.serialNumber).padStart(3, '0'));
       if (bill.createdAt) {
           const d = new Date(bill.createdAt);
           setBillDate(d.toLocaleDateString('en-CA')); // YYYY-MM-DD format
@@ -671,6 +674,7 @@ const ManualPos = () => {
     setBillDate(new Date().toLocaleDateString('en-CA'));
     setEditingBillId(null);
     setEditingBillSerial(null);
+    setInvoiceNum('');
   };
 
   const handleWhatsApp = async (bill) => {
@@ -1000,6 +1004,31 @@ const ManualPos = () => {
               >
                 <RefreshCcw size={14}/> {billType === 'return' ? 'Return Mode' : 'Sales Mode'}
               </button>
+
+               <div className="pos-action-input" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px', borderLeft: '1px solid #cbd5e1', paddingLeft: '16px' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Inv No:</label>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <input 
+                    type="text"
+                    style={{ 
+                      padding: '6px 10px', 
+                      borderRadius: '8px', 
+                      border: '1px solid #cbd5e1', 
+                      fontSize: '0.85rem', 
+                      outline: 'none',
+                      fontWeight: 600,
+                      color: '#334155',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                      transition: 'all 0.2s ease',
+                      width: '100px'
+                    }} 
+                    className="premium-date-input"
+                    value={invoiceNum} 
+                    placeholder="Auto"
+                    onChange={(e) => setInvoiceNum(e.target.value)}
+                  />
+                </div>
+              </div>
 
               <div className="pos-action-input" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '8px', borderLeft: '1px solid #cbd5e1', paddingLeft: '16px' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#475569' }}>Date:</label>
@@ -2391,6 +2420,7 @@ const ManualPos = () => {
                   const term = editSearchTerm.toLowerCase();
                   return (
                     String(b.serialNumber).includes(term) ||
+                    (b.invoiceNumber && String(b.invoiceNumber).toLowerCase().includes(term)) ||
                     (b.customerName && b.customerName.toLowerCase().includes(term)) ||
                     (b.uniqueInvoiceId && b.uniqueInvoiceId.toLowerCase().includes(term))
                   );
@@ -2400,6 +2430,7 @@ const ManualPos = () => {
                     const term = editSearchTerm.toLowerCase();
                     return (
                       String(b.serialNumber).includes(term) ||
+                      (b.invoiceNumber && String(b.invoiceNumber).toLowerCase().includes(term)) ||
                       (b.customerName && b.customerName.toLowerCase().includes(term)) ||
                       (b.uniqueInvoiceId && b.uniqueInvoiceId.toLowerCase().includes(term))
                     );
@@ -2422,7 +2453,7 @@ const ManualPos = () => {
                     >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
-                          #{b.serialNumber} — {b.customerName || 'Cash Sale'}
+                          #{b.invoiceNumber || String(b.serialNumber).padStart(3, '0')} — {b.customerName || 'Cash Sale'}
                         </div>
                         <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
                           {b.uniqueInvoiceId || 'Invoice ID'} • {new Date(b.createdAt).toLocaleDateString('en-IN')}
