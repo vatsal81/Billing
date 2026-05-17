@@ -29,6 +29,7 @@ const ManualPos = () => {
   // ERP Features State
   const [discountAmount, setDiscountAmount] = useState(''); // Feature 1
   const [discountType, setDiscountType] = useState('none'); // Feature 1
+  const [customRoundOff, setCustomRoundOff] = useState(''); // Custom Round Off
   const [billType, setBillType] = useState('sale'); // Feature 6
   const [barcodeMode, setBarcodeMode] = useState(false); // Feature 5
   const [heldBills, setHeldBills] = useState([]); // Feature 4
@@ -525,7 +526,13 @@ const ManualPos = () => {
   if (discountedSubtotal < 0) discountedSubtotal = 0;
 
   const taxAmount = discountedSubtotal * 0.05; // 5% GST
-  const grandTotal = Math.round(discountedSubtotal + taxAmount);
+  const autoRoundOff = Math.round(discountedSubtotal + taxAmount) - (discountedSubtotal + taxAmount);
+  
+  let roundOffVal = autoRoundOff;
+  if (customRoundOff !== '' && !isNaN(customRoundOff)) {
+      roundOffVal = parseFloat(customRoundOff) || 0;
+  }
+  const grandTotal = Math.round(discountedSubtotal + taxAmount + roundOffVal);
 
   const handleCheckout = async () => {
     if (!customerId && !customerName) {
@@ -558,6 +565,7 @@ const ManualPos = () => {
         paymentMode,
         discountAmount: dAmount,
         discountType,
+        roundOff: customRoundOff !== '' ? parseFloat(customRoundOff) : undefined,
         billType,
         billDate
       };
@@ -608,6 +616,7 @@ const ManualPos = () => {
       setBillType(bill.billType || 'sale');
       setDiscountAmount(bill.discountAmount || '');
       setDiscountType(bill.discountType || 'none');
+      setCustomRoundOff(bill.roundOff !== undefined ? String(bill.roundOff) : '');
       if (bill.createdAt) {
           const d = new Date(bill.createdAt);
           setBillDate(d.toLocaleDateString('en-CA')); // YYYY-MM-DD format
@@ -657,6 +666,7 @@ const ManualPos = () => {
     setPaymentMode('cash');
     setDiscountAmount('');
     setDiscountType('none');
+    setCustomRoundOff('');
     setBillType('sale');
     setBillDate(new Date().toLocaleDateString('en-CA'));
     setEditingBillId(null);
@@ -1650,6 +1660,29 @@ const ManualPos = () => {
 
             <span style={{ color: '#64748b', textAlign: 'right' }}>GST (5%):</span>
             <span style={{ textAlign: 'right', fontWeight: 600 }}>Rs. {taxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+
+            <span style={{ color: '#64748b', textAlign: 'right', alignSelf: 'center' }}>Round Off:</span>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+              <input 
+                type="text" 
+                inputMode="decimal"
+                placeholder={autoRoundOff.toFixed(2)}
+                value={customRoundOff}
+                onChange={(e) => setCustomRoundOff(e.target.value)}
+                style={{
+                  width: '80px',
+                  padding: '4px 8px',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '6px',
+                  textAlign: 'right', 
+                  fontSize: '0.85rem', 
+                  color: '#0f172a', 
+                  fontWeight: 600, 
+                  outline: 'none',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}
+              />
+            </div>
             
             <span style={{ color: '#0f172a', textAlign: 'right', fontWeight: 800, fontSize: '1.1rem' }}>Grand Total:</span>
             <span style={{ color: billType === 'return' ? '#ef4444' : '#0369a1', textAlign: 'right', fontWeight: 800, fontSize: '1.2rem' }}>

@@ -19,10 +19,9 @@ const getStats = async (req, res) => {
             { $group: { _id: null, total: { $sum: '$actualTotal' } } }
         ]);
 
-        const totalPurchases = await Bill.aggregate([
-            { $match: { status: 'active' } },
-            { $unwind: '$items' },
-            { $group: { _id: null, total: { $sum: { $multiply: ['$items.quantity', '$items.price'] } } } }
+        const totalPurchases = await PurchaseBill.aggregate([
+            { $match: { status: 'completed' } },
+            { $group: { _id: null, total: { $sum: '$totalAmount' } } }
         ]);
 
         const totalExpenses = await Expense.aggregate([
@@ -44,25 +43,56 @@ const getStats = async (req, res) => {
             { $sort: { _id: 1 } }
         ]);
 
-        const purchasesByDay = await Bill.aggregate([
-            { $match: { status: 'active', createdAt: { $gte: sinceDate } } },
-            { $unwind: '$items' },
+        const purchasesByDay = await PurchaseBill.aggregate([
+            { $match: { status: 'completed', createdAt: { $gte: sinceDate } } },
             { $group: {
                 _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-                total: { $sum: { $multiply: ['$items.quantity', '$items.price'] } }
+                total: { $sum: "$totalAmount" }
             }},
             { $sort: { _id: 1 } }
         ]);
 
         const totalSalesVal = totalSales[0]?.total || 0;
-        const totalCOGS = totalPurchases[0]?.total || 0;
+        const totalPurchasesVal = totalPurchases[0]?.total || 0;
         const totalExpensesVal = totalExpenses[0]?.total || 0;
-        // Gross Profit = Sales - COGS - Expenses
-        const profit = totalSalesVal - totalCOGS - totalExpensesVal;
+
+        // Real Cost of Goods Sold (COGS) based on actual items sold
+        const realCOGSQuery = await Bill.aggregate([
+            { $match: { status: 'active' } },
+            { $unwind: '$items' },
+            { 
+                $lookup: {
+                    from: 'products',
+                    localField: 'items.product',
+                    foreignField: '_id',
+                    as: 'prod'
+                }
+            },
+            { $unwind: { path: '$prod', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    itemCOGS: {
+                        $multiply: [
+                            { $ifNull: ['$items.quantity', 0] },
+                            { $ifNull: ['$prod.purchaseRate', 0] }
+                        ]
+                    }
+                }
+            },
+            { $group: { _id: null, total: { $sum: '$itemCOGS' } } }
+        ]);
+        const realCOGSVal = realCOGSQuery[0]?.total || 0;
+
+        // Current Stock Value derived directly from recorded Purchases and Sales COGS
+        const currentStockValue = Math.max(0, totalPurchasesVal - realCOGSVal);
+
+        // Gross Profit = Sales - Real COGS - Expenses
+        const profit = totalSalesVal - realCOGSVal - totalExpensesVal;
 
         res.json({
             totalSales: totalSalesVal,
-            totalCOGS,
+            totalPurchases: totalPurchasesVal,
+            currentStockValue,
             totalExpenses: totalExpensesVal,
             totalProducts,
             totalBills,

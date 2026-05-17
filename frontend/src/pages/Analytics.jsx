@@ -39,7 +39,8 @@ const Analytics = () => {
 
     const statCards = [
         { title: 'Total Sales', value: stats?.totalSales || 0, icon: <TrendingUp size={24} />, color: 'var(--success)', bg: 'rgba(5, 150, 105, 0.1)' },
-        { title: 'Cost of Goods (COGS)', value: stats?.totalCOGS || 0, icon: <TrendingDown size={24} />, color: 'var(--accent-primary)', bg: 'rgba(3, 105, 161, 0.1)' },
+        { title: 'Total Purchases', value: stats?.totalPurchases || 0, icon: <TrendingDown size={24} />, color: 'var(--accent-primary)', bg: 'rgba(3, 105, 161, 0.1)' },
+        { title: 'Current Stock Value', value: stats?.currentStockValue || 0, icon: <Package size={24} />, color: '#d97706', bg: 'rgba(217, 119, 6, 0.1)' },
         { title: 'Total Expenses', value: stats?.totalExpenses || 0, icon: <Wallet size={24} />, color: 'var(--danger)', bg: 'rgba(220, 38, 38, 0.1)' },
         { title: 'Net Profit', value: stats?.profit || 0, icon: <IndianRupee size={24} />, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
     ];

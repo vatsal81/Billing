@@ -140,7 +140,7 @@ export default function Inventory() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!name || !price) return;
+    if (!nameEnglish || !price) return;
     try {
       setLoading(true);
       await createProduct({ 
@@ -366,7 +366,7 @@ export default function Inventory() {
                   className="input-field" 
                   placeholder="e.g. 400"
                   value={purchaseRate ?? ''}
-                  onChange={(e) => setEditPurchaseRate(e.target.value)}
+                  onChange={(e) => setPurchaseRate(e.target.value)}
                 />
               </div>
               <div className="input-group">

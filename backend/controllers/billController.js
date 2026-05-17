@@ -31,69 +31,114 @@ exports.generateBill = asyncHandler(async (req, res) => {
         throw new Error(`No stock available. Total products in DB: ${allProducts}`);
     }
 
-    const targetItemCount = Math.min(products.length, Math.floor(Math.random() * 3) + 6);
-    const shuffledProducts = [...products].sort(() => 0.5 - Math.random());
-    
-    let selectedItemsMap = {}; 
-    let selectedProducts = [];
-    let currentSubtotal = 0;
-    const targetSubtotal = targetAmount / 1.05;
+    let bestResult = null;
+    let closestDiff = Infinity;
 
-    for (const p of shuffledProducts) {
-        if (selectedProducts.length < targetItemCount && (currentSubtotal + p.price) <= targetSubtotal) {
-            const fullName = p.name;
-            selectedItemsMap[p._id] = {
-                product: p._id,
-                name: fullName,
-                price: p.price,
-                hsnCode: p.hsnCode,
-                quantity: 1
+    const maxTrials = 5000;
+    for (let trial = 0; trial < maxTrials; trial++) {
+        const targetItemCount = Math.min(products.length, Math.floor(Math.random() * 3) + 6);
+        const shuffledProducts = [...products].sort(() => 0.5 - Math.random());
+        
+        let selectedItemsMap = {}; 
+        let selectedProducts = [];
+        let currentSubtotal = 0;
+        const targetSubtotal = targetAmount / 1.05;
+
+        for (const p of shuffledProducts) {
+            if (selectedProducts.length < targetItemCount && (currentSubtotal + p.price) <= targetSubtotal) {
+                selectedItemsMap[p._id] = {
+                    product: p._id,
+                    name: p.name,
+                    price: p.price,
+                    hsnCode: p.hsnCode,
+                    quantity: 1
+                };
+                selectedProducts.push(p);
+                currentSubtotal += p.price;
+            }
+        }
+
+        let attempts = 0;
+        while (currentSubtotal < targetSubtotal && attempts < 100) {
+            attempts++;
+            const affordableProducts = selectedProducts.filter(p => 
+                p.price <= (targetSubtotal - currentSubtotal) && 
+                (selectedItemsMap[p._id].quantity < p.stockAmount)
+            );
+
+            if (affordableProducts.length === 0) break;
+            
+            const p = affordableProducts[Math.floor(Math.random() * affordableProducts.length)];
+            const item = selectedItemsMap[p._id];
+            
+            let maxPossibleAdd = Math.floor((targetSubtotal - currentSubtotal) / p.price);
+            if (maxPossibleAdd > (p.stockAmount - item.quantity)) {
+                maxPossibleAdd = p.stockAmount - item.quantity;
+            }
+            
+            let addQty = Math.min(maxPossibleAdd, Math.floor(Math.random() * 3) + 1);
+            if (addQty > 0) {
+                item.quantity += addQty;
+                currentSubtotal += (p.price * addQty);
+            }
+        }
+
+        const remainingGap = targetSubtotal - currentSubtotal;
+        if (remainingGap > 0) {
+            const finalFillers = products.filter(p => 
+                p.price <= remainingGap &&
+                (!selectedItemsMap[p._id] || selectedItemsMap[p._id].quantity < p.stockAmount)
+            );
+            if (finalFillers.length > 0) {
+                finalFillers.sort((a, b) => b.price - a.price);
+                const p = finalFillers[0];
+                if (selectedItemsMap[p._id]) {
+                    selectedItemsMap[p._id].quantity += 1;
+                } else {
+                    selectedItemsMap[p._id] = {
+                        product: p._id,
+                        name: p.name,
+                        price: p.price,
+                        hsnCode: p.hsnCode,
+                        quantity: 1
+                    };
+                }
+                currentSubtotal += p.price;
+            }
+        }
+
+        const cgst = currentSubtotal * 0.025;
+        const sgst = currentSubtotal * 0.025;
+        const preRound = currentSubtotal + cgst + sgst;
+        const finalActualTotal = Math.round(preRound);
+        const diff = Math.abs(finalActualTotal - targetAmount);
+
+        if (diff < closestDiff) {
+            closestDiff = diff;
+            bestResult = {
+                selectedItems: Object.values(selectedItemsMap).map(item => ({
+                    ...item,
+                    total: item.price * item.quantity
+                })),
+                currentSubtotal,
+                cgst,
+                sgst,
+                roundOff: finalActualTotal - preRound,
+                finalActualTotal
             };
-            selectedProducts.push(p);
-            currentSubtotal += p.price;
+
+            if (diff === 0) {
+                break;
+            }
         }
     }
 
-    let attempts = 0;
-    while (currentSubtotal < targetSubtotal * 0.99 && attempts < 1000) {
-        attempts++;
-        const affordableProducts = selectedProducts.filter(p => 
-            p.price <= (targetSubtotal * 1.001 - currentSubtotal) && 
-            (selectedItemsMap[p._id].quantity < p.stockAmount)
-        );
-
-        if (affordableProducts.length === 0) break;
-        
-        const p = affordableProducts[Math.floor(Math.random() * affordableProducts.length)];
-        const item = selectedItemsMap[p._id];
-
-        let maxPossibleAdd = Math.floor((targetSubtotal * 1.001 - currentSubtotal) / p.price);
-        if (maxPossibleAdd > (p.stockAmount - item.quantity)) {
-            maxPossibleAdd = p.stockAmount - item.quantity;
-        }
-        
-        let addQty = Math.min(maxPossibleAdd, Math.floor(Math.random() * 5) + 1);
-        if (addQty > 0) {
-            item.quantity += addQty;
-            currentSubtotal += (p.price * addQty);
-        }
-    }
-
-    const selectedItems = Object.values(selectedItemsMap).map(item => ({
-        ...item,
-        total: item.price * item.quantity
-    }));
-
-    if (selectedItems.length === 0) {
+    if (!bestResult || bestResult.selectedItems.length === 0) {
         res.status(400);
         throw new Error("Target amount is too low for available products.");
     }
 
-    const cgst = currentSubtotal * 0.025;
-    const sgst = currentSubtotal * 0.025;
-    const preRound = currentSubtotal + cgst + sgst;
-    const finalActualTotal = Math.round(preRound);
-    const roundOff = finalActualTotal - preRound;
+    const { selectedItems, currentSubtotal, cgst, sgst, roundOff, finalActualTotal } = bestResult;
 
     const lastBill = await Bill.findOne().sort({ serialNumber: -1 });
     const nextSerial = lastBill ? lastBill.serialNumber + 1 : 1;
@@ -212,8 +257,15 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
     const cgst = discountedSubtotal * 0.025;
     const sgst = discountedSubtotal * 0.025;
     const preRound = discountedSubtotal + cgst + sgst;
-    const finalTotal = Math.round(preRound);
-    const roundOff = finalTotal - preRound;
+    
+    let roundOff = Math.round(preRound) - preRound;
+    if (req.body.roundOff !== undefined && req.body.roundOff !== null && req.body.roundOff !== '') {
+        const parsedOverride = parseFloat(req.body.roundOff);
+        if (!isNaN(parsedOverride)) {
+            roundOff = parsedOverride;
+        }
+    }
+    const finalTotal = Math.round(preRound + roundOff);
 
     const impactAmount = actualBillType === 'return' ? -finalTotal : finalTotal;
 
@@ -375,8 +427,15 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
     const cgst = discountedSubtotal * 0.025;
     const sgst = discountedSubtotal * 0.025;
     const preRound = discountedSubtotal + cgst + sgst;
-    const finalTotal = Math.round(preRound);
-    const roundOff = finalTotal - preRound;
+    
+    let roundOff = Math.round(preRound) - preRound;
+    if (req.body.roundOff !== undefined && req.body.roundOff !== null && req.body.roundOff !== '') {
+        const parsedOverride = parseFloat(req.body.roundOff);
+        if (!isNaN(parsedOverride)) {
+            roundOff = parsedOverride;
+        }
+    }
+    const finalTotal = Math.round(preRound + roundOff);
 
     const newImpactAmount = actualBillType === 'return' ? -finalTotal : finalTotal;
 
