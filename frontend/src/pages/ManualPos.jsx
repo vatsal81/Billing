@@ -309,7 +309,7 @@ const ManualPos = () => {
         
         const qty = parseFloat(row.quantity) || 0;
         const rate = parseFloat(row.rate) || 0;
-        const meter = row.meter === '' ? 1 : (parseFloat(row.meter) || 0); // Default multiplier is 1 if empty
+        const meter = parseFloat(row.meter) || 1; // Default multiplier is 1 if empty or 0
         row.amount = Math.round(qty * rate * meter * 100) / 100;
       } else {
         row[field] = value;
@@ -1339,7 +1339,7 @@ const ManualPos = () => {
                 <th style={{ width: '40px', minWidth: '40px', textAlign: 'center' }}>#</th>
                 <th style={{ minWidth: '180px' }}>Item Name</th>
                 <th style={{ width: '100px', minWidth: '90px' }}>HSN Code</th>
-                <th style={{ width: '80px', minWidth: '70px', textAlign: 'right' }}>Meter</th>
+                <th style={{ width: '90px', minWidth: '80px', textAlign: 'right', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>METER / PCS</th>
                 <th style={{ width: '80px', minWidth: '70px', textAlign: 'right' }}>Qty</th>
                 <th style={{ width: '100px', minWidth: '90px', textAlign: 'right' }}>Rate (Rs)</th>
                 <th style={{ width: '120px', minWidth: '100px', textAlign: 'right' }}>Amount</th>
