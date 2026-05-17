@@ -555,7 +555,7 @@ const ManualPos = () => {
   };
 
   return (
-    <div className="animate-fade-in" style={{ 
+    <div className="animate-fade-in animate-pos-wrapper" style={{ 
       flex: 1, 
       display: 'flex', 
       flexDirection: 'column',
@@ -673,6 +673,86 @@ const ManualPos = () => {
         }
         .erp-pill-btn:hover {
           transform: translateY(-1px) !important;
+        }
+        
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 768px) {
+          .animate-pos-wrapper {
+            height: auto !important;
+            overflow: visible !important;
+            padding: 8px !important;
+          }
+          .pos-erp-container {
+            height: auto !important;
+            overflow: visible !important;
+            padding: 10px !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+          .pos-erp-header-top {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+          }
+          .pos-erp-actions {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 8px !important;
+            width: 100% !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding-bottom: 12px !important;
+          }
+          .pos-action-input {
+            margin-left: 0 !important;
+            border-left: none !important;
+            padding-left: 0 !important;
+            flex: 1 1 130px !important;
+          }
+          .pos-action-input div {
+            width: 100% !important;
+          }
+          .premium-date-input {
+            width: 100% !important;
+          }
+          .premium-select-trigger {
+            width: 100% !important;
+          }
+          
+          /* Grid adjustments */
+          .erp-table-wrapper {
+            max-height: 400px !important;
+            overflow-x: auto !important;
+            border-radius: 8px !important;
+            border: 1px solid #cbd5e1 !important;
+          }
+          
+          /* Footer */
+          .erp-footer {
+            flex-direction: column-reverse !important;
+            gap: 16px !important;
+            align-items: stretch !important;
+            padding: 12px !important;
+          }
+          .erp-footer-actions {
+            flex-direction: column !important;
+            width: 100% !important;
+            gap: 8px !important;
+          }
+          .erp-footer-actions button, .erp-footer-actions .btn {
+            width: 100% !important;
+            justify-content: center !important;
+            padding: 12px !important;
+            display: flex !important;
+            align-items: center !important;
+          }
+          .erp-totals {
+            width: 100% !important;
+            border-left: none !important;
+            padding-left: 0 !important;
+            padding-top: 12px !important;
+            border-top: 1px solid #cbd5e1 !important;
+            grid-template-columns: 1fr 1fr !important;
+          }
         }
       `}</style>
       {/* Premium Full-Screen Loading Overlay */}
