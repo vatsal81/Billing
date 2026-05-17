@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const { generateBill, generateManualBill, getBills, getBillById, voidBill, getBillPdf, getBookPdf } = require('../controllers/billController');
+const { generateBill, generateManualBill, getBills, getBillById, voidBill, getBillPdf, getBookPdf, updateManualBill } = require('../controllers/billController');
 
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validator');
@@ -19,7 +19,10 @@ router.route('/manual')
         validate
     ], generateManualBill);
 
-router.route('/:id').get(getBillById).delete(protect, require('../controllers/billController').deleteBill);
+router.route('/:id')
+    .get(getBillById)
+    .put(protect, updateManualBill)
+    .delete(protect, require('../controllers/billController').deleteBill);
 router.route('/:id/pdf').get(getBillPdf);
 router.route('/book/:bookNumber/pdf').get(getBookPdf);
 router.route('/:id/void').put(protect, voidBill);

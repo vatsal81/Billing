@@ -70,6 +70,11 @@ export const generateManualBill = async (billData) => {
   return data;
 };
 
+export const updateManualBill = async (id, billData) => {
+  const { data } = await API.put(`/bills/${id}`, billData);
+  return data;
+};
+
 export const voidBill = async (id) => {
   const { data } = await API.put(`/bills/${id}/void`);
   return data;

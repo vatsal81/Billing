@@ -312,6 +312,147 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
     res.status(201).json(bill);
 });
 
+// @desc    Update an existing manual bill
+// @route   PUT /api/bills/:id
+// @access  Private
+exports.updateManualBill = asyncHandler(async (req, res) => {
+    const { items, customerId, customerName, customerNameGujarati, customerAddress, customerAddressGujarati, customerPhone, paymentMode, discountAmount, discountType, billType, billDate } = req.body;
+    const billId = req.params.id;
+
+    const oldBill = await Bill.findById(billId);
+    if (!oldBill) {
+        res.status(404);
+        throw new Error("Bill not found");
+    }
+
+    // 1. Reverse old stock impacts
+    if (oldBill.status !== 'void') {
+        for (let item of oldBill.items) {
+            if (item.product) {
+                const revertQty = oldBill.billType === 'return' ? -item.quantity : item.quantity;
+                await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount: revertQty } });
+            }
+        }
+    }
+
+    // 2. Reverse old customer balance and spendings
+    if (oldBill.status !== 'void' && (oldBill.customer || oldBill.customerName)) {
+        const query = oldBill.customer ? { _id: oldBill.customer } : { name: oldBill.customerName };
+        const oldImpact = oldBill.billType === 'return' ? -oldBill.actualTotal : oldBill.actualTotal;
+        await Customer.findOneAndUpdate(
+            query,
+            { 
+                $inc: { 
+                    totalSpent: -oldImpact,
+                    balance: (oldBill.paymentMode === 'credit' ? -oldImpact : 0)
+                }
+            }
+        );
+        // Clear old ledger entries
+        await LedgerEntry.deleteMany({ referenceId: oldBill._id });
+    }
+
+    // 3. Compute new totals
+    const actualBillType = billType || 'sale';
+    const actualDiscountAmount = parseFloat(discountAmount) || 0;
+    const actualDiscountType = discountType || 'none';
+
+    let subtotal = 0;
+    items.forEach(i => {
+        const meter = i.meter ? parseFloat(i.meter) : 1;
+        subtotal += (i.price * i.quantity * meter);
+    });
+    
+    // Apply discount
+    let discountedSubtotal = subtotal;
+    if (actualDiscountType === 'percentage') {
+        discountedSubtotal = subtotal - (subtotal * (actualDiscountAmount / 100));
+    } else if (actualDiscountType === 'flat') {
+        discountedSubtotal = subtotal - actualDiscountAmount;
+    }
+    if (discountedSubtotal < 0) discountedSubtotal = 0;
+
+    const cgst = discountedSubtotal * 0.025;
+    const sgst = discountedSubtotal * 0.025;
+    const preRound = discountedSubtotal + cgst + sgst;
+    const finalTotal = Math.round(preRound);
+    const roundOff = finalTotal - preRound;
+
+    const newImpactAmount = actualBillType === 'return' ? -finalTotal : finalTotal;
+
+    // 4. Update customer spent and balance with new totals
+    let resolvedCustomerId = null;
+    if (customerId || customerName) {
+        const query = customerId ? { _id: customerId } : { name: customerName };
+        const customer = await Customer.findOneAndUpdate(
+            query,
+            { 
+                $inc: { 
+                    totalSpent: newImpactAmount,
+                    balance: (paymentMode === 'credit' ? newImpactAmount : 0)
+                },
+                $set: { 
+                    lastVisit: Date.now(), 
+                    address: customerAddress, 
+                    addressGujarati: customerAddressGujarati || '',
+                    phone: customerPhone,
+                    nameGujarati: customerNameGujarati || ''
+                },
+                $setOnInsert: { name: customerName || 'Unknown Customer' }
+            },
+            { upsert: true, returnDocument: 'after' }
+        );
+        resolvedCustomerId = customer._id;
+    }
+
+    // 5. Update the bill fields
+    oldBill.items = items;
+    oldBill.totalAmount = subtotal;
+    oldBill.discountAmount = actualDiscountAmount;
+    oldBill.discountType = actualDiscountType;
+    oldBill.billType = actualBillType;
+    oldBill.cgst = cgst;
+    oldBill.sgst = sgst;
+    oldBill.roundOff = roundOff;
+    oldBill.actualTotal = finalTotal;
+    oldBill.customer = resolvedCustomerId;
+    oldBill.customerName = customerName;
+    oldBill.customerNameGujarati = customerNameGujarati;
+    oldBill.customerAddress = customerAddress;
+    oldBill.customerAddressGujarati = customerAddressGujarati;
+    oldBill.customerPhone = customerPhone;
+    oldBill.paymentMode = paymentMode || 'cash';
+    if (billDate) oldBill.createdAt = new Date(billDate);
+    oldBill.status = 'active'; // force reactivate if it was void
+
+    const updatedBill = await oldBill.save();
+
+    // 6. Apply new stock impacts
+    for (let item of items) {
+        if (item.product) {
+            const stockImpact = actualBillType === 'return' ? item.quantity : -item.quantity;
+            await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount: stockImpact } });
+        }
+    }
+
+    // 7. Create new ledger entry if credit
+    if (resolvedCustomerId && paymentMode === 'credit') {
+        const customer = await Customer.findById(resolvedCustomerId);
+        await LedgerEntry.create({
+            partyType: 'customer',
+            partyId: customer._id,
+            partyName: customer.name,
+            type: actualBillType === 'return' ? 'credit' : 'debit',
+            amount: finalTotal,
+            description: `Manual Edit ${actualBillType === 'return' ? 'Sales Return' : 'Credit Sale'} - Bill #${oldBill.serialNumber}`,
+            referenceId: updatedBill._id,
+            balanceAfter: customer.balance
+        });
+    }
+
+    res.json(updatedBill);
+});
+
 // @desc    Get all bills
 // @route   GET /api/bills
 // @access  Private

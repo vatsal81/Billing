@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchBills, voidBill, deleteBill, fetchExpenses, getFrontendUrl, getBackendUrl } from '../utils/api';
 
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
-import { TrendingUp, FileText, Banknote, RefreshCw, Eye, X, Printer, Search, Download, Ban, MessageCircle, Share2, Trash2, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, FileText, Banknote, RefreshCw, Eye, X, Printer, Search, Download, Ban, MessageCircle, Share2, Trash2, CheckCircle2, Edit3 } from 'lucide-react';
 
 import { useLanguage } from '../utils/LanguageContext';
 import PrintableBill from '../components/PrintableBill';
@@ -10,6 +11,13 @@ import { generatePDFBlob } from '../utils/pdfGenerator';
 
 export default function History() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+
+  const handleEditBill = (bill) => {
+    localStorage.setItem('erp_edit_bill_cache', JSON.stringify(bill));
+    navigate('/manual');
+  };
+
   const [bills, setBills] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -537,6 +545,11 @@ export default function History() {
                       <button onClick={() => handleWhatsApp(bill)} className="action-btn-hover" style={{background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="WhatsApp">
                         <MessageCircle size={18} /> <span className="hide-on-mobile">Share</span>
                       </button>
+                      {!isVoid && (
+                        <button onClick={() => handleEditBill(bill)} className="action-btn-hover" style={{background: 'rgba(2, 132, 199, 0.1)', color: '#0284c7', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Edit">
+                          <Edit3 size={18} /> <span className="hide-on-mobile">Edit</span>
+                        </button>
+                      )}
                       {!isVoid && (
                         <button onClick={() => handleVoid(bill._id)} className="action-btn-hover" style={{background: 'rgba(251, 191, 36, 0.1)', color: '#f59e0b', padding: '10px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', fontSize: '0.9rem'}} title="Void">
                           <Ban size={18} /> <span className="hide-on-mobile">Void</span>

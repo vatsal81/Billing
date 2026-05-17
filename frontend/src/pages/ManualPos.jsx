@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchProducts, generateManualBill, searchCustomers, createCustomer, getFrontendUrl, createProduct } from '../utils/api';
-import { User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save, Keyboard, UserPlus, RefreshCcw, PauseCircle, PlayCircle, ScanLine, Tag, Coins, Smartphone, CreditCard, Calendar, ChevronDown, AlertCircle, AlertTriangle } from 'lucide-react';
+import { fetchProducts, generateManualBill, searchCustomers, createCustomer, getFrontendUrl, createProduct, updateManualBill, fetchBills } from '../utils/api';
+import { User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save, Keyboard, UserPlus, RefreshCcw, PauseCircle, PlayCircle, ScanLine, Tag, Coins, Smartphone, CreditCard, Calendar, ChevronDown, AlertCircle, AlertTriangle, Edit3 } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import PrintableBill from '../components/PrintableBill';
 import '../index.css';
@@ -34,6 +34,14 @@ const ManualPos = () => {
   const [heldBills, setHeldBills] = useState([]); // Feature 4
   const [showPaymentDropdown, setShowPaymentDropdown] = useState(false);
   const [showDiscountDropdown, setShowDiscountDropdown] = useState(false);
+  
+  // Sales Bill Edit State
+  const [editingBillId, setEditingBillId] = useState(null);
+  const [editingBillSerial, setEditingBillSerial] = useState(null);
+  const [showEditSearchModal, setShowEditSearchModal] = useState(false);
+  const [recentBills, setRecentBills] = useState([]);
+  const [editSearchTerm, setEditSearchTerm] = useState('');
+  const [loadingRecent, setLoadingRecent] = useState(false);
   
   const [dialog, setDialog] = useState({
       isOpen: false,
@@ -111,6 +119,20 @@ const ManualPos = () => {
       console.error(e);
     }
   };
+
+  useEffect(() => {
+    const cachedBill = localStorage.getItem('erp_edit_bill_cache');
+    if (cachedBill) {
+      try {
+        const parsed = JSON.parse(cachedBill);
+        loadBillToEdit(parsed);
+      } catch(e) {
+        console.error("Failed to parse cached bill:", e);
+      } finally {
+        localStorage.removeItem('erp_edit_bill_cache');
+      }
+    }
+  }, [products]);
 
   const holdCurrentBill = () => {
       // Feature 4: Hold Bill
@@ -540,7 +562,14 @@ const ManualPos = () => {
         billDate
       };
       
-      const res = await generateManualBill(billData);
+      let res;
+      if (editingBillId) {
+          res = await updateManualBill(editingBillId, billData);
+          setEditingBillId(null);
+          setEditingBillSerial(null);
+      } else {
+          res = await generateManualBill(billData);
+      }
       setBill(res);
       setLoading(false);
       
@@ -562,6 +591,65 @@ const ManualPos = () => {
     }
   };
 
+  const loadBillToEdit = (bill) => {
+      // Set simple values
+      setEditingBillId(bill._id);
+      setEditingBillSerial(bill.serialNumber);
+      
+      // Populate customer
+      setCustomerId(bill.customer || null);
+      setCustomerName(bill.customerName || '');
+      setCustomerAddress(bill.customerAddress || '');
+      setCustomerPhone(bill.customerPhone || '');
+      setCustomerBalance(0);
+      
+      // Populate values
+      setPaymentMode(bill.paymentMode || 'cash');
+      setBillType(bill.billType || 'sale');
+      setDiscountAmount(bill.discountAmount || '');
+      setDiscountType(bill.discountType || 'none');
+      if (bill.createdAt) {
+          const d = new Date(bill.createdAt);
+          setBillDate(d.toLocaleDateString('en-CA')); // YYYY-MM-DD format
+      }
+      
+      // Populate rows
+      const gridRows = bill.items.map(item => ({
+          id: Date.now() + Math.random(),
+          productId: item.product || null,
+          itemName: item.name,
+          hsnCode: item.hsnCode || '',
+          meter: item.meter ? parseFloat(item.meter) : '',
+          quantity: parseFloat(item.quantity) || 1,
+          rate: parseFloat(item.price) || 0,
+          amount: (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 1) * (item.meter ? parseFloat(item.meter) : 1),
+          stockAmount: 100
+      }));
+      
+      setRows(gridRows);
+      setShowEditSearchModal(false);
+      showCustomAlert(`Loaded Invoice #${bill.serialNumber} for editing.`, "Invoice Loaded");
+  };
+
+  const loadRecentBillsForEdit = async () => {
+      setLoadingRecent(true);
+      try {
+          const list = await fetchBills();
+          setRecentBills(list || []);
+      } catch(e) {
+          showCustomAlert("Failed to load recent sales invoices.", "Error");
+      } finally {
+          setLoadingRecent(false);
+      }
+  };
+
+  const cancelEditingBill = () => {
+      setEditingBillId(null);
+      setEditingBillSerial(null);
+      clearForm();
+      showCustomAlert("Invoice edit cancelled. Resetting POS grid to new invoice.", "Cancelled");
+  };
+
   const clearForm = () => {
     setBill(null);
     setRows([getEmptyRow()]);
@@ -571,6 +659,8 @@ const ManualPos = () => {
     setDiscountType('none');
     setBillType('sale');
     setBillDate(new Date().toLocaleDateString('en-CA'));
+    setEditingBillId(null);
+    setEditingBillSerial(null);
   };
 
   const handleWhatsApp = async (bill) => {
@@ -877,6 +967,17 @@ const ManualPos = () => {
               )}
 
               <button 
+                onClick={() => {
+                    loadRecentBillsForEdit();
+                    setShowEditSearchModal(true);
+                }} 
+                className="erp-pill-btn"
+                style={{ background: '#0284c7', color: 'white', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Edit3 size={14}/> Edit Bill
+              </button>
+
+              <button 
                 onClick={() => setBarcodeMode(!barcodeMode)} 
                 className={`erp-pill-btn ${barcodeMode ? 'bg-indigo' : 'bg-gray'}`}
               >
@@ -1050,6 +1151,44 @@ const ManualPos = () => {
             </div>
           </div>
 
+          {editingBillId && (
+            <div style={{
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '8px',
+              padding: '10px 16px',
+              marginBottom: '14px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              animation: 'fadeIn 0.25s ease-out'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e40af', fontWeight: 600, fontSize: '0.88rem' }}>
+                <Edit3 size={16} />
+                <span>EDITING SALES BILL / INVOICE #{editingBillSerial} ({customerName})</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.8rem', color: '#3b82f6' }}>Saving this POS workspace will overwrite Invoice #{editingBillSerial}.</span>
+                <button 
+                  onClick={cancelEditingBill}
+                  style={{
+                    background: '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(239, 68, 68, 0.2)'
+                  }}
+                >
+                  Cancel Edit
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Customer Details Row */}
           <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             {customerId || customerName ? (
@@ -1206,10 +1345,33 @@ const ManualPos = () => {
                                 onClick={() => handleProductSelect(row.id, p, null)}
                                 onMouseEnter={() => setActiveDropdownIndex(i)}
                               >
-                                <div style={{ fontWeight: 600, fontSize: '0.85rem', color: i === activeDropdownIndex ? '#0369a1' : '#0f172a' }}>{p.nameEnglish || p.name}</div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                                  <span style={{ color: p.currentStock <= 0 ? '#ef4444' : '' }}>Stock: {p.currentStock || p.stockAmount || 0}</span>
-                                  <span style={{ color: '#059669', fontWeight: 600 }}>Rs.{p.price}</span>
+                                <div style={{ 
+                                  fontWeight: 700, 
+                                  fontSize: '0.88rem', 
+                                  color: i === activeDropdownIndex ? '#0284c7' : '#1e293b',
+                                  transition: 'color 0.15s ease'
+                                }}>
+                                  {p.nameEnglish || p.name}
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', marginTop: '4px' }}>
+                                  <span style={{ 
+                                    color: (p.currentStock || p.stockAmount || 0) <= 0 ? '#ef4444' : '#64748b', 
+                                    fontWeight: (p.currentStock || p.stockAmount || 0) <= 0 ? 700 : 500 
+                                  }}>
+                                    Stock: {p.currentStock || p.stockAmount || 0}
+                                  </span>
+                                  <span style={{ 
+                                    color: '#059669', 
+                                    fontWeight: 800,
+                                    background: '#ecfdf5',
+                                    padding: '2px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.76rem',
+                                    border: '1px solid #d1fae5',
+                                    fontFamily: 'monospace'
+                                  }}>
+                                    Rs.{(p.price || 0).toLocaleString('en-IN')}
+                                  </span>
                                 </div>
                               </div>
                             ))
@@ -1565,19 +1727,79 @@ const ManualPos = () => {
       {bill && (
         <div style={{ 
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          background: 'rgba(15, 23, 42, 0.95)', zIndex: 9999, 
+          background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(8px)', zIndex: 9999, 
           display: 'flex', flexDirection: 'column', alignItems: 'center', 
-          padding: '40px 20px', overflowY: 'auto'
+          padding: '40px 20px', overflowY: 'auto',
+          animation: 'fadeIn 0.2s ease-out'
         }}>
           <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-            <button className="btn" style={{ background: '#25D366', color: 'white', border: 'none' }} onClick={() => handleWhatsApp(bill)}>
-              <MessageCircle size={16} /> WhatsApp
+            <button 
+              onClick={() => handleWhatsApp(bill)} 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 18px',
+                background: 'transparent',
+                border: '1px solid #22c55e',
+                color: '#22c55e',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+              }}
+              className="action-btn-hover"
+            >
+              <MessageCircle size={16} />
+              <span>WhatsApp</span>
             </button>
-            <button className="btn" style={{ background: '#3b82f6', color: 'white', border: 'none' }} onClick={() => window.print()}>
-              <Printer size={16} /> Print
+            
+            <button 
+              onClick={() => window.print()} 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 18px',
+                background: '#0284c7',
+                border: 'none',
+                color: 'white',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.2)'
+              }}
+              className="action-btn-hover"
+            >
+              <Printer size={16} />
+              <span>Print</span>
             </button>
-            <button className="btn" style={{ background: '#ef4444', color: 'white', border: 'none' }} onClick={clearForm}>
-              <X size={16} /> Close & New Bill
+            
+            <button 
+              onClick={clearForm} 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 18px',
+                background: 'white',
+                border: '1px solid #cbd5e1',
+                color: '#334155',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              }}
+              className="action-btn-hover"
+            >
+              <X size={16} />
+              <span>Close</span>
             </button>
           </div>
           <div style={{ width: '100%', maxWidth: '800px', display: 'flex', justifyContent: 'center' }}>
@@ -1733,28 +1955,47 @@ const ManualPos = () => {
         }
         .erp-autocomplete-dropdown {
           position: absolute;
-          top: 100%;
+          top: calc(100% + 4px);
           left: 0;
-          width: 350px;
-          background: white;
-          border: 1px solid #cbd5e1;
-          border-radius: 0 0 6px 6px;
-          box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
-          z-index: 50;
-          max-height: 250px;
+          width: 380px;
+          background: rgba(255, 255, 255, 0.98);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(226, 232, 240, 0.9);
+          border-radius: 12px;
+          box-shadow: 0 12px 30px -6px rgba(15, 23, 42, 0.15), 0 8px 12px -8px rgba(15, 23, 42, 0.08);
+          z-index: 200;
+          max-height: 265px;
           overflow-y: auto;
+          padding: 6px;
+          animation: slideDownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          transform-origin: top left;
         }
         .erp-autocomplete-item {
-          padding: 10px 16px;
-          border-bottom: 1px solid #f1f5f9;
+          padding: 8px 12px;
+          border-radius: 8px;
           cursor: pointer;
-          transition: background 0.15s;
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          border-bottom: 1px solid rgba(241, 245, 249, 0.6);
+          margin-bottom: 2px;
         }
         .erp-autocomplete-item:last-child {
           border-bottom: none;
+          margin-bottom: 0;
         }
         .erp-autocomplete-item:hover, .erp-autocomplete-item.active {
-          background: #f0f9ff;
+          background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+          transform: translateX(4px);
+        }
+        
+        @keyframes slideDownFade {
+          from {
+            opacity: 0;
+            transform: translateY(6px) scale(0.98);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
         .erp-footer {
           padding: 16px 24px;
@@ -2031,6 +2272,152 @@ const ManualPos = () => {
                 }}
               >
                 {dialog.type === 'confirm' ? 'Confirm' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search/Picker Modal for Editing Bills */}
+      {showEditSearchModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.45)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center',
+          zIndex: 99999,
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            border: '1px solid #f1f5f9',
+            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
+            width: 'calc(100% - 32px)',
+            maxWidth: '520px',
+            overflow: 'hidden',
+            animation: 'scaleUp 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Edit3 size={18} style={{ color: '#0ea5e9' }} />
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  Edit Existing Sales Invoice
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowEditSearchModal(false)}
+                style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Search input to type Serial or Invoice Number */}
+              <div style={{ position: 'relative' }}>
+                <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input 
+                  type="text"
+                  placeholder="Search by customer name or invoice serial..."
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 36px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '0.88rem',
+                    outline: 'none'
+                  }}
+                  value={editSearchTerm}
+                  onChange={(e) => setEditSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '6px' }}>
+                Recent Invoices ({recentBills.length})
+              </div>
+              
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '8px', 
+                maxHeight: '260px', 
+                overflowY: 'auto',
+                paddingRight: '4px'
+              }} className="custom-scrollbar">
+                {loadingRecent ? (
+                  <div style={{ textAlign: 'center', padding: '24px 0', color: '#64748b', fontSize: '0.85rem' }}>
+                    Loading recent invoices...
+                  </div>
+                ) : recentBills.filter(b => {
+                  if (!editSearchTerm.trim()) return true;
+                  const term = editSearchTerm.toLowerCase();
+                  return (
+                    String(b.serialNumber).includes(term) ||
+                    (b.customerName && b.customerName.toLowerCase().includes(term)) ||
+                    (b.uniqueInvoiceId && b.uniqueInvoiceId.toLowerCase().includes(term))
+                  );
+                }).length > 0 ? (
+                  recentBills.filter(b => {
+                    if (!editSearchTerm.trim()) return true;
+                    const term = editSearchTerm.toLowerCase();
+                    return (
+                      String(b.serialNumber).includes(term) ||
+                      (b.customerName && b.customerName.toLowerCase().includes(term)) ||
+                      (b.uniqueInvoiceId && b.uniqueInvoiceId.toLowerCase().includes(term))
+                    );
+                  }).map((b) => (
+                    <div 
+                      key={b._id}
+                      onClick={() => loadBillToEdit(b)}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '10px 14px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      className="dropdown-item-hover"
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
+                          #{b.serialNumber} — {b.customerName || 'Cash Sale'}
+                        </div>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                          {b.uniqueInvoiceId || 'Invoice ID'} • {new Date(b.createdAt).toLocaleDateString('en-IN')}
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0ea5e9', fontFamily: 'monospace' }}>
+                        Rs.{b.actualTotal.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                    No matching invoices found.
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div style={{
+              background: '#f8fafc',
+              padding: '12px 16px',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              borderTop: '1px solid #cbd5e1'
+            }}>
+              <button 
+                onClick={() => setShowEditSearchModal(false)}
+                className="btn btn-secondary"
+                style={{ padding: '8px 16px', fontSize: '0.82rem', fontWeight: 600 }}
+              >
+                Close
               </button>
             </div>
           </div>
