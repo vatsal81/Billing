@@ -3,6 +3,7 @@ import { X, Printer, Download, CheckCircle, ShieldCheck } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { numberToWords } from '../utils/numberToWords';
 import { getBackendUrl, fetchPurchaseBill } from '../utils/api';
+import { showToast } from '../utils/toast';
 import './PurchaseBillView.css';
 
 const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
@@ -20,7 +21,7 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
                     setBill(data);
                 } catch (err) {
                     console.error('Error fetching bill:', err);
-                    alert('Failed to load bill details');
+                    showToast('Failed to load bill details', 'error');
                     onClose();
                 } finally {
                     setLoading(false);
@@ -77,7 +78,7 @@ const PurchaseBillView = ({ billId, onClose, setFetchingBill }) => {
             a.click();
             URL.revokeObjectURL(url);
         } catch (err) {
-            alert('Failed to generate PDF: ' + err.message);
+            showToast('Failed to generate PDF: ' + err.message, 'error');
         }
     };
 

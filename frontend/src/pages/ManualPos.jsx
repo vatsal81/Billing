@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { fetchProducts, generateManualBill, searchCustomers, createCustomer, getFrontendUrl, createProduct, updateManualBill, fetchBills } from '../utils/api';
 import { User, Phone, MapPin, X, Trash2, Printer, Search, MessageCircle, Plus, Save, Keyboard, UserPlus, RefreshCcw, PauseCircle, PlayCircle, ScanLine, Tag, Coins, Smartphone, CreditCard, Calendar, ChevronDown, AlertCircle, AlertTriangle, Edit3 } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
+import { showToast } from '../utils/toast';
+
 import PrintableBill from '../components/PrintableBill';
 import '../index.css';
 
@@ -680,7 +682,7 @@ const ManualPos = () => {
 
   const handleWhatsApp = async (bill) => {
     if (!customerPhone) {
-        alert("No phone number recorded for this customer.");
+        showToast('No phone number recorded for this customer', 'warning');
         return;
     }
 

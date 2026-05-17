@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { fetchSettings, updateSettings, getBackendUrl } from '../utils/api';
 import { Settings as SettingsIcon, Save } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
+import { showToast } from '../utils/toast';
+
 
 export default function Settings() {
   const { t } = useLanguage();
@@ -36,7 +38,7 @@ export default function Settings() {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert("Image too large. Please use an image smaller than 2MB.");
+        showToast('Image too large. Please use an image smaller than 2MB', 'warning');
         return;
       }
       setSettings({ ...settings, [field]: file });
@@ -82,7 +84,7 @@ export default function Settings() {
       loadSettings(); // Reload to get paths
     } catch(e) { 
         console.error(e);
-        alert("Failed to save settings");
+        showToast('Failed to save settings', 'error');
     } finally { setSaving(false); }
   };
 

@@ -11,6 +11,8 @@ import {
 import PurchaseBillView from './PurchaseBillView';
 import './Suppliers.css';
 import '../index.css';
+import { showToast } from '../utils/toast';
+
 
 const emptySupplier = {
     name: '', gstin: '', pan: '', phone: '', email: '',
@@ -125,7 +127,7 @@ const Suppliers = () => {
             setActiveModal(null);
             loadSuppliers();
         } catch (err) {
-            alert('Failed to save supplier details');
+            showToast('Failed to save supplier details', 'error');
         } finally {
             setSaving(true);
         }
@@ -139,7 +141,7 @@ const Suppliers = () => {
             setActiveModal(null);
             loadSuppliers();
         } catch (err) {
-            alert('Failed to delete supplier');
+            showToast('Failed to delete supplier', 'error');
         } finally {
             setSaving(false);
         }
@@ -163,7 +165,7 @@ const Suppliers = () => {
             loadSuppliers();
             loadLedger(selectedSupplier._id);
         } catch (err) {
-            alert('Failed to record payment');
+            showToast('Failed to record payment', 'error');
         } finally {
             setSaving(false);
         }
@@ -368,10 +370,10 @@ const Suppliers = () => {
                                                                                     if (bill?.billImage) {
                                                                                         window.open(`${getBackendUrl()}/${bill.billImage}`, '_blank');
                                                                                     } else {
-                                                                                        alert('No original scan was uploaded for this bill.');
+                                                                                        showToast('No original scan was uploaded for this bill', 'warning');
                                                                                     }
                                                                                 } catch (e) {
-                                                                                    alert('Error opening original scan: ' + e.message);
+                                                                                    showToast('Error opening original scan: ' + e.message, 'error');
                                                                                 }
                                                                             }}
                                                                             style={{

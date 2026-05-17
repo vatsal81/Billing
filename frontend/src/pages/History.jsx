@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchBills, voidBill, deleteBill, fetchExpenses, getFrontendUrl, getBackendUrl } from '../utils/api';
+import { showToast } from '../utils/toast';
+
 
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { TrendingUp, FileText, Banknote, RefreshCw, Eye, X, Printer, Search, Download, Ban, MessageCircle, Share2, Trash2, CheckCircle2, Edit3 } from 'lucide-react';
@@ -104,7 +106,7 @@ export default function History() {
 
   const handleWhatsApp = async (b) => {
     if (!b.customerPhone) {
-        alert("No phone number recorded for this customer.");
+        showToast('No phone number recorded for this customer', 'warning');
         return;
     }
 

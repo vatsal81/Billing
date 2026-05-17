@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { generateBill, searchCustomers, createCustomer, getFrontendUrl } from '../utils/api';
 import { Zap, Printer, CheckCircle2, History, RefreshCw, User, MapPin, Phone, MessageCircle, X, Plus, Save } from 'lucide-react';
+import { showToast } from '../utils/toast';
+
 
 import { useLanguage } from '../utils/LanguageContext';
 import PrintableBill from '../components/PrintableBill';
@@ -31,7 +33,7 @@ export default function Dashboard() {
   const [bill, setBill] = useState(null);
   const handleWhatsApp = async () => {
     if (!customerPhone) {
-      alert("Please enter a phone number first.");
+      showToast('Please enter a phone number first', 'warning');
       return;
     }
     
@@ -153,7 +155,7 @@ export default function Dashboard() {
       setShowAddModal(false);
       setNewCustomer({ name: '', address: '', phone: '' });
     } catch (err) {
-      alert('Failed to save customer');
+      showToast('Failed to save customer', 'error');
     } finally {
       setSavingCustomer(false);
     }

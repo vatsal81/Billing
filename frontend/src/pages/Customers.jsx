@@ -3,6 +3,7 @@ import { fetchCustomers, createCustomer, updateCustomer, deleteCustomer, fetchLe
 import { User, Plus, Search, History, ArrowUpRight, ArrowDownLeft, X, Save, Wallet, Pencil, Trash2, AlertTriangle, Phone, MapPin, Eye, MessageCircle } from 'lucide-react';
 import PrintableBill from '../components/PrintableBill';
 import '../index.css';
+import { showToast } from '../utils/toast';
 
 const emptyCustomer = { name: '', address: '', phone: '' };
 
@@ -418,7 +419,7 @@ const Customers = () => {
     const handleAdd = async e => {
         e.preventDefault(); setSaving(true);
         try { await createCustomer(newCustomer); setActiveModal(null); setNewCustomer(emptyCustomer); loadCustomers(); }
-        catch { alert('Failed to save'); } finally { setSaving(false); }
+        catch { showToast('Failed to save customer', 'error'); } finally { setSaving(false); }
     };
 
     const handleEdit = async e => {
@@ -428,13 +429,13 @@ const Customers = () => {
             setActiveModal(null);
             if (selectedCustomer?._id === editCustomer._id) setSelected(updated);
             loadCustomers();
-        } catch { alert('Failed to update'); } finally { setSaving(false); }
+        } catch { showToast('Failed to update customer', 'error'); } finally { setSaving(false); }
     };
 
     const handleDelete = async () => {
         setSaving(true);
         try { await deleteCustomer(selectedCustomer._id); setActiveModal(null); setSelected(null); setLedger([]); loadCustomers(); }
-        catch { alert('Failed to delete'); } finally { setSaving(false); }
+        catch { showToast('Failed to delete customer', 'error'); } finally { setSaving(false); }
     };
 
     const handlePayment = async e => {
@@ -443,7 +444,7 @@ const Customers = () => {
             await createLedgerEntry({ partyType: 'customer', partyId: selectedCustomer._id, partyName: selectedCustomer.name, type: 'credit', amount: Number(payment.amount), description: payment.description || 'Payment received from customer' });
             setActiveModal(null); setPayment({ amount: '', description: '', date: new Date().toISOString().split('T')[0] });
             selectCustomer(selectedCustomer); loadCustomers();
-        } catch { alert('Failed to record payment'); }
+        } catch { showToast('Failed to record payment', 'error'); }
     };
 
     const handleViewBill = async (billId) => {
@@ -451,7 +452,7 @@ const Customers = () => {
             const bill = await fetchBillById(billId);
             setViewingBill(bill);
         } catch (error) {
-            alert('Failed to load bill data.');
+            showToast('Failed to load bill data', 'error');
         }
     };
 
