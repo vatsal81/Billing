@@ -30,7 +30,6 @@ const ManualPos = () => {
   const [discountAmount, setDiscountAmount] = useState(''); // Feature 1
   const [discountType, setDiscountType] = useState('none'); // Feature 1
   const [customRoundOff, setCustomRoundOff] = useState(''); // Custom Round Off
-  const [isRoundOffManual, setIsRoundOffManual] = useState(false); // Round Off Manual flag
   const [billType, setBillType] = useState('sale'); // Feature 6
   const [barcodeMode, setBarcodeMode] = useState(false); // Feature 5
   const [heldBills, setHeldBills] = useState([]); // Feature 4
@@ -207,15 +206,6 @@ const ManualPos = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [heldBills]);
-
-  // Automatic Round Off Sync Hook
-  useEffect(() => {
-    if (!isRoundOffManual) {
-      const taxAmountVal = discountedSubtotal * 0.05;
-      const autoVal = Math.round(discountedSubtotal + taxAmountVal) - (discountedSubtotal + taxAmountVal);
-      setCustomRoundOff(autoVal === 0 ? '0.00' : autoVal.toFixed(2));
-    }
-  }, [discountedSubtotal, isRoundOffManual]);
 
   // Customer logic
   useEffect(() => {
@@ -627,7 +617,6 @@ const ManualPos = () => {
       setDiscountAmount(bill.discountAmount || '');
       setDiscountType(bill.discountType || 'none');
       setCustomRoundOff(bill.roundOff !== undefined ? String(bill.roundOff) : '');
-      setIsRoundOffManual(bill.roundOff !== undefined);
       if (bill.createdAt) {
           const d = new Date(bill.createdAt);
           setBillDate(d.toLocaleDateString('en-CA')); // YYYY-MM-DD format
@@ -678,7 +667,6 @@ const ManualPos = () => {
     setDiscountAmount('');
     setDiscountType('none');
     setCustomRoundOff('');
-    setIsRoundOffManual(false);
     setBillType('sale');
     setBillDate(new Date().toLocaleDateString('en-CA'));
     setEditingBillId(null);
@@ -1681,16 +1669,9 @@ const ManualPos = () => {
               <input 
                 type="text" 
                 inputMode="decimal"
+                placeholder={autoRoundOff.toFixed(2)}
                 value={customRoundOff}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setCustomRoundOff(val);
-                  if (val === '') {
-                    setIsRoundOffManual(false);
-                  } else {
-                    setIsRoundOffManual(true);
-                  }
-                }}
+                onChange={(e) => setCustomRoundOff(e.target.value)}
                 style={{
                   width: '80px',
                   padding: '4px 8px',

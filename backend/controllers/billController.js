@@ -233,6 +233,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
 // @route   POST /api/bills/manual
 // @access  Private
 exports.generateManualBill = asyncHandler(async (req, res) => {
+    console.log("[DEBUG] generateManualBill req.body:", req.body);
     const { items, customerId, customerName, customerNameGujarati, customerAddress, customerAddressGujarati, customerPhone, paymentMode, discountAmount, discountType, billType, billDate } = req.body;
 
     const actualBillType = billType || 'sale';
@@ -259,7 +260,7 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
     const preRound = discountedSubtotal + cgst + sgst;
     
     let roundOff = Math.round(preRound) - preRound;
-    if (req.body.roundOff !== undefined && req.body.roundOff !== null && req.body.roundOff !== '') {
+    if (req.body.roundOff !== undefined && req.body.roundOff !== null) {
         const parsedOverride = parseFloat(req.body.roundOff);
         if (!isNaN(parsedOverride)) {
             roundOff = parsedOverride;
@@ -368,6 +369,7 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
 // @route   PUT /api/bills/:id
 // @access  Private
 exports.updateManualBill = asyncHandler(async (req, res) => {
+    console.log("[DEBUG] updateManualBill req.body:", req.body);
     const { items, customerId, customerName, customerNameGujarati, customerAddress, customerAddressGujarati, customerPhone, paymentMode, discountAmount, discountType, billType, billDate } = req.body;
     const billId = req.params.id;
 
@@ -429,7 +431,7 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
     const preRound = discountedSubtotal + cgst + sgst;
     
     let roundOff = Math.round(preRound) - preRound;
-    if (req.body.roundOff !== undefined && req.body.roundOff !== null && req.body.roundOff !== '') {
+    if (req.body.roundOff !== undefined && req.body.roundOff !== null) {
         const parsedOverride = parseFloat(req.body.roundOff);
         if (!isNaN(parsedOverride)) {
             roundOff = parsedOverride;

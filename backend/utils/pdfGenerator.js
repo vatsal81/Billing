@@ -122,6 +122,19 @@ const buildSingleBillHTML = (bill, settings = {}) => {
         return String(num).padStart(3, '0');
     };
 
+    const originalSubtotal = bill.items ? bill.items.reduce((sum, item) => sum + (item.price * item.quantity * (item.meter || 1)), 0) : 0;
+    
+    let discountValue = 0;
+    if (bill.discountType === 'percentage') {
+        discountValue = originalSubtotal * ((bill.discountAmount || 0) / 100);
+    } else if (bill.discountType === 'flat') {
+        discountValue = bill.discountAmount || 0;
+    }
+    
+    const discountedSubtotal = originalSubtotal - discountValue;
+    const gstAmount = (bill.cgst || 0) + (bill.sgst || 0);
+    const totalWithGst = discountedSubtotal + gstAmount;
+
     const finalTotal = bill.actualTotal || bill.targetAmount || 0;
 
     const emptyRowsHTML = Array.from({length: Math.max(1, 8 - bill.items.length)}).map((_, i) => `
@@ -241,8 +254,14 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                 <div class="footer-right">
                     <div class="total-row">
                         <span style="width: 65%; font-weight: bold;">Sub Total</span>
-                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${(bill.subTotal || bill.totalAmount).toFixed(2)}</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${originalSubtotal.toFixed(2)}</span>
                     </div>
+                    ${discountValue > 0 ? `
+                    <div class="total-row">
+                        <span style="width: 65%; font-weight: bold;">Discount (${bill.discountType === 'percentage' ? `${bill.discountAmount}%` : 'Flat'})</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #e11d48; font-size: 15px; font-weight: bold;">-${discountValue.toFixed(2)}</span>
+                    </div>
+                    ` : ''}
                     <div class="total-row">
                         <span style="width: 65%; font-weight: bold;">CGST 2.5%</span>
                         <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.cgst.toFixed(2)}</span>
@@ -252,15 +271,15 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                         <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.sgst.toFixed(2)}</span>
                     </div>
                     <div class="total-row">
-                        <span style="width: 65%; font-weight: bold;">IGST %</span>
-                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;"></span>
+                        <span style="width: 65%; font-weight: bold;">Total (with GST)</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${totalWithGst.toFixed(2)}</span>
                     </div>
                     <div class="total-row" style="border-bottom: 2px solid #000;">
                         <span style="width: 65%; font-weight: bold;">Round Off</span>
-                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.roundOff >= 0 ? '+' : ''}${bill.roundOff.toFixed(2)}</span>
+                        <span class="kalam-text" style="width: 35%; text-align: right; color: #0f3c88; font-size: 15px; font-weight: bold;">${bill.roundOff >= 0 ? '+' : ''}${(bill.roundOff || 0).toFixed(2)}</span>
                     </div>
                     <div style="display: flex; padding: 8px;">
-                        <span style="width: 50%; font-weight: bold; font-size: 16px;">Total</span>
+                        <span style="width: 50%; font-weight: bold; font-size: 16px;">Final Amount</span>
                         <span class="kalam-text" style="width: 50%; text-align: right; color: #0f3c88; font-size: 24px; font-weight: bold;">${finalTotal}/-</span>
                     </div>
                     <div class="stamp-area" style="min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative;">
