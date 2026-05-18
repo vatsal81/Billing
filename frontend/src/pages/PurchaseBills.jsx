@@ -521,7 +521,9 @@ const PurchaseBills = () => {
             // Append simple fields
             Object.keys(newBill).forEach(key => {
                 if (key !== 'items' && key !== 'ewayBillDetails' && key !== 'billImage' && key !== 'ewayBillImage') {
-                    formData.append(key, newBill[key]);
+                    if (newBill[key] !== null && newBill[key] !== undefined) {
+                        formData.append(key, newBill[key]);
+                    }
                 }
             });
 
@@ -710,7 +712,7 @@ const PurchaseBills = () => {
                     <button className="btn btn-secondary" onClick={() => setShowReportModal(true)} style={{ height: 'auto', minHeight: '70px', padding: '10px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', flex: 1 }}>
                         <Download size={20} /> <span>Monthly PDF</span>
                     </button>
-                    <button className="btn btn-primary" onClick={() => { setIsEditing(false); setEditingId(null); resetForm(); setBillPreview(null); setEwayPreview(null); setIsAdding(true); }} style={{ height: 'auto', minHeight: '70px', padding: '10px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', flex: 1 }}>
+                    <button className="btn btn-primary" onClick={() => { setIsEditing(false); setEditingId(null); resetForm(); setBillPreviews([]); setEwayPreview(null); setIsAdding(true); }} style={{ height: 'auto', minHeight: '70px', padding: '10px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '6px', flex: 1 }}>
                         <Plus size={20} /> <span>Add New Bill</span>
                     </button>
                 </div>
