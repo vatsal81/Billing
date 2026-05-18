@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Download, FileText, ShoppingBag, Calendar, User, Hash, Trash2, Save, Search, Building, Truck, Briefcase, Eye, Edit2, AlertCircle } from 'lucide-react';
+import { Plus, Download, FileText, ShoppingBag, Calendar, User, Hash, Trash2, Save, Search, Building, Truck, Briefcase, Eye, Edit2, AlertCircle, X } from 'lucide-react';
 import { fetchPurchaseBills, createPurchaseBill, updatePurchaseBill, downloadPurchaseReport, fetchSuppliers, deletePurchaseBill, getBackendUrl } from '../utils/api';
 import PurchaseBillView from './PurchaseBillView';
 import '../index.css';
@@ -23,6 +23,7 @@ const PurchaseBills = () => {
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
     const [reportYear, setReportYear] = useState(new Date().getFullYear());
+    const [viewingAttachments, setViewingAttachments] = useState(null);
 
     const months = [
         { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
@@ -124,13 +125,51 @@ const PurchaseBills = () => {
 
             // Also create a preview URL for the UI
             const previewUrl = URL.createObjectURL(file);
-            if (fieldName === 'billImage') setBillPreview(previewUrl);
-            else if (fieldName === 'ewayBillImage') setEwayPreview(previewUrl);
+            if (fieldName === 'ewayBillImage') setEwayPreview(previewUrl);
         }
     };
 
-    const [billPreview, setBillPreview] = useState(null);
+    const [billPreviews, setBillPreviews] = useState([]);
     const [ewayPreview, setEwayPreview] = useState(null);
+
+    const handleBillImagesChange = (e) => {
+        const files = Array.from(e.target.files);
+        const validFiles = [];
+        
+        for (const file of files) {
+            if (file.size > 5 * 1024 * 1024) {
+                setErrorMessage(`File "${file.name}" is too large! Please upload files smaller than 5MB.`);
+                return;
+            }
+            validFiles.push(file);
+        }
+        
+        if (validFiles.length > 0) {
+            const newPreviews = validFiles.map(file => {
+                const url = URL.createObjectURL(file);
+                const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+                return {
+                    url,
+                    file,
+                    isPdf,
+                    name: file.name
+                };
+            });
+            
+            setBillPreviews(prev => [...prev, ...newPreviews]);
+        }
+        e.target.value = '';
+    };
+
+    const handleRemoveBillImage = (indexToRemove) => {
+        setBillPreviews(prev => {
+            const item = prev[indexToRemove];
+            if (item.url && item.file) {
+                URL.revokeObjectURL(item.url);
+            }
+            return prev.filter((_, idx) => idx !== indexToRemove);
+        });
+    };
 
     const loadSuppliers = async () => {
         try {
@@ -266,12 +305,19 @@ const PurchaseBills = () => {
         });
 
         // Handle image previews 'properly'
-        if (bill.billImage) {
-            const isPath = bill.billImage.startsWith('uploads');
-            setBillPreview(isPath ? `${getBackendUrl()}/${bill.billImage}` : bill.billImage);
-        } else {
-            setBillPreview(null);
-        }
+        const existingImages = bill.billImages || (bill.billImage ? [bill.billImage] : []);
+        const mappedPreviews = existingImages.map(img => {
+            const isPath = img.startsWith('uploads');
+            const url = isPath ? `${getBackendUrl()}/${img}` : img;
+            const isPdf = img.endsWith('.pdf');
+            return {
+                url,
+                file: null,
+                isPdf,
+                path: img
+            };
+        });
+        setBillPreviews(mappedPreviews);
 
         if (bill.ewayBillImage) {
             const isPath = bill.ewayBillImage.startsWith('uploads');
@@ -484,9 +530,16 @@ const PurchaseBills = () => {
             formData.append('ewayBillDetails', JSON.stringify(newBill.ewayBillDetails));
 
             // Append files
-            if (newBill.billImage instanceof File) {
-                formData.append('billImage', newBill.billImage);
-            }
+            const existingImages = [];
+            billPreviews.forEach(p => {
+                if (p.file instanceof File) {
+                    formData.append('billImages', p.file);
+                } else if (p.path) {
+                    existingImages.push(p.path);
+                }
+            });
+            formData.append('existingBillImages', JSON.stringify(existingImages));
+
             if (newBill.ewayBillImage instanceof File) {
                 formData.append('ewayBillImage', newBill.ewayBillImage);
             }
@@ -514,7 +567,7 @@ const PurchaseBills = () => {
                 setEditingId(null);
                 loadSuppliers();
                 resetForm();
-                setBillPreview(null);
+                setBillPreviews([]);
                 setEwayPreview(null);
             }, 2000);
         } catch (error) {
@@ -525,6 +578,7 @@ const PurchaseBills = () => {
     };
 
     const resetForm = () => {
+        setBillPreviews([]);
         setNewBill({
             billNumber: '',
             supplierId: '',
@@ -983,33 +1037,100 @@ const PurchaseBills = () => {
                                         </div>
 
                                         <div className="attachments-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-                                            <div className="upload-section">
-                                                <label className="input-label" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    <ShoppingBag size={14} /> SCAN COPY
+                                            <div className="upload-section" style={{ gridColumn: 'span 2' }}>
+                                                <label className="input-label" style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ShoppingBag size={14} /> MERCHANT BILL SCAN COPIES ({billPreviews.length})</span>
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Supports Images & PDFs</span>
                                                 </label>
-                                                <div
-                                                    onClick={() => document.getElementById('bill-image-input').click()}
-                                                    style={{
-                                                        height: '100px',
-                                                        background: billPreview ? 'white' : '#0369a1',
-                                                        border: billPreview ? '2px solid #0369a1' : 'none',
-                                                        borderRadius: '20px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        cursor: 'pointer',
-                                                        transition: '0.3s',
-                                                        boxShadow: billPreview ? 'none' : '0 4px 12px rgba(3, 105, 161, 0.2)',
-                                                        overflow: 'hidden'
-                                                    }}>
-                                                    {billPreview ? (
-                                                        <img src={billPreview} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    ) : (
-                                                        <ShoppingBag size={32} color="white" />
-                                                    )}
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                                                    {billPreviews.map((preview, index) => (
+                                                        <div key={index} style={{
+                                                            position: 'relative',
+                                                            width: '80px',
+                                                            height: '80px',
+                                                            borderRadius: '12px',
+                                                            overflow: 'hidden',
+                                                            border: '1px solid var(--border-color)',
+                                                            background: '#f8fafc',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                                                        }}>
+                                                            {preview.isPdf ? (
+                                                                <div onClick={() => window.open(preview.url, '_blank')} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: '#fef2f2' }}>
+                                                                    <FileText size={24} color="#dc2626" />
+                                                                    <span style={{ fontSize: '0.55rem', fontWeight: 700, color: '#991b1b', marginTop: '4px', textTransform: 'uppercase', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', width: '90%', textAlign: 'center' }}>
+                                                                        PDF
+                                                                    </span>
+                                                                </div>
+                                                            ) : (
+                                                                <img src={preview.url} alt={`Page ${index + 1}`} onClick={() => window.open(preview.url, '_blank')} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }} />
+                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveBillImage(index)}
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: '4px',
+                                                                    right: '4px',
+                                                                    width: '20px',
+                                                                    height: '20px',
+                                                                    borderRadius: '50%',
+                                                                    background: 'rgba(239, 68, 68, 0.9)',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    cursor: 'pointer',
+                                                                    boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                                                                    zIndex: 10
+                                                                }}
+                                                            >
+                                                                <X size={12} strokeWidth={3} />
+                                                            </button>
+                                                            <div style={{
+                                                                position: 'absolute',
+                                                                bottom: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                background: 'rgba(15, 23, 42, 0.65)',
+                                                                color: 'white',
+                                                                fontSize: '0.55rem',
+                                                                textAlign: 'center',
+                                                                padding: '2px 0',
+                                                                fontWeight: 700
+                                                            }}>
+                                                                PAGE {index + 1}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                    <div
+                                                        onClick={() => document.getElementById('bill-images-input').click()}
+                                                        style={{
+                                                            width: '80px',
+                                                            height: '80px',
+                                                            borderRadius: '12px',
+                                                            border: '2px dashed #0369a1',
+                                                            background: 'rgba(3, 105, 161, 0.05)',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            transition: '0.2s',
+                                                            color: '#0369a1'
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(3, 105, 161, 0.1)'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(3, 105, 161, 0.05)'; }}
+                                                    >
+                                                        <Plus size={20} strokeWidth={3} />
+                                                        <span style={{ fontSize: '0.6rem', fontWeight: 800, marginTop: '4px' }}>ADD PAGE</span>
+                                                    </div>
                                                 </div>
-                                                <input type="file" id="bill-image-input" hidden accept="image/*" onChange={(e) => handleFileChange(e, 'billImage')} />
-                                                <p style={{ fontSize: '0.65rem', textAlign: 'center', marginTop: '8px', color: 'var(--text-secondary)', fontWeight: 600 }}>{billPreview ? 'PHOTO ATTACHED ✓' : 'TAP TO SCAN / UPLOAD'}</p>
+                                                <input type="file" id="bill-images-input" hidden multiple accept="image/*,application/pdf" onChange={handleBillImagesChange} />
                                             </div>
 
                                             <div className="upload-section">
@@ -1484,13 +1605,34 @@ const PurchaseBills = () => {
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                                        {bill.billImage ? (
-                                                            <button className="action-btn view" onClick={() => {
-                                                                const isPath = bill.billImage.startsWith('uploads');
-                                                                const imageUrl = isPath ? `${getBackendUrl()}/${bill.billImage}` : bill.billImage;
-                                                                window.open(imageUrl, '_blank');
-                                                            }} title="View Merchant Invoice Copy">
+                                                        {(bill.billImages && bill.billImages.length > 0) || bill.billImage ? (
+                                                            <button 
+                                                                className="action-btn view" 
+                                                                onClick={() => setViewingAttachments(bill)} 
+                                                                title="View Merchant Invoice Copies"
+                                                                style={{ position: 'relative' }}
+                                                            >
                                                                 <ShoppingBag size={18} />
+                                                                {bill.billImages && bill.billImages.length > 1 && (
+                                                                    <span style={{ 
+                                                                        position: 'absolute', 
+                                                                        top: '-6px', 
+                                                                        right: '-6px', 
+                                                                        background: 'var(--accent-primary)', 
+                                                                        color: 'white', 
+                                                                        fontSize: '0.6rem', 
+                                                                        width: '15px', 
+                                                                        height: '15px', 
+                                                                        borderRadius: '50%', 
+                                                                        display: 'flex', 
+                                                                        alignItems: 'center', 
+                                                                        justifyContent: 'center',
+                                                                        fontWeight: 800,
+                                                                        boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                                                                    }}>
+                                                                        {bill.billImages.length}
+                                                                    </span>
+                                                                )}
                                                             </button>
                                                         ) : null}
                                                         {bill.ewayBillImage ? (
@@ -1502,7 +1644,7 @@ const PurchaseBills = () => {
                                                                 <Truck size={18} />
                                                             </button>
                                                         ) : null}
-                                                        {!bill.billImage && !bill.ewayBillImage && (
+                                                        {!bill.billImage && (!bill.billImages || bill.billImages.length === 0) && !bill.ewayBillImage && (
                                                             <span className="text-secondary text-xs italic">N/A</span>
                                                         )}
                                                     </div>
@@ -1553,7 +1695,7 @@ const PurchaseBills = () => {
 
                                         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                                             <span className="badge secondary" style={{ fontSize: '0.7rem', padding: '4px 8px' }}>{bill.items.length} Products</span>
-                                            {bill.billImage && <span className="badge info" style={{ fontSize: '0.7rem', padding: '4px 8px' }}>Invoice Attached</span>}
+                                            {(bill.billImage || (bill.billImages && bill.billImages.length > 0)) && <span className="badge info" style={{ fontSize: '0.7rem', padding: '4px 8px' }}>Invoice Attached</span>}
                                         </div>
 
                                         <div style={{
@@ -1564,11 +1706,46 @@ const PurchaseBills = () => {
                                             borderTop: '1px solid #f1f5f9'
                                         }}>
                                             <div style={{ display: 'flex', gap: '10px' }}>
-                                                {bill.billImage && (
-                                                    <button onClick={() => window.open(bill.billImage.startsWith('uploads') ? `${getBackendUrl()}/${bill.billImage}` : bill.billImage, '_blank')} style={{ border: 'none', background: 'rgba(3, 105, 161, 0.1)', color: 'var(--accent-primary)', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {(bill.billImages && bill.billImages.length > 0) || bill.billImage ? (
+                                                    <button 
+                                                        onClick={() => setViewingAttachments(bill)} 
+                                                        style={{ 
+                                                            border: 'none', 
+                                                            background: 'rgba(3, 105, 161, 0.1)', 
+                                                            color: 'var(--accent-primary)', 
+                                                            width: '36px', 
+                                                            height: '36px', 
+                                                            borderRadius: '10px', 
+                                                            display: 'flex', 
+                                                            alignItems: 'center', 
+                                                            justifyContent: 'center',
+                                                            position: 'relative'
+                                                        }}
+                                                        title="View Merchant Invoice Copies"
+                                                    >
                                                         <ShoppingBag size={18} />
+                                                        {bill.billImages && bill.billImages.length > 1 && (
+                                                            <span style={{ 
+                                                                position: 'absolute', 
+                                                                top: '-6px', 
+                                                                right: '-6px', 
+                                                                background: 'var(--accent-primary)', 
+                                                                color: 'white', 
+                                                                fontSize: '0.6rem', 
+                                                                width: '15px', 
+                                                                height: '15px', 
+                                                                borderRadius: '50%', 
+                                                                display: 'flex', 
+                                                                alignItems: 'center', 
+                                                                justifyContent: 'center',
+                                                                fontWeight: 800,
+                                                                boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                                                            }}>
+                                                                {bill.billImages.length}
+                                                            </span>
+                                                        )}
                                                     </button>
-                                                )}
+                                                ) : null}
                                                 {bill.ewayBillImage && (
                                                     <button onClick={() => window.open(bill.ewayBillImage.startsWith('uploads') ? `${getBackendUrl()}/${bill.ewayBillImage}` : bill.ewayBillImage, '_blank')} style={{ border: 'none', background: 'rgba(5, 150, 105, 0.1)', color: 'var(--success)', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                         <Truck size={18} />
@@ -1713,6 +1890,170 @@ const PurchaseBills = () => {
                             boxShadow: '0 10px 15px -3px rgba(30, 41, 59, 0.3)',
                             transition: 'all 0.2s'
                         }}>Got it, thanks</button>
+                    </div>
+                </div>
+            )}
+
+            {/* Premium Document Attachment Viewer Modal */}
+            {viewingAttachments && (
+                <div className="modal-overlay" style={{ zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)' }}>
+                    <div style={{
+                        background: 'white',
+                        padding: '32px',
+                        borderRadius: '24px',
+                        maxWidth: '800px',
+                        width: '90%',
+                        maxHeight: '90vh',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                        animation: 'modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+                            <div>
+                                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0 }}>Merchant Invoice Scan Copies</h3>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+                                    Bill No: <strong>{viewingAttachments.billNumber}</strong> • Supplier: <strong>{viewingAttachments.supplierName}</strong>
+                                </p>
+                            </div>
+                            <button 
+                                onClick={() => setViewingAttachments(null)} 
+                                style={{ 
+                                    background: '#f1f5f9', 
+                                    border: 'none', 
+                                    color: 'var(--text-secondary)', 
+                                    width: '36px', 
+                                    height: '36px', 
+                                    borderRadius: '50%', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    cursor: 'pointer',
+                                    transition: '0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#e2e8f0'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        
+                        <div style={{ 
+                            flex: 1, 
+                            overflowY: 'auto', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '24px', 
+                            paddingRight: '8px',
+                            minHeight: '200px'
+                        }}>
+                            {(viewingAttachments.billImages && viewingAttachments.billImages.length > 0) ? (
+                                viewingAttachments.billImages.map((img, idx) => {
+                                    const isPath = img.startsWith('uploads');
+                                    const imageUrl = isPath ? `${getBackendUrl()}/${img}` : img;
+                                    const isPdf = img.endsWith('.pdf');
+                                    
+                                    return (
+                                        <div key={idx} style={{ 
+                                            background: '#f8fafc', 
+                                            border: '1px solid var(--border-color)', 
+                                            borderRadius: '16px', 
+                                            padding: '16px', 
+                                            display: 'flex', 
+                                            flexDirection: 'column', 
+                                            gap: '12px' 
+                                        }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontWeight: 800, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>PAGE {idx + 1} OF {viewingAttachments.billImages.length}</span>
+                                                <button 
+                                                    onClick={() => window.open(imageUrl, '_blank')} 
+                                                    style={{ 
+                                                        border: '1px solid #e2e8f0', 
+                                                        background: 'white', 
+                                                        color: 'var(--accent-primary)', 
+                                                        padding: '6px 12px', 
+                                                        borderRadius: '8px', 
+                                                        fontSize: '0.75rem', 
+                                                        fontWeight: 700, 
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '4px'
+                                                    }}
+                                                >
+                                                    <Eye size={12} /> Open Full Size
+                                                </button>
+                                            </div>
+                                            
+                                            {isPdf ? (
+                                                <div style={{ height: '400px', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
+                                                    <iframe src={imageUrl} style={{ width: '100%', height: '100%', border: 'none' }} title={`Page ${idx + 1}`} />
+                                                </div>
+                                            ) : (
+                                                <div style={{ display: 'flex', justifyContent: 'center', background: '#f1f5f9', borderRadius: '12px', padding: '10px', overflow: 'hidden' }}>
+                                                    <img 
+                                                        src={imageUrl} 
+                                                        alt={`Page ${idx + 1}`} 
+                                                        style={{ 
+                                                            maxWidth: '100%', 
+                                                            maxHeight: '450px', 
+                                                            objectFit: 'contain', 
+                                                            borderRadius: '8px', 
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)' 
+                                                        }} 
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })
+                            ) : viewingAttachments.billImage ? (
+                                <div style={{ 
+                                    background: '#f8fafc', 
+                                    border: '1px solid var(--border-color)', 
+                                    borderRadius: '16px', 
+                                    padding: '16px', 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    gap: '12px' 
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontWeight: 800, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>PAGE 1 OF 1</span>
+                                        <button 
+                                            onClick={() => window.open(viewingAttachments.billImage.startsWith('uploads') ? `${getBackendUrl()}/${viewingAttachments.billImage}` : viewingAttachments.billImage, '_blank')} 
+                                            style={{ 
+                                                border: '1px solid #e2e8f0', 
+                                                background: 'white', 
+                                                color: 'var(--accent-primary)', 
+                                                padding: '6px 12px', 
+                                                borderRadius: '8px', 
+                                                fontSize: '0.75rem', 
+                                                fontWeight: 700, 
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '4px'
+                                            }}
+                                        >
+                                            <Eye size={12} /> Open Full Size
+                                        </button>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'center', background: '#f1f5f9', borderRadius: '12px', padding: '10px', overflow: 'hidden' }}>
+                                        <img 
+                                            src={viewingAttachments.billImage.startsWith('uploads') ? `${getBackendUrl()}/${viewingAttachments.billImage}` : viewingAttachments.billImage} 
+                                            alt="Scan Copy" 
+                                            style={{ 
+                                                maxWidth: '100%', 
+                                                maxHeight: '450px', 
+                                                objectFit: 'contain', 
+                                                borderRadius: '8px', 
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)' 
+                                            }} 
+                                        />
+                                    </div>
+                                </div>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
             )}

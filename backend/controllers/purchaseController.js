@@ -25,7 +25,14 @@ const addPurchaseBill = async (req, res) => {
         } = body;
 
         // Get file paths from multer
-        const billImage = req.files?.['billImage']?.[0]?.path;
+        const uploadedBillImages = req.files?.['billImages']?.map(file => file.path) || [];
+        const singleBillImage = req.files?.['billImage']?.[0]?.path;
+        
+        // Combine them (or use whichever is present)
+        const billImages = uploadedBillImages.length > 0 ? uploadedBillImages : (singleBillImage ? [singleBillImage] : []);
+        // Set first image for single image field backwards compatibility
+        const billImage = billImages[0] || null;
+
         const ewayBillImage = req.files?.['ewayBillImage']?.[0]?.path;
 
 
@@ -81,6 +88,7 @@ const addPurchaseBill = async (req, res) => {
             totalAmount,
             remarks: remarks || '',
             billImage,
+            billImages,
             ewayBillImage
         });
 
@@ -261,8 +269,29 @@ const updatePurchaseBill = async (req, res) => {
             subTotal, discountPercent, discountAmount, igst, cgst, sgst, roundOff, totalAmount, remarks
         } = body;
 
-        // Get file paths from multer
-        const billImage = req.files?.['billImage']?.[0]?.path || oldBill.billImage;
+        // Parse existing retained images
+        let retainedImages = [];
+        if (body.existingBillImages) {
+            try {
+                retainedImages = typeof body.existingBillImages === 'string' ? JSON.parse(body.existingBillImages) : body.existingBillImages;
+            } catch (e) {
+                console.error("Error parsing existingBillImages:", e);
+            }
+        } else {
+            // Fallback for older or other requests
+            retainedImages = oldBill.billImages || (oldBill.billImage ? [oldBill.billImage] : []);
+        }
+
+        // Get new files from multer
+        const newUploadedBillImages = req.files?.['billImages']?.map(file => file.path) || [];
+        const newSingleBillImage = req.files?.['billImage']?.[0]?.path;
+        
+        const newImages = newUploadedBillImages.length > 0 ? newUploadedBillImages : (newSingleBillImage ? [newSingleBillImage] : []);
+
+        // Combine retained and new files
+        const billImages = [...retainedImages, ...newImages];
+        const billImage = billImages[0] || null;
+
         const ewayBillImage = req.files?.['ewayBillImage']?.[0]?.path || oldBill.ewayBillImage;
 
         // 1. Reverse old stock
@@ -338,6 +367,7 @@ const updatePurchaseBill = async (req, res) => {
         oldBill.totalAmount = totalAmount || oldBill.totalAmount;
         oldBill.remarks = remarks || oldBill.remarks;
         oldBill.billImage = billImage;
+        oldBill.billImages = billImages;
         oldBill.ewayBillImage = ewayBillImage;
 
         // 4. Apply new stock

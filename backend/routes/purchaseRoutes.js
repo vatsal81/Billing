@@ -5,8 +5,8 @@ const { addPurchaseBill, getPurchaseBills, getMonthlyReport, getSingleBillPdf, d
 const upload = require('../middleware/upload');
 
 router.get('/details/:id', getPurchaseBill);
-router.post('/', upload.fields([{ name: 'billImage', maxCount: 1 }, { name: 'ewayBillImage', maxCount: 1 }]), addPurchaseBill);
-router.put('/:id', upload.fields([{ name: 'billImage', maxCount: 1 }, { name: 'ewayBillImage', maxCount: 1 }]), updatePurchaseBill);
+router.post('/', upload.fields([{ name: 'billImage', maxCount: 1 }, { name: 'billImages', maxCount: 10 }, { name: 'ewayBillImage', maxCount: 1 }]), addPurchaseBill);
+router.put('/:id', upload.fields([{ name: 'billImage', maxCount: 1 }, { name: 'billImages', maxCount: 10 }, { name: 'ewayBillImage', maxCount: 1 }]), updatePurchaseBill);
 router.get('/', getPurchaseBills);
 router.get('/monthly-pdf', getMonthlyReport);
 router.get('/:id/pdf', getSingleBillPdf);

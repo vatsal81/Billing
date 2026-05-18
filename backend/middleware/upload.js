@@ -13,7 +13,7 @@ dirs.forEach(dir => {
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        if (file.fieldname === 'billImage') {
+        if (file.fieldname === 'billImage' || file.fieldname === 'billImages' || file.fieldname === 'ewayBillImage') {
             cb(null, 'uploads/purchase/');
         } else {
             cb(null, 'uploads/settings/');

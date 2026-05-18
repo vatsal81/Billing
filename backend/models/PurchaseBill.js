@@ -55,6 +55,7 @@ const purchaseBillSchema = mongoose.Schema({
     remarks: { type: String, default: '' },
     status: { type: String, default: 'completed' },
     billImage: { type: String },
+    billImages: [{ type: String }],
     ewayBillImage: { type: String },
 }, { timestamps: true });
 
