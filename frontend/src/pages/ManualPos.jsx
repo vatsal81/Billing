@@ -328,17 +328,25 @@ const ManualPos = () => {
       const rowIndex = newRows.findIndex(r => r.id === rowId);
       if (rowIndex === -1) return prevRows;
       
-      const rate = parseFloat(product.price) || 0;
       const qty = parseFloat(newRows[rowIndex].quantity) || 1;
       
+      const meterVal = product.pieceLength && product.pieceLength > 0 ? product.pieceLength : '';
+      const meterMultiplier = meterVal !== '' ? parseFloat(meterVal) : 1;
+
+      let rate = parseFloat(product.price) || 0;
+      if (product.pieceLength && product.pieceLength > 0) {
+        rate = Math.round((rate / product.pieceLength) * 100) / 100;
+      }
+
       newRows[rowIndex] = {
         ...newRows[rowIndex],
         productId: product._id,
         itemName: product.nameEnglish || product.name,
         hsnCode: product.hsnCode || '',
         rate: rate,
+        meter: meterVal,
         quantity: qty,
-        amount: Math.round(qty * rate * 100) / 100,
+        amount: Math.round(qty * rate * meterMultiplier * 100) / 100,
         stockAmount: product.stockAmount || product.currentStock || 0 // Feature 2
       };
       

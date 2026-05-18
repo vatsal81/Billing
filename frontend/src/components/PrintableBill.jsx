@@ -163,9 +163,9 @@ export default function PrintableBill({ bill }) {
             <thead>
               <tr style={{borderBottom: '2px solid #000', fontSize: '14px', fontWeight: 'bold', display: 'flex', width: '100%'}}>
                 <th style={{padding: '8px', borderRight: '1px solid #000', width: '35%'}}>{t('tableCol1')}</th>
-                <th style={{padding: '8px', borderRight: '1px solid #000', width: '15%'}}>{t('tableCol2')}</th>
-                <th style={{padding: '8px', borderRight: '1px solid #000', width: '10%'}}>Mtr</th>
-                <th style={{padding: '8px', borderRight: '1px solid #000', width: '10%'}}>{t('tableCol3')}</th>
+                <th style={{padding: '8px', borderRight: '1px solid #000', width: '12%'}}>{t('tableCol2')}</th>
+                <th style={{padding: '8px', borderRight: '1px solid #000', width: '13%'}}>Meter/Piece</th>
+                <th style={{padding: '8px', borderRight: '1px solid #000', width: '10%'}}>Quantity</th>
                 <th style={{padding: '8px', borderRight: '2px solid #000', width: '12%'}}>{t('tableCol4')}</th>
                 <th style={{padding: '8px', width: '18%'}}>{t('tableCol5')}</th>
               </tr>
@@ -174,8 +174,8 @@ export default function PrintableBill({ bill }) {
               {bill.items.map((item, idx) => (
                 <tr key={idx} style={{display: 'flex', width: '100%', fontSize: '16px', fontFamily: '"Kalam", cursive', color: '#0f3c88'}}>
                   <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '35%', textAlign: 'left'}}>{item.name}</td>
-                  <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '15%', textAlign: 'center'}}>{item.hsnCode || ''}</td>
-                  <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '10%', textAlign: 'center'}}>{item.meter || '-'}</td>
+                  <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '12%', textAlign: 'center'}}>{item.hsnCode || ''}</td>
+                  <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '13%', textAlign: 'center'}}>{item.meter || 1}</td>
                   <td style={{padding: '6px 8px', borderRight: '1px solid #000', width: '10%'}}>{item.quantity}</td>
                   <td style={{padding: '6px 8px', borderRight: '2px solid #000', width: '12%', textAlign: 'right'}}>{item.price.toFixed(0)}</td>
                   <td style={{padding: '6px 8px', width: '18%', textAlign: 'right'}}>{(item.price * item.quantity * (item.meter || 1)).toFixed(0)}</td>
@@ -186,8 +186,8 @@ export default function PrintableBill({ bill }) {
               {Array.from({length: Math.max(1, 8 - bill.items.length)}).map((_, i) => (
                  <tr key={`empty-${i}`} style={{display: 'flex', width: '100%', flexGrow: i === 0 ? 1 : 0}}>
                    <td style={{padding: '12px', borderRight: '1px solid #000', width: '35%'}}>&nbsp;</td>
-                   <td style={{borderRight: '1px solid #000', width: '15%'}}></td>
-                   <td style={{borderRight: '1px solid #000', width: '10%'}}></td>
+                   <td style={{borderRight: '1px solid #000', width: '12%'}}></td>
+                   <td style={{borderRight: '1px solid #000', width: '13%'}}></td>
                    <td style={{borderRight: '1px solid #000', width: '10%'}}></td>
                    <td style={{borderRight: '2px solid #000', width: '12%'}}></td>
                    <td style={{width: '18%'}}></td>

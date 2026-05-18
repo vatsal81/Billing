@@ -42,6 +42,14 @@ const productSchema = mongoose.Schema(
         lastInvoice: {
             type: String,
             default: '',
+        },
+        pieceLengthType: {
+            type: String,
+            default: 'none',
+        },
+        pieceLength: {
+            type: Number,
+            default: 0,
         }
     },
     {

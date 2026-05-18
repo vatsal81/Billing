@@ -152,8 +152,9 @@ const buildSingleBillHTML = (bill, settings = {}) => {
 
     const emptyRowsHTML = Array.from({length: Math.max(1, 8 - bill.items.length)}).map((_, i) => `
         <tr style="display: flex; width: 100%; ${i === 0 ? 'flex-grow: 1;' : ''}">
-            <td style="padding: 12px; border-right: 1px solid #000; width: 45%">&nbsp;</td>
-            <td style="border-right: 1px solid #000; width: 15%"></td>
+            <td style="padding: 12px; border-right: 1px solid #000; width: 35%">&nbsp;</td>
+            <td style="border-right: 1px solid #000; width: 12%"></td>
+            <td style="border-right: 1px solid #000; width: 13%"></td>
             <td style="border-right: 1px solid #000; width: 10%"></td>
             <td style="border-right: 2px solid #000; width: 12%"></td>
             <td style="width: 18%"></td>
@@ -219,9 +220,10 @@ const buildSingleBillHTML = (bill, settings = {}) => {
             <table class="items-table">
                 <thead>
                     <tr style="display: flex; width: 100%;">
-                        <th style="padding: 8px; border-right: 1px solid #000; width: 45%;">Item Description</th>
-                        <th style="padding: 8px; border-right: 1px solid #000; width: 15%;">HSN Code</th>
-                        <th style="padding: 8px; border-right: 1px solid #000; width: 10%;">Qty/Mtr</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 35%;">Item Description</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 12%;">HSN Code</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 13%;">Meter/Piece</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 10%;">Quantity</th>
                         <th style="padding: 8px; border-right: 2px solid #000; width: 12%;">Rate</th>
                         <th style="padding: 8px; width: 18%;">Amount Rs.</th>
                     </tr>
@@ -229,11 +231,12 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                 <tbody>
                     ${bill.items.map((item, idx) => `
                         <tr style="display: flex; width: 100%; font-family: 'Kalam', 'Gujarati', cursive; color: #0f3c88; font-size: 18px;">
-                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 45%; text-align: left;">${item.name}</td>
-                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 15%; text-align: center;">${item.hsnCode || ''}</td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 35%; text-align: left;">${item.name}</td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 12%; text-align: center;">${item.hsnCode || ''}</td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 13%; text-align: center;">${item.meter || 1}</td>
                             <td style="padding: 6px 8px; border-right: 1px solid #000; width: 10%; text-align: center;">${item.quantity}</td>
                             <td style="padding: 6px 8px; border-right: 2px solid #000; width: 12%; text-align: right;">${item.price.toFixed(0)}</td>
-                            <td style="padding: 6px 8px; width: 18%; text-align: right;">${(item.price * item.quantity).toFixed(0)}</td>
+                            <td style="padding: 6px 8px; width: 18%; text-align: right;">${(item.price * item.quantity * (item.meter || 1)).toFixed(0)}</td>
                         </tr>
                     `).join('')}
                     ${emptyRowsHTML}

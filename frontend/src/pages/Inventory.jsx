@@ -22,6 +22,57 @@ export default function Inventory() {
   const [newPrice, setNewPrice] = useState('');
   const [unpricedItems, setUnpricedItems] = useState([]);
   const [showUnpricedAlert, setShowUnpricedAlert] = useState(false);
+
+  const [pieceLengthType, setPieceLengthType] = useState('none');
+  const [customPieceLength, setCustomPieceLength] = useState('');
+  const [editPieceLengthType, setEditPieceLengthType] = useState('none');
+  const [editCustomPieceLength, setEditCustomPieceLength] = useState('');
+
+  const handlePurchaseRateOrConversionChange = (rateVal, typeVal, customLengthVal) => {
+    setPurchaseRate(rateVal);
+    setPieceLengthType(typeVal);
+    setCustomPieceLength(customLengthVal);
+
+    if (typeVal === 'none') return;
+
+    const pr = parseFloat(rateVal);
+    if (isNaN(pr) || pr <= 0) return;
+
+    let len = 0;
+    if (typeVal === '1.6') len = 1.6;
+    else if (typeVal === '2.5') len = 2.5;
+    else if (typeVal === 'custom') len = parseFloat(customLengthVal) || 0;
+
+    if (len > 0) {
+      const pieceCost = pr * len;
+      const rawSellingPrice = pieceCost * 1.30;
+      const roundedPrice = Math.round(rawSellingPrice / 10) * 10;
+      setPrice(roundedPrice.toString());
+    }
+  };
+
+  const handleEditPurchaseRateOrConversionChange = (rateVal, typeVal, customLengthVal) => {
+    setEditPurchaseRate(rateVal);
+    setEditPieceLengthType(typeVal);
+    setEditCustomPieceLength(customLengthVal);
+
+    if (typeVal === 'none') return;
+
+    const pr = parseFloat(rateVal);
+    if (isNaN(pr) || pr <= 0) return;
+
+    let len = 0;
+    if (typeVal === '1.6') len = 1.6;
+    else if (typeVal === '2.5') len = 2.5;
+    else if (typeVal === 'custom') len = parseFloat(customLengthVal) || 0;
+
+    if (len > 0) {
+      const pieceCost = pr * len;
+      const rawSellingPrice = pieceCost * 1.30;
+      const roundedPrice = Math.round(rawSellingPrice / 10) * 10;
+      setEditPrice(roundedPrice.toString());
+    }
+  };
   
   // Restock Modal States
   const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
@@ -143,6 +194,12 @@ export default function Inventory() {
     if (!nameEnglish || !price) return;
     try {
       setLoading(true);
+      
+      let pLen = 0;
+      if (pieceLengthType === '1.6') pLen = 1.6;
+      else if (pieceLengthType === '2.5') pLen = 2.5;
+      else if (pieceLengthType === 'custom') pLen = parseFloat(customPieceLength) || 0;
+
       await createProduct({ 
         name: nameEnglish, 
         nameEnglish,
@@ -150,7 +207,9 @@ export default function Inventory() {
         price: Number(price), 
         purchaseRate: Number(purchaseRate),
         stockAmount: Number(stock), 
-        lowStockThreshold: Number(threshold) 
+        lowStockThreshold: Number(threshold),
+        pieceLengthType,
+        pieceLength: pLen
       });
       setName('');
       setNameEnglish('');
@@ -159,6 +218,8 @@ export default function Inventory() {
       setPurchaseRate('');
       setStock(100);
       setThreshold(5);
+      setPieceLengthType('none');
+      setCustomPieceLength('');
       await loadProducts();
     } catch (err) {
       setError(err.response?.data?.message || err.message);
@@ -210,6 +271,16 @@ export default function Inventory() {
     setEditThreshold(product.lowStockThreshold || 5);
     setEditSupplier(product.lastSupplier || '');
     setEditInvoice(product.lastInvoice || '');
+
+    // Piece Conversion fields loading
+    const type = product.pieceLengthType || 'none';
+    setEditPieceLengthType(type);
+    if (type === 'custom') {
+      setEditCustomPieceLength(String(product.pieceLength || ''));
+    } else {
+      setEditCustomPieceLength('');
+    }
+
     setIsEditModalOpen(true);
   };
 
@@ -219,6 +290,11 @@ export default function Inventory() {
     
     setIsProcessing(true);
     try {
+      let pLen = 0;
+      if (editPieceLengthType === '1.6') pLen = 1.6;
+      else if (editPieceLengthType === '2.5') pLen = 2.5;
+      else if (editPieceLengthType === 'custom') pLen = parseFloat(editCustomPieceLength) || 0;
+
       await updateProduct(selectedProduct._id, {
         name: editNameEnglish,
         nameEnglish: editNameEnglish,
@@ -228,7 +304,9 @@ export default function Inventory() {
         stockAmount: Number(editStock),
         lowStockThreshold: Number(editThreshold),
         lastSupplier: editSupplier,
-        lastInvoice: editInvoice
+        lastInvoice: editInvoice,
+        pieceLengthType: editPieceLengthType,
+        pieceLength: pLen
       });
       
       await loadProducts();
@@ -357,6 +435,56 @@ export default function Inventory() {
                 onChange={(e) => setHsnCode(e.target.value)}
               />
             </div>
+
+            <div className="input-group" style={{ marginBottom: '16px', background: 'rgba(3, 105, 161, 0.03)', padding: '14px', borderRadius: '12px', border: '1px dashed rgba(3, 105, 161, 0.15)' }}>
+              <label className="input-label" style={{ color: 'var(--accent-primary)', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Package size={16} /> Piece Length Conversion (Optional)
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '8px' }}>
+                {['none', '1.6', '2.5', 'custom'].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => handlePurchaseRateOrConversionChange(purchaseRate, type, customPieceLength)}
+                    style={{
+                      padding: '8px 4px',
+                      borderRadius: '8px',
+                      border: pieceLengthType === type ? '2px solid var(--accent-primary)' : '1px solid rgba(0,0,0,0.1)',
+                      background: pieceLengthType === type ? 'rgba(3, 105, 161, 0.1)' : 'white',
+                      color: pieceLengthType === type ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      fontWeight: '800',
+                      fontSize: '0.75rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {type === 'none' ? 'None' : type === 'custom' ? 'Custom' : `${type}m`}
+                  </button>
+                ))}
+              </div>
+              
+              {pieceLengthType === 'custom' && (
+                <div style={{ marginTop: '10px' }}>
+                  <input 
+                    type="text" 
+                    inputMode="decimal"
+                    className="input-field" 
+                    placeholder="Enter custom meters per piece (e.g. 2.4)"
+                    style={{ margin: 0, fontSize: '0.85rem' }}
+                    value={customPieceLength}
+                    onChange={(e) => handlePurchaseRateOrConversionChange(purchaseRate, 'custom', e.target.value)}
+                  />
+                </div>
+              )}
+
+              {pieceLengthType !== 'none' && purchaseRate && (
+                <div style={{ marginTop: '10px', fontSize: '0.75rem', color: 'var(--success)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Check size={14} /> Selling Price auto-set with 30% markup (rounded)
+                </div>
+              )}
+            </div>
+
             <div className="form-grid">
               <div className="input-group">
                 <label className="input-label">Purchase Rate</label>
@@ -366,7 +494,7 @@ export default function Inventory() {
                   className="input-field" 
                   placeholder="e.g. 400"
                   value={purchaseRate ?? ''}
-                  onChange={(e) => setPurchaseRate(e.target.value)}
+                  onChange={(e) => handlePurchaseRateOrConversionChange(e.target.value, pieceLengthType, customPieceLength)}
                 />
               </div>
               <div className="input-group">
@@ -474,6 +602,19 @@ export default function Inventory() {
                              letterSpacing: '0.02em',
                              flexShrink: 0
                            }}>{p.productId}</span>
+                           {p.pieceLengthType && p.pieceLengthType !== 'none' && (
+                             <span style={{
+                               fontSize: '0.65rem',
+                               background: 'rgba(16, 185, 129, 0.15)',
+                               color: 'var(--success)',
+                               padding: '1px 6px',
+                               borderRadius: '4px',
+                               fontWeight: '800',
+                               flexShrink: 0
+                             }}>
+                               1 Pcs = {p.pieceLength}m
+                             </span>
+                           )}
                         </div>
                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: '600' }}>
                           HSN: {p.hsnCode || 'N/A'}
@@ -864,18 +1005,68 @@ export default function Inventory() {
               onChange={(e) => setEditHsn(e.target.value)}
             />
           </div>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <div className="input-group" style={{ flex: 1 }}>
+
+          <div className="input-group" style={{ marginBottom: '16px', background: 'rgba(3, 105, 161, 0.03)', padding: '14px', borderRadius: '12px', border: '1px dashed rgba(3, 105, 161, 0.15)' }}>
+            <label className="input-label" style={{ color: 'var(--accent-primary)', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Package size={16} /> Piece Length Conversion (Optional)
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginTop: '8px' }}>
+              {['none', '1.6', '2.5', 'custom'].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => handleEditPurchaseRateOrConversionChange(editPurchaseRate, type, editCustomPieceLength)}
+                  style={{
+                    padding: '8px 4px',
+                    borderRadius: '8px',
+                    border: editPieceLengthType === type ? '2px solid var(--accent-primary)' : '1px solid rgba(0,0,0,0.1)',
+                    background: editPieceLengthType === type ? 'rgba(3, 105, 161, 0.1)' : 'white',
+                    color: editPieceLengthType === type ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    fontWeight: '800',
+                    fontSize: '0.75rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    textAlign: 'center'
+                  }}
+                >
+                  {type === 'none' ? 'None' : type === 'custom' ? 'Custom' : `${type}m`}
+                </button>
+              ))}
+            </div>
+            
+            {editPieceLengthType === 'custom' && (
+              <div style={{ marginTop: '10px' }}>
+                <input 
+                  type="text" 
+                  inputMode="decimal"
+                  className="input-field" 
+                  placeholder="Enter custom meters per piece (e.g. 2.4)"
+                  style={{ margin: 0, fontSize: '0.85rem' }}
+                  value={editCustomPieceLength}
+                  onChange={(e) => handleEditPurchaseRateOrConversionChange(editPurchaseRate, 'custom', e.target.value)}
+                />
+              </div>
+            )}
+
+            {editPieceLengthType !== 'none' && editPurchaseRate && (
+              <div style={{ marginTop: '10px', fontSize: '0.75rem', color: 'var(--success)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Check size={14} /> Selling Price auto-set with 30% markup (rounded)
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="input-group">
               <label className="input-label">Purchase Rate</label>
               <input
                 type="number"
                 className="input-field"
                 value={editPurchaseRate ?? ''}
-                onChange={(e) => setEditPurchaseRate(e.target.value)}
+                onChange={(e) => handleEditPurchaseRateOrConversionChange(e.target.value, editPieceLengthType, editCustomPieceLength)}
                 step="0.01"
               />
             </div>
-            <div className="input-group" style={{ flex: 1 }}>
+            <div className="input-group">
               <label className="input-label">Selling Price *</label>
               <input
                 type="number"
@@ -887,8 +1078,8 @@ export default function Inventory() {
               />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <div className="input-group" style={{ flex: 1 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="input-group">
               <label className="input-label">Current Stock</label>
               <input
                 type="number"
@@ -898,7 +1089,7 @@ export default function Inventory() {
                 required
               />
             </div>
-            <div className="input-group" style={{ flex: 1 }}>
+            <div className="input-group">
               <label className="input-label">Low Stock Alert</label>
               <input
                 type="number"
@@ -911,29 +1102,29 @@ export default function Inventory() {
 
           <div style={{ padding: '16px', background: 'rgba(3, 105, 161, 0.05)', borderRadius: '16px', marginTop: '8px', border: '1px solid rgba(3, 105, 161, 0.1)' }}>
              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', fontWeight: '800', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Last Purchase Info</h4>
-             <div style={{ display: 'flex', gap: '16px' }}>
-                <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '16px' }}>
+                <div className="input-group" style={{ marginBottom: 0 }}>
                    <label className="input-label">Supplier Name</label>
                    <input
-                     type="text"
-                     className="input-field"
-                     list="edit-suppliers-list"
-                     value={editSupplier ?? ''}
-                     onChange={(e) => setEditSupplier(e.target.value)}
-                     placeholder="Type merchant name..."
+                      type="text"
+                      className="input-field"
+                      list="edit-suppliers-list"
+                      value={editSupplier ?? ''}
+                      onChange={(e) => setEditSupplier(e.target.value)}
+                      placeholder="Type merchant name..."
                    />
                    <datalist id="edit-suppliers-list">
                       {suppliers.map(s => <option key={s._id} value={s.name} />)}
                    </datalist>
                 </div>
-                <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+                <div className="input-group" style={{ marginBottom: 0 }}>
                    <label className="input-label">Invoice Number</label>
                    <input
-                     type="text"
-                     className="input-field"
-                     value={editInvoice ?? ''}
-                     onChange={(e) => setEditInvoice(e.target.value)}
-                     placeholder="e.g. FS/1234"
+                      type="text"
+                      className="input-field"
+                      value={editInvoice ?? ''}
+                      onChange={(e) => setEditInvoice(e.target.value)}
+                      placeholder="e.g. FS/1234"
                    />
                 </div>
              </div>

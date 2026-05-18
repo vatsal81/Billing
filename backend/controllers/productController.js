@@ -12,22 +12,18 @@ const getProducts = async (req, res) => {
     }
 };
 
-// @desc    Create a product
-// @route   POST /api/products
-// @access  Public
 const createProduct = async (req, res) => {
     try {
-        const { name, price, stockAmount, lowStockThreshold } = req.body;
+        const { name, price } = req.body;
 
         if (!name || !price) {
             return res.status(400).json({ message: 'Please add all required fields' });
         }
 
         const product = await Product.create({
-            name,
-            price,
-            stockAmount: stockAmount !== undefined ? stockAmount : 100,
-            lowStockThreshold: lowStockThreshold !== undefined ? lowStockThreshold : 5,
+            ...req.body,
+            stockAmount: req.body.stockAmount !== undefined ? req.body.stockAmount : 100,
+            lowStockThreshold: req.body.lowStockThreshold !== undefined ? req.body.lowStockThreshold : 5,
         });
 
         res.status(201).json(product);

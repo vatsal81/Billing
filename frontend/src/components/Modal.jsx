@@ -25,7 +25,7 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
             <X size={20} />
           </button>
         </div>
-        <div className="modal-content">
+        <div className="modal-scroll-content">
           {children}
         </div>
         {footer && (

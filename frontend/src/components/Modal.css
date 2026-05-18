@@ -19,7 +19,7 @@
 .modal-container {
   background: white;
   width: 100%;
-  max-width: 300px;
+  max-width: 440px;
   margin: 0 auto;
   border-radius: 28px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
@@ -34,9 +34,9 @@
 
 @media (max-width: 640px) {
   .modal-container {
-    max-width: 85%;
-    margin-top: 20px;
-    margin-bottom: 20px;
+    max-width: 95%; /* Wider and more screen-efficient on mobile */
+    max-height: 85vh; /* Keep the card height constrained within the viewport */
+    margin: auto;
   }
 }
 
@@ -51,10 +51,36 @@
   box-sizing: border-box !important;
 }
 
-.modal-content {
-  padding: 16px 24px; /* Reduced vertical padding */
+.modal-scroll-content {
+  padding: 16px 24px 32px; /* Bottom padding 32px to keep spacing clean */
   width: 100% !important;
   box-sizing: border-box !important;
+  overflow-y: auto;
+  max-height: 65vh;
+  flex: 1; /* Grow and fill remaining vertical space nicely */
+}
+
+/* Beautiful custom scrollbar themed to match the primary app accent color */
+.modal-scroll-content::-webkit-scrollbar {
+  width: 6px;
+}
+.modal-scroll-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 99px;
+}
+.modal-scroll-content::-webkit-scrollbar-thumb {
+  background: rgba(3, 105, 161, 0.35); /* Accent primary themed */
+  border-radius: 99px;
+}
+.modal-scroll-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(3, 105, 161, 0.6);
+}
+
+@media (max-width: 640px) {
+  .modal-scroll-content {
+    max-height: calc(85vh - 130px); /* Strictly constrain scrolling height so header/footer are sticky */
+    padding: 16px 16px 48px; /* Extra bottom padding so last inputs clear the sticky footer completely */
+  }
 }
 
 .modal-footer {

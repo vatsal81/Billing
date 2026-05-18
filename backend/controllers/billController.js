@@ -56,12 +56,12 @@ exports.generateBill = asyncHandler(async (req, res) => {
         throw new Error("Customer selection is strictly required to generate a bill");
     }
 
-    const products = await Product.find({ stockAmount: { $gt: 0 } });
+    const products = await Product.find({ stockAmount: { $gte: 1 } });
     
     if (products.length === 0) {
         const allProducts = await Product.countDocuments();
         res.status(400);
-        throw new Error(`No stock available. Total products in DB: ${allProducts}`);
+        throw new Error(`No stock available (minimum 1 unit required). Total products in DB: ${allProducts}`);
     }
 
     const targetSubtotal = targetAmount * 0.9524; // User's precise inclusive subtotal formula (-4.76%)
@@ -79,11 +79,13 @@ exports.generateBill = asyncHandler(async (req, res) => {
 
         for (const p of shuffledProducts) {
             if (selectedProducts.length < targetItemCount && (currentSubtotal + p.price) <= targetSubtotal) {
+                const hasPiece = p.pieceLength && p.pieceLength > 0;
                 selectedItemsMap[p._id] = {
                     product: p._id,
                     name: p.name,
-                    price: p.price,
+                    price: hasPiece ? Math.round((p.price / p.pieceLength) * 100) / 100 : p.price,
                     hsnCode: p.hsnCode,
+                    meter: hasPiece ? p.pieceLength : undefined,
                     quantity: 1
                 };
                 selectedProducts.push(p);
@@ -96,7 +98,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
             attempts++;
             const affordableProducts = selectedProducts.filter(p => 
                 p.price <= (targetSubtotal - currentSubtotal) && 
-                (selectedItemsMap[p._id].quantity < p.stockAmount)
+                (selectedItemsMap[p._id].quantity < Math.floor(p.stockAmount))
             );
 
             if (affordableProducts.length === 0) break;
@@ -105,8 +107,8 @@ exports.generateBill = asyncHandler(async (req, res) => {
             const item = selectedItemsMap[p._id];
             
             let maxPossibleAdd = Math.floor((targetSubtotal - currentSubtotal) / p.price);
-            if (maxPossibleAdd > (p.stockAmount - item.quantity)) {
-                maxPossibleAdd = p.stockAmount - item.quantity;
+            if (maxPossibleAdd > (Math.floor(p.stockAmount) - item.quantity)) {
+                maxPossibleAdd = Math.floor(p.stockAmount) - item.quantity;
             }
             
             let addQty = Math.min(maxPossibleAdd, Math.floor(Math.random() * 3) + 1);
@@ -120,19 +122,21 @@ exports.generateBill = asyncHandler(async (req, res) => {
         if (remainingGap > 0) {
             const finalFillers = products.filter(p => 
                 p.price <= remainingGap &&
-                (!selectedItemsMap[p._id] || selectedItemsMap[p._id].quantity < p.stockAmount)
+                (!selectedItemsMap[p._id] || selectedItemsMap[p._id].quantity < Math.floor(p.stockAmount))
             );
             if (finalFillers.length > 0) {
                 finalFillers.sort((a, b) => b.price - a.price);
                 const p = finalFillers[0];
+                const hasPiece = p.pieceLength && p.pieceLength > 0;
                 if (selectedItemsMap[p._id]) {
                     selectedItemsMap[p._id].quantity += 1;
                 } else {
                     selectedItemsMap[p._id] = {
                         product: p._id,
                         name: p.name,
-                        price: p.price,
+                        price: hasPiece ? Math.round((p.price / p.pieceLength) * 100) / 100 : p.price,
                         hsnCode: p.hsnCode,
+                        meter: hasPiece ? p.pieceLength : undefined,
                         quantity: 1
                     };
                 }
@@ -151,7 +155,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
             bestResult = {
                 selectedItems: Object.values(selectedItemsMap).map(item => ({
                     ...item,
-                    total: item.price * item.quantity
+                    total: Math.round(item.price * item.quantity * (item.meter || 1) * 100) / 100
                 })),
                 currentSubtotal,
                 cgst: Number(cgst.toFixed(2)),
