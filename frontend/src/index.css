@@ -27,6 +27,7 @@
   --accent-primary: #0369a1;
   --accent-gradient: linear-gradient(135deg, #0369a1, #075985);
   --success: #059669;
+  --warning: #f59e0b;
   --danger: #dc2626;
   --border-color: rgba(0, 0, 0, 0.1);
   --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);

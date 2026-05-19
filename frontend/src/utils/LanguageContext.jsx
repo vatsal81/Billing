@@ -12,7 +12,7 @@ const translations = {
     navManual: "Manual POS",
     navAuto: "Auto POS",
     navLedger: "Ledger",
-    navInventory: "Inventory",
+    navInventory: "Inventory(Stock)",
     sysStatus: "System Status",
     online: "Online",
     languageOptions: "Language",
@@ -86,7 +86,7 @@ const translations = {
     terms2: "2. E. & O.E.",
 
     // Inventory
-    invTitle: "Stock Management",
+    invTitle: "Inventory(Stock)",
     invSubtitle: "Add or remove items from your stock inventory.",
     addNewItem: "Add New Item",
     itemName: "Item Name",

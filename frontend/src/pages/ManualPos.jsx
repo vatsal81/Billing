@@ -621,6 +621,7 @@ const ManualPos = () => {
              return p;
          }));
       }
+      window.inventoryCache = null;
 
     } catch (e) {
       setError(e.response?.data?.message || e.message);
@@ -885,7 +886,7 @@ const ManualPos = () => {
         
         {/* Header Section */}
         <div className={`pos-erp-header ${billType === 'return' ? 'return-mode' : ''}`}>
-          <div className="pos-erp-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div className="pos-erp-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h2 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: billType === 'return' ? '#991b1b' : '#0f172a' }}>
                 {billType === 'return' ? <RefreshCcw size={18}/> : <Keyboard size={18}/>} 
@@ -894,7 +895,7 @@ const ManualPos = () => {
               </h2>
             </div>
             
-            <div className="pos-erp-actions" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="pos-erp-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
               {/* Feature 6 & 5 & 4 toggles */}
               {heldBills.length > 0 && (
                 <div className="held-dropdown-container" style={{ position: 'relative', display: 'flex' }}>

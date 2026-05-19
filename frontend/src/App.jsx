@@ -23,7 +23,7 @@ function App() {
   const { language, toggleLanguage, t } = useLanguage();
   const { user, logoutUser, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  
+
   const isAdmin = user?.role === 'admin';
   const [lowStockCount, setLowStockCount] = useState(0);
 
@@ -50,22 +50,22 @@ function App() {
         {/* Public Routes - No Auth Required */}
         <Route path="/view-bill/:id" element={<ViewBill />} />
         <Route path="/pay/:customerId/:amount" element={<PaymentView />} />
-        
+
         {/* Protected Routes - Need Login */}
         <Route path="/*" element={
           !user ? <Login /> : (
             <div className="app-container">
               {/* Mobile Header */}
               <header className="mobile-header no-print">
-                <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                  <Menu size={24} onClick={() => setSidebarOpen(true)} style={{cursor: 'pointer', color: 'var(--text-primary)'}} />
-                  <div className="brand" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                    <img src="/favicon.png" alt="logo" style={{width: '28px', height: '28px', borderRadius: '6px'}} />
-                    <h2 className="text-gradient" style={{fontSize: '20px', margin: 0}}>{t('appTitle')}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Menu size={24} onClick={() => setSidebarOpen(true)} style={{ cursor: 'pointer', color: 'var(--text-primary)' }} />
+                  <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <img src="/favicon.png" alt="logo" style={{ width: '28px', height: '28px', borderRadius: '6px' }} />
+                    <h2 className="text-gradient" style={{ fontSize: '20px', margin: 0 }}>{t('appTitle')}</h2>
                   </div>
                 </div>
-                <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                  <LogOut size={20} onClick={logoutUser} style={{color: 'var(--danger)', cursor: 'pointer'}} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <LogOut size={20} onClick={logoutUser} style={{ color: 'var(--danger)', cursor: 'pointer' }} />
                 </div>
               </header>
 
@@ -78,13 +78,13 @@ function App() {
                 <div className="mobile-close-btn" onClick={() => setSidebarOpen(false)}>
                   <X size={24} />
                 </div>
-                <div className="brand" style={{marginBottom: '24px', textAlign: 'center', padding: '10px 0'}}>
+                <div className="brand" style={{ marginBottom: '24px', textAlign: 'center', padding: '10px 0' }}>
                   <img src="/favicon.png" alt="Shree Hari Logo" style={{ width: '120px', height: '120px', marginBottom: '16px', borderRadius: '24px', boxShadow: '0 10px 20px rgba(0,0,0,0.2)', border: '2px solid rgba(255,255,255,0.1)' }} />
-                  <h1 className="text-gradient" style={{fontSize: '38px', marginBottom: '8px', letterSpacing: '-1px'}}>{t('appTitle')}</h1>
-                  <p style={{color: 'var(--text-secondary)', fontSize: '1.1rem', fontWeight: 500, letterSpacing: '1px'}}>{t('appSubtitle')}</p>
+                  <h1 className="text-gradient" style={{ fontSize: '38px', marginBottom: '8px', letterSpacing: '-1px' }}>{t('appTitle')}</h1>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', fontWeight: 500, letterSpacing: '1px' }}>{t('appSubtitle')}</p>
                 </div>
-                
-                <nav style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+
+                <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <NavLink to="/analytics" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                     <LayoutDashboard size={20} />
                     Dashboard
@@ -97,7 +97,7 @@ function App() {
                     <ShoppingCart size={20} />
                     Manual POS
                   </NavLink>
-                  
+
                   {isAdmin && (
                     <>
                       <NavLink to="/ledger" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
@@ -106,7 +106,7 @@ function App() {
                       </NavLink>
                       <NavLink to="/inventory" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
                         <PackageSearch size={20} />
-                        Inventory
+                        Inventory (Stock)
                         {lowStockCount > 0 && <span className="nav-badge danger animate-pulse">{lowStockCount}</span>}
                       </NavLink>
                       <NavLink to="/purchase" onClick={() => setSidebarOpen(false)} className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}>
@@ -133,14 +133,14 @@ function App() {
                   )}
                 </nav>
 
-                <div style={{marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px'}}>
-                  <div style={{padding: '16px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)'}}>
-                    <h4 style={{marginBottom: '8px', color: 'var(--success)'}}>{t('sysStatus')}</h4>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', marginBottom: '12px'}}>
-                      <div style={{width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success)'}}></div>
+                <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ padding: '16px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '12px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                    <h4 style={{ marginBottom: '8px', color: 'var(--success)' }}>{t('sysStatus')}</h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', marginBottom: '12px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success)' }}></div>
                       {t('online')} - {user.username}
                     </div>
-                    <button onClick={logoutUser} className="btn btn-danger" style={{width: '100%', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'}}><LogOut size={16} /> Logout</button>
+                    <button onClick={logoutUser} className="btn btn-danger" style={{ width: '100%', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><LogOut size={16} /> Logout</button>
                   </div>
                 </div>
               </aside>
@@ -148,18 +148,18 @@ function App() {
               {/* Main Content Area */}
               <main className="main-content">
                 <Routes>
-                    <Route path="/" element={<Analytics />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/manual" element={<ManualPos />} />
-                    <Route path="/auto" element={<Dashboard />} />
-                    {isAdmin && <Route path="/ledger" element={<History />} />}
-                    {isAdmin && <Route path="/inventory" element={<Inventory />} />}
-                    {isAdmin && <Route path="/purchase" element={<PurchaseBills />} />}
-                    {isAdmin && <Route path="/expenses" element={<Expenses />} />}
-                    {isAdmin && <Route path="/suppliers" element={<Suppliers />} />}
-                    {isAdmin && <Route path="/customer-udhaar" element={<Customers />} />}
-                    {isAdmin && <Route path="/settings" element={<Settings />} />}
-                    <Route path="*" element={<ManualPos />} />
+                  <Route path="/" element={<Analytics />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/manual" element={<ManualPos />} />
+                  <Route path="/auto" element={<Dashboard />} />
+                  {isAdmin && <Route path="/ledger" element={<History />} />}
+                  {isAdmin && <Route path="/inventory" element={<Inventory />} />}
+                  {isAdmin && <Route path="/purchase" element={<PurchaseBills />} />}
+                  {isAdmin && <Route path="/expenses" element={<Expenses />} />}
+                  {isAdmin && <Route path="/suppliers" element={<Suppliers />} />}
+                  {isAdmin && <Route path="/customer-udhaar" element={<Customers />} />}
+                  {isAdmin && <Route path="/settings" element={<Settings />} />}
+                  <Route path="*" element={<ManualPos />} />
                 </Routes>
               </main>
 

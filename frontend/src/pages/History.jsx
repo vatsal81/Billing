@@ -43,6 +43,7 @@ export default function History() {
     if(!window.confirm("Are you sure you want to void this bill? It will be removed from your revenue total but keep its serial sequence.")) return;
     try {
       await voidBill(id);
+      window.inventoryCache = null;
       loadData();
     } catch(e) {
       setError(e.response?.data?.message || e.message);
@@ -70,6 +71,7 @@ export default function History() {
       await new Promise(resolve => setTimeout(resolve, 2500));
       
       await deleteBill(billToDelete._id);
+      window.inventoryCache = null;
       
       setIsDeletingProcess(false);
       setDeleteSuccess(true);
@@ -82,6 +84,7 @@ export default function History() {
       loadData();
     } catch(e) {
       setIsDeletingProcess(false);
+      window.inventoryCache = null;
       setBillToDelete(null);
       setError(e.response?.data?.message || e.message);
     }

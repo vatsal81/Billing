@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { fetchProducts, createProduct, deleteProduct, updateProduct, fetchSuppliers } from '../utils/api';
-import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart, Pencil, X, Building, Hash } from 'lucide-react';
+import { fetchProducts, createProduct, deleteProduct, updateProduct, fetchSuppliers, fetchAnalyticsStats } from '../utils/api';
+import { Trash2, Plus, RefreshCw, Search, Download, AlertTriangle, Check, Truck, ShoppingBag, Package, ShoppingCart, Pencil, X, Building, Hash, TrendingUp, Lock, Unlock, Eye, EyeOff, FileText } from 'lucide-react';
 import { useLanguage } from '../utils/LanguageContext';
 import Modal from '../components/Modal';
 import './Inventory.css';
+
 export default function Inventory() {
   const { t } = useLanguage();
   const [products, setProducts] = useState([]);
+  const [totalHistoricalPurchase, setTotalHistoricalPurchase] = useState(0);
+  const [totalHistoricalSales, setTotalHistoricalSales] = useState(0);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -27,6 +30,25 @@ export default function Inventory() {
   const [customPieceLength, setCustomPieceLength] = useState('');
   const [editPieceLengthType, setEditPieceLengthType] = useState('none');
   const [editCustomPieceLength, setEditCustomPieceLength] = useState('');
+
+  // Password Security for Real-Time Stock Valuation
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [showPasswordText, setShowPasswordText] = useState(false);
+
+  const handleVerifyPassword = (e) => {
+    if (e) e.preventDefault();
+    if (passwordInput === 'admin' || passwordInput === '1234') {
+      setIsUnlocked(true);
+      setShowPasswordModal(false);
+      setPasswordInput('');
+      setPasswordError('');
+    } else {
+      setPasswordError('Incorrect password or security PIN.');
+    }
+  };
 
   const handlePurchaseRateOrConversionChange = (rateVal, typeVal, customLengthVal) => {
     setPurchaseRate(rateVal);
@@ -105,18 +127,33 @@ export default function Inventory() {
         // If we have cached data, set it immediately so UI is ready
         setProducts(window.inventoryCache);
         setFilteredProducts(window.inventoryCache);
+        if (window.inventoryTotalPurchasesCache !== undefined) {
+          setTotalHistoricalPurchase(window.inventoryTotalPurchasesCache);
+          setTotalHistoricalSales(window.inventoryTotalSalesCache || 0);
+        }
       }
 
-      const data = await fetchProducts();
-      const productsData = Array.isArray(data) ? data : [];
-      setProducts(productsData);
-      setFilteredProducts(productsData);
+      const [productsData, analyticsData] = await Promise.all([
+        fetchProducts(),
+        fetchAnalyticsStats('30d').catch(() => ({})) // Catch error if analytics fails
+      ]);
+
+      const productsArray = Array.isArray(productsData) ? productsData : [];
+      setProducts(productsArray);
+      setFilteredProducts(productsArray);
+      
+      const totalPurchases = analyticsData?.totalPurchases || 0;
+      const totalSales = analyticsData?.totalSales || 0;
+      setTotalHistoricalPurchase(totalPurchases);
+      setTotalHistoricalSales(totalSales);
       
       // Update cache
-      window.inventoryCache = productsData;
+      window.inventoryCache = productsArray;
+      window.inventoryTotalPurchasesCache = totalPurchases;
+      window.inventoryTotalSalesCache = totalSales;
       
       // Check for unpriced items
-      const unpriced = productsData.filter(p => !p.price || p.price === 0);
+      const unpriced = productsArray.filter(p => !p.price || p.price === 0);
       setUnpricedItems(unpriced);
       if (isRefresh && unpriced.length > 0) {
         setShowUnpricedAlert(true);
@@ -379,10 +416,27 @@ export default function Inventory() {
       setLoading(false);
     }
   };
+  
+  // Real-time Stock Valuation Calculations
+  const totalStockItems = products.reduce((sum, p) => sum + (Number(p.stockAmount) || 0), 0);
+  
+  const totalPurchaseValue = products.reduce((sum, p) => sum + ((Number(p.stockAmount) || 0) * (Number(p.purchaseRate) || 0)), 0);
+
+  const totalRetailValue = products.reduce((sum, p) => {
+    let len = 1;
+    if (p.pieceLengthType === '1.6') len = 1.6;
+    else if (p.pieceLengthType === '2.5') len = 2.5;
+    else if (p.pieceLengthType === 'custom' && p.customPieceLength) len = parseFloat(p.customPieceLength) || 1;
+    
+    const pieces = (Number(p.stockAmount) || 0) / len;
+    return sum + (pieces * (Number(p.price) || 0));
+  }, 0);
+  
+  const expectedProfit = totalRetailValue - totalPurchaseValue;
 
   return (
     <div className="animate-fade-in">
-      <header className="page-header">
+      <header className="page-header" style={{ marginBottom: '24px' }}>
         <div>
           <h2>{t('invTitle')}</h2>
           <p style={{color: 'var(--text-secondary)'}}>{t('invSubtitle')}</p>
@@ -396,6 +450,137 @@ export default function Inventory() {
           </button>
         </div>
       </header>
+
+      {/* Real-time Stock Valuation Dashboard */}
+      {!isUnlocked ? (
+        <div className="valuation-lock-container">
+          <div className="valuation-lock-info">
+            <div className="valuation-lock-icon">
+              <Lock size={28} />
+            </div>
+            <div>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>Stock Valuation Dashboard Locked</h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Wholesale capital investment, retail value, and projected margins are hidden for security reasons.</p>
+            </div>
+          </div>
+          <button 
+            className="valuation-lock-button"
+            onClick={() => {
+              setPasswordError('');
+              setPasswordInput('');
+              setShowPasswordModal(true);
+            }}
+          >
+            <Unlock size={16} /> Check Real Time Stock
+          </button>
+        </div>
+      ) : (
+        <div style={{ animation: 'fadeIn 0.3s ease-out forwards' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: '12px',
+            marginTop: '-16px'
+          }}>
+            <button
+              onClick={() => setIsUnlocked(false)}
+              style={{
+                background: 'rgba(239, 68, 68, 0.05)',
+                color: 'var(--danger)',
+                border: '1px solid rgba(239, 68, 68, 0.1)',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.8rem',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)'; }}
+            >
+              <Lock size={12} /> Lock Stock Value
+            </button>
+          </div>
+          <div className="valuation-unlocked-grid">
+            {/* Total Stock Quantity Card */}
+            <div className="glass-panel hover-lift" style={{padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', position: 'relative', overflow: 'hidden'}}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: 'var(--accent-primary)' }}></div>
+              <div style={{background: 'rgba(3, 105, 161, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--accent-primary)'}}>
+                <Package size={24} />
+              </div>
+              <div>
+                <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>Total Stock Quantity</p>
+                <h3 style={{fontSize: '1.65rem', fontWeight: '800', letterSpacing: '-0.5px', color: 'var(--text-primary)'}}>{totalStockItems.toLocaleString('en-IN')} Pcs</h3>
+              </div>
+            </div>
+
+            {/* Total Historical Purchases Card */}
+            <div className="glass-panel hover-lift" style={{padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', position: 'relative', overflow: 'hidden'}}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#8b5cf6' }}></div>
+              <div style={{background: 'rgba(139, 92, 246, 0.1)', padding: '12px', borderRadius: '12px', color: '#8b5cf6'}}>
+                <FileText size={24} />
+              </div>
+              <div>
+                <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>Total Purchases</p>
+                <h3 style={{fontSize: '1.65rem', fontWeight: '800', letterSpacing: '-0.5px', color: 'var(--text-primary)'}}>₹{Math.round(totalHistoricalPurchase).toLocaleString('en-IN')}</h3>
+              </div>
+            </div>
+
+            {/* Total Sales Card */}
+            <div className="glass-panel hover-lift" style={{padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', position: 'relative', overflow: 'hidden'}}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: '#3b82f6' }}></div>
+              <div style={{background: 'rgba(59, 130, 246, 0.1)', padding: '12px', borderRadius: '12px', color: '#3b82f6'}}>
+                <TrendingUp size={24} />
+              </div>
+              <div>
+                <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>Total Sales</p>
+                <h3 style={{fontSize: '1.65rem', fontWeight: '800', letterSpacing: '-0.5px', color: 'var(--text-primary)'}}>₹{Math.round(totalHistoricalSales).toLocaleString('en-IN')}</h3>
+              </div>
+            </div>
+
+            {/* Current Stock Value Card (Total Purchases - Total Sales) */}
+            <div className="glass-panel hover-lift" style={{padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', position: 'relative', overflow: 'hidden'}}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: 'var(--warning)' }}></div>
+              <div style={{background: 'rgba(245, 158, 11, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--warning)'}}>
+                <Package size={24} />
+              </div>
+              <div>
+                <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>Current Stock Value</p>
+                <h3 style={{fontSize: '1.65rem', fontWeight: '800', letterSpacing: '-0.5px', color: 'var(--text-primary)'}}>
+                  ₹{Math.round(totalPurchaseValue).toLocaleString('en-IN')}
+                </h3>
+              </div>
+            </div>
+
+            {/* Stock Retail Value Card */}
+            <div className="glass-panel hover-lift" style={{padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', position: 'relative', overflow: 'hidden'}}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: 'var(--success)' }}></div>
+              <div style={{background: 'rgba(16, 185, 129, 0.1)', padding: '12px', borderRadius: '12px', color: 'var(--success)'}}>
+                <ShoppingBag size={24} />
+              </div>
+              <div>
+                <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>Stock Retail Value</p>
+                <h3 style={{fontSize: '1.65rem', fontWeight: '800', letterSpacing: '-0.5px', color: 'var(--text-primary)'}}>Rs.{Math.round(totalRetailValue).toLocaleString('en-IN')}</h3>
+              </div>
+            </div>
+
+            {/* Expected Profit / Valuation Margin Card */}
+            <div className="glass-panel hover-lift" style={{padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '12px', position: 'relative', overflow: 'hidden'}}>
+              <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', background: expectedProfit >= 0 ? 'var(--success)' : 'var(--danger)' }}></div>
+              <div style={{background: expectedProfit >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', padding: '12px', borderRadius: '12px', color: expectedProfit >= 0 ? 'var(--success)' : 'var(--danger)'}}>
+                <TrendingUp size={24} />
+              </div>
+              <div>
+                <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>Expected Margin</p>
+                <h3 style={{fontSize: '1.65rem', fontWeight: '800', letterSpacing: '-0.5px', color: expectedProfit >= 0 ? 'var(--success)' : 'var(--danger)'}}>Rs.{Math.round(expectedProfit).toLocaleString('en-IN')}</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {error && (
@@ -1157,6 +1342,79 @@ export default function Inventory() {
           </button>
         </div>
       )}
+
+      {/* Password Security Verification Modal */}
+      <Modal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        title="Security Verification Required"
+        footer={(
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowPasswordModal(false)}>Cancel</button>
+            <button className="btn btn-primary" style={{ flex: 1, background: 'var(--accent-gradient)' }} onClick={handleVerifyPassword}>Verify</button>
+          </div>
+        )}
+      >
+        <div style={{ textAlign: 'center', padding: '10px 0' }}>
+          <div style={{ width: '60px', height: '60px', background: 'rgba(3, 105, 161, 0.1)', color: 'var(--accent-primary)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px auto' }}>
+            <Lock size={30} strokeWidth={2.5} />
+          </div>
+          
+          <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)', fontSize: '1.25rem', fontWeight: '800' }}>
+            Enter Master Password
+          </h3>
+          
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: '1.5', marginBottom: '24px' }}>
+            Please enter your security PIN or admin password to view real-time stock value.
+          </p>
+
+          <form onSubmit={handleVerifyPassword} style={{ width: '100%' }}>
+            <div className="input-group" style={{ position: 'relative' }}>
+              <input
+                type={showPasswordText ? "text" : "password"}
+                className="input-field"
+                placeholder="Enter password..."
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                autoFocus
+                style={{
+                  paddingRight: '40px',
+                  textAlign: 'center',
+                  fontSize: '1.1rem',
+                  letterSpacing: showPasswordText ? 'normal' : '0.4em',
+                  fontWeight: '700'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPasswordText(!showPasswordText)}
+                style={{
+                  position: 'absolute',
+                  right: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '4px'
+                }}
+              >
+                {showPasswordText ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            
+            {passwordError && (
+              <p style={{ color: 'var(--danger)', fontSize: '0.8rem', fontWeight: '700', marginTop: '8px', marginBottom: 0 }}>
+                {passwordError}
+              </p>
+            )}
+          </form>
+        </div>
+      </Modal>
     </div>
   );
 }
