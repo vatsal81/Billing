@@ -193,6 +193,19 @@ export default function PrintableBill({ bill }) {
                    <td style={{width: '18%'}}></td>
                  </tr>
               ))}
+              {/* Total Qty Row */}
+              <tr style={{display: 'flex', width: '100%', borderTop: '2px solid #000', background: 'rgba(0,0,0,0.04)'}}>
+                <td style={{padding: '5px 8px', borderRight: '1px solid #000', width: '35%', fontWeight: 'bold', fontSize: '13px', textAlign: 'right', color: '#000'}}>Total Qty</td>
+                <td style={{borderRight: '1px solid #000', width: '12%'}}></td>
+                <td style={{padding: '5px 8px', borderRight: '1px solid #000', width: '13%', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px', fontWeight: 'bold', textAlign: 'center'}}>
+                  {bill.items.reduce((sum, item) => sum + ((Number(item.meter) || 1) * (Number(item.quantity) || 0)), 0).toFixed(1)}
+                </td>
+                <td style={{padding: '5px 8px', borderRight: '1px solid #000', width: '10%', fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: '15px', fontWeight: 'bold', textAlign: 'center'}}>
+                  {bill.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)}
+                </td>
+                <td style={{borderRight: '2px solid #000', width: '12%'}}></td>
+                <td style={{width: '18%'}}></td>
+              </tr>
             </tbody>
           </table>
 
