@@ -152,7 +152,11 @@ const addPurchaseBill = async (req, res) => {
             if (product) {
                 product.stockAmount += (Number(item.meters) || Number(item.pcs) || 0);
                 product.purchaseRate = Number(item.rate);
-                product.price = markupPrice; // Set 30% profit markup!
+                if (product.pieceLength && product.pieceLength > 0) {
+                    product.price = Math.round((Number(item.rate) * 1.30 * product.pieceLength) / 10) * 10;
+                } else {
+                    product.price = markupPrice;
+                }
                 product.lastSupplier = supplierName;
                 product.lastInvoice = billNumber;
                 if (!product.nameEnglish && item.nameEnglish) {

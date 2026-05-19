@@ -36,7 +36,15 @@ export default function Inventory() {
     const pr = parseFloat(rateVal);
     if (isNaN(pr) || pr <= 0) return;
 
-    const rawSellingPrice = pr * 1.30;
+    let len = 0;
+    if (typeVal === '1.6') len = 1.6;
+    else if (typeVal === '2.5') len = 2.5;
+    else if (typeVal === 'custom') len = parseFloat(customLengthVal) || 0;
+
+    let rawSellingPrice = pr * 1.30;
+    if (len > 0) {
+      rawSellingPrice = pr * 1.30 * len;
+    }
     const roundedPrice = Math.round(rawSellingPrice / 10) * 10;
     setPrice(roundedPrice.toString());
   };
@@ -49,7 +57,15 @@ export default function Inventory() {
     const pr = parseFloat(rateVal);
     if (isNaN(pr) || pr <= 0) return;
 
-    const rawSellingPrice = pr * 1.30;
+    let len = 0;
+    if (typeVal === '1.6') len = 1.6;
+    else if (typeVal === '2.5') len = 2.5;
+    else if (typeVal === 'custom') len = parseFloat(customLengthVal) || 0;
+
+    let rawSellingPrice = pr * 1.30;
+    if (len > 0) {
+      rawSellingPrice = pr * 1.30 * len;
+    }
     const roundedPrice = Math.round(rawSellingPrice / 10) * 10;
     setEditPrice(roundedPrice.toString());
   };

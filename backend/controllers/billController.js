@@ -127,8 +127,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
 
     // Filter candidate products based on target price parameters to ensure high realism
     let candidateProducts = products.filter(p => {
-        const hasPiece = p.pieceLength && p.pieceLength > 0;
-        const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+        const unitCost = p.price;
         return unitCost >= params.minProductPrice && unitCost <= params.maxProductPrice;
     });
 
@@ -169,12 +168,12 @@ exports.generateBill = asyncHandler(async (req, res) => {
 
         for (const p of shuffledProducts) {
             const hasPiece = p.pieceLength && p.pieceLength > 0;
-            const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+            const unitCost = p.price;
             if (selectedProducts.length < targetItemCount && (currentSubtotal + unitCost) <= targetSubtotal) {
                 selectedItemsMap[p._id] = {
                     product: p._id,
                     name: p.nameEnglish || p.name,
-                    price: p.price,
+                    price: hasPiece ? Math.round((p.price / p.pieceLength) * 100) / 100 : p.price,
                     purchaseRate: p.purchaseRate,
                     hsnCode: p.hsnCode,
                     meter: hasPiece ? p.pieceLength : undefined,
@@ -189,8 +188,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
         while (currentSubtotal < targetSubtotal && attempts < 100) {
             attempts++;
             const affordableProducts = selectedProducts.filter(p => {
-                const hasPiece = p.pieceLength && p.pieceLength > 0;
-                const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+                const unitCost = p.price;
                 const currentQty = selectedItemsMap[p._id].quantity;
                 return unitCost <= (targetSubtotal - currentSubtotal) && 
                        (currentQty < Math.floor(p.stockAmount)) &&
@@ -201,8 +199,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
             
             const p = affordableProducts[Math.floor(Math.random() * affordableProducts.length)];
             const item = selectedItemsMap[p._id];
-            const hasPiece = p.pieceLength && p.pieceLength > 0;
-            const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+            const unitCost = p.price;
             
             let maxPossibleAdd = Math.floor((targetSubtotal - currentSubtotal) / unitCost);
             if (maxPossibleAdd > (Math.floor(p.stockAmount) - item.quantity)) {
@@ -222,28 +219,27 @@ exports.generateBill = asyncHandler(async (req, res) => {
         const remainingGap = targetSubtotal - currentSubtotal;
         if (remainingGap > 0) {
             const finalFillers = pool.filter(p => {
-                const hasPiece = p.pieceLength && p.pieceLength > 0;
-                const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+                const unitCost = p.price;
                 const currentQty = selectedItemsMap[p._id] ? selectedItemsMap[p._id].quantity : 0;
                 return unitCost <= remainingGap &&
                        (!selectedItemsMap[p._id] || (currentQty < Math.floor(p.stockAmount) && currentQty < maxQty));
             });
             if (finalFillers.length > 0) {
                 finalFillers.sort((a, b) => {
-                    const costA = a.pieceLength && a.pieceLength > 0 ? a.price * a.pieceLength : a.price;
-                    const costB = b.pieceLength && b.pieceLength > 0 ? b.price * b.pieceLength : b.price;
+                    const costA = a.price;
+                    const costB = b.price;
                     return costB - costA;
                 });
                 const p = finalFillers[0];
                 const hasPiece = p.pieceLength && p.pieceLength > 0;
-                const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+                const unitCost = p.price;
                 if (selectedItemsMap[p._id]) {
                     selectedItemsMap[p._id].quantity += 1;
                 } else {
                     selectedItemsMap[p._id] = {
                         product: p._id,
                         name: p.nameEnglish || p.name,
-                        price: p.price,
+                        price: hasPiece ? Math.round((p.price / p.pieceLength) * 100) / 100 : p.price,
                         purchaseRate: p.purchaseRate,
                         hsnCode: p.hsnCode,
                         meter: hasPiece ? p.pieceLength : undefined,
