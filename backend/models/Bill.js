@@ -7,6 +7,7 @@ const billSchema = mongoose.Schema({
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
         name: String,
         price: Number,
+        purchaseRate: Number,
         hsnCode: String,
         quantity: Number,
         meter: Number, // New field for fabric cut length

@@ -132,7 +132,7 @@ export default function Settings() {
             <input type="text" className="input-field" value={settings.terms2} onChange={(e) => setSettings({...settings, terms2: e.target.value})} />
           </div>
           <div className="input-group" style={{marginBottom: 0}}>
-            <label className="input-label">Rubber Stamp Name (Gujarati / English)</label>
+            <label className="input-label">Rubber Stamp Name (English)</label>
             <input type="text" className="input-field" value={settings.stampName} onChange={(e) => setSettings({...settings, stampName: e.target.value})} />
           </div>
 

@@ -5,6 +5,23 @@ const Supplier = require('../models/Supplier');
 const LedgerEntry = require('../models/LedgerEntry');
 const { generatePurchaseReportPdf, generateSingleBillPdf } = require('../utils/purchaseReportGenerator');
 
+const generateUniquePurchaseBillId = (supplierName, billDate, billNumber) => {
+    const nameParts = (supplierName || 'SUPPLIER').trim().split(/\s+/);
+    let initials = 'SUP';
+    if (nameParts.length === 1 && nameParts[0].toUpperCase() !== 'SUPPLIER') {
+        initials = nameParts[0].substring(0, 3).toUpperCase();
+    } else if (nameParts.length >= 2) {
+        initials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+    }
+    initials = initials.replace(/[^A-Z]/g, '') || 'SUP';
+
+    const dateObj = billDate ? new Date(billDate) : new Date();
+    const datePart = `${String(dateObj.getDate()).padStart(2, '0')}${String(dateObj.getMonth()+1).padStart(2, '0')}${dateObj.getFullYear()}`;
+
+    const cleanBillNo = String(billNumber || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    return `PUR-${initials}-${cleanBillNo}-${datePart}`;
+};
+
 
 // @desc    Add a new purchase bill
 // @route   POST /api/purchase-bills
@@ -64,8 +81,17 @@ const addPurchaseBill = async (req, res) => {
             await supplier.save();
         }
 
+        const uniqueBillId = generateUniquePurchaseBillId(supplierName, billDate, billNumber);
+
+        // Check if duplicate purchase bill already exists
+        const existingBill = await PurchaseBill.findOne({ uniqueBillId });
+        if (existingBill) {
+            return res.status(400).json({ message: `A purchase bill with Invoice No: ${billNumber} from ${supplierName} on this date already exists.` });
+        }
+
         const purchaseBill = await PurchaseBill.create({
             billNumber,
+            uniqueBillId,
             supplier: supplier._id,
             supplierName,
             supplierGstin,
@@ -343,9 +369,21 @@ const updatePurchaseBill = async (req, res) => {
             });
         }
 
+        const newSupplierName = supplierName || oldBill.supplierName;
+        const newBillDate = billDate || oldBill.billDate;
+        const newBillNumber = billNumber || oldBill.billNumber;
+        const uniqueBillId = generateUniquePurchaseBillId(newSupplierName, newBillDate, newBillNumber);
+
+        // Check if duplicate purchase bill already exists with a different ID
+        const existingBill = await PurchaseBill.findOne({ uniqueBillId, _id: { $ne: oldBill._id } });
+        if (existingBill) {
+            return res.status(400).json({ message: `A purchase bill with Invoice No: ${newBillNumber} from ${newSupplierName} on this date already exists.` });
+        }
+
         // 3. Update bill fields
+        oldBill.uniqueBillId = uniqueBillId;
         oldBill.supplier = currentSupplier?._id || oldBill.supplier;
-        oldBill.billNumber = billNumber || oldBill.billNumber;
+        oldBill.billNumber = newBillNumber;
         oldBill.supplierName = supplierName || oldBill.supplierName;
         oldBill.supplierGstin = supplierGstin || oldBill.supplierGstin;
         oldBill.supplierPan = supplierPan || oldBill.supplierPan;

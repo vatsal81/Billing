@@ -57,6 +57,7 @@ const purchaseBillSchema = mongoose.Schema({
     billImage: { type: String },
     billImages: [{ type: String }],
     ewayBillImage: { type: String },
+    uniqueBillId: { type: String, unique: true, sparse: true },
 }, { timestamps: true });
 
 

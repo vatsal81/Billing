@@ -386,7 +386,7 @@ const buildBillHTML = (billOrBills, settings = {}) => {
 
     return `
 <!DOCTYPE html>
-<html lang="gu">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <style>${getBillStyles()}</style>

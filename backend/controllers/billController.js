@@ -40,6 +40,65 @@ const generateUniqueInvoiceId = (customerName, billDate, invoiceNumber, serialNu
     return `${initials}-BK${bookNo}-B${billNo}-${datePart}-${payMode}`;
 };
 
+const getRealisticBillingParams = (targetAmount) => {
+    if (targetAmount < 1200) {
+        // User's specific feedback rule: 0-1200 take 2-3 products
+        return {
+            minItems: 2,
+            maxItems: 3,
+            maxQty: 2,
+            minProductPrice: 50,
+            maxProductPrice: 600 // Keep price lower so 2-3 items can comfortably fit in this range
+        };
+    } else if (targetAmount <= 4400) {
+        // User's specific feedback rule: 1200-4400 take 3-4 products
+        return {
+            minItems: 3,
+            maxItems: 4,
+            maxQty: 3,
+            minProductPrice: 80,
+            maxProductPrice: 1500
+        };
+    } else if (targetAmount <= 8500) {
+        // User's specific feedback rule: 4500-8500 take 6-7 products
+        return {
+            minItems: 6,
+            maxItems: 7,
+            maxQty: 2,
+            minProductPrice: 80,
+            maxProductPrice: 1000 // Keep price moderate to fit 6-7 items in this range
+        };
+    } else if (targetAmount < 15000) {
+        // User's specific feedback rule: 8500-15000 take 7-8 products
+        return {
+            minItems: 7,
+            maxItems: 8,
+            maxQty: 3,
+            minProductPrice: 90,
+            maxProductPrice: 1800 // Moderate price cap so we can comfortably distribute 7-8 items in this range
+        };
+    } else {
+        // User's specific feedback rule: upon 15000 take product according to amount
+        // Dynamically scale parameters smoothly from Rs. 15,000 up to Rs. 100,000+
+        const capAmount = Math.max(15000, Math.min(100000, targetAmount));
+        const factor = (capAmount - 15000) / 85000; // Scales from 0.0 to 1.0
+        
+        const minItems = Math.floor(8 + factor * 8);         // Scales from 8 to 16 items
+        const maxItems = Math.floor(10 + factor * 10);       // Scales from 10 to 20 items
+        const maxQty = Math.floor(4 + factor * 8);           // Scales from 4 to 12 units max quantity
+        const minProductPrice = Math.floor(100 + factor * 100); // Scales from Rs. 100 to Rs. 200 min price
+        const maxProductPrice = Math.floor(3000 + factor * 7000); // Scales from Rs. 3000 to Rs. 10000 max price
+
+        return {
+            minItems,
+            maxItems,
+            maxQty,
+            minProductPrice,
+            maxProductPrice
+        };
+    }
+};
+
 // @desc    Generate a smart bill
 // @route   POST /api/bills
 // @access  Private
@@ -64,83 +123,134 @@ exports.generateBill = asyncHandler(async (req, res) => {
         throw new Error(`No stock available (minimum 1 unit required). Total products in DB: ${allProducts}`);
     }
 
+    const params = getRealisticBillingParams(targetAmount);
+
+    // Filter candidate products based on target price parameters to ensure high realism
+    let candidateProducts = products.filter(p => {
+        const hasPiece = p.pieceLength && p.pieceLength > 0;
+        const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+        return unitCost >= params.minProductPrice && unitCost <= params.maxProductPrice;
+    });
+
+    // Fallback if not enough matching products exist
+    if (candidateProducts.length < params.minItems) {
+        candidateProducts = products;
+    }
+
     const targetSubtotal = targetAmount * 0.9524; // User's precise inclusive subtotal formula (-4.76%)
     let bestResult = null;
     let closestDiff = Infinity;
 
     const maxTrials = 5000;
     for (let trial = 0; trial < maxTrials; trial++) {
-        const targetItemCount = Math.min(products.length, Math.floor(Math.random() * 3) + 6);
-        const shuffledProducts = [...products].sort(() => 0.5 - Math.random());
+        // Relax constraints in the second half of trials if we haven't found a perfect match
+        const relax = trial > 2500 && closestDiff > 10;
+        
+        const maxQty = relax ? Math.max(params.maxQty * 2, 20) : params.maxQty;
+        
+        let pool = candidateProducts;
+        if (relax || pool.length < params.minItems) {
+            pool = products;
+        }
+
+        const minItems = relax ? Math.max(1, params.minItems - 1) : params.minItems;
+        const maxItems = relax ? params.maxItems + 2 : params.maxItems;
+        
+        const targetItemCount = Math.min(
+            pool.length, 
+            Math.floor(Math.random() * (maxItems - minItems + 1)) + minItems
+        );
+        
+        const shuffledProducts = [...pool].sort(() => 0.5 - Math.random());
         
         let selectedItemsMap = {}; 
         let selectedProducts = [];
         let currentSubtotal = 0;
 
         for (const p of shuffledProducts) {
-            if (selectedProducts.length < targetItemCount && (currentSubtotal + p.price) <= targetSubtotal) {
-                const hasPiece = p.pieceLength && p.pieceLength > 0;
+            const hasPiece = p.pieceLength && p.pieceLength > 0;
+            const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+            if (selectedProducts.length < targetItemCount && (currentSubtotal + unitCost) <= targetSubtotal) {
                 selectedItemsMap[p._id] = {
                     product: p._id,
-                    name: p.name,
-                    price: hasPiece ? Math.round((p.price / p.pieceLength) * 100) / 100 : p.price,
+                    name: p.nameEnglish || p.name,
+                    price: p.price,
+                    purchaseRate: p.purchaseRate,
                     hsnCode: p.hsnCode,
                     meter: hasPiece ? p.pieceLength : undefined,
                     quantity: 1
                 };
                 selectedProducts.push(p);
-                currentSubtotal += p.price;
+                currentSubtotal += unitCost;
             }
         }
 
         let attempts = 0;
         while (currentSubtotal < targetSubtotal && attempts < 100) {
             attempts++;
-            const affordableProducts = selectedProducts.filter(p => 
-                p.price <= (targetSubtotal - currentSubtotal) && 
-                (selectedItemsMap[p._id].quantity < Math.floor(p.stockAmount))
-            );
+            const affordableProducts = selectedProducts.filter(p => {
+                const hasPiece = p.pieceLength && p.pieceLength > 0;
+                const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+                const currentQty = selectedItemsMap[p._id].quantity;
+                return unitCost <= (targetSubtotal - currentSubtotal) && 
+                       (currentQty < Math.floor(p.stockAmount)) &&
+                       (currentQty < maxQty);
+            });
 
             if (affordableProducts.length === 0) break;
             
             const p = affordableProducts[Math.floor(Math.random() * affordableProducts.length)];
             const item = selectedItemsMap[p._id];
+            const hasPiece = p.pieceLength && p.pieceLength > 0;
+            const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
             
-            let maxPossibleAdd = Math.floor((targetSubtotal - currentSubtotal) / p.price);
+            let maxPossibleAdd = Math.floor((targetSubtotal - currentSubtotal) / unitCost);
             if (maxPossibleAdd > (Math.floor(p.stockAmount) - item.quantity)) {
                 maxPossibleAdd = Math.floor(p.stockAmount) - item.quantity;
+            }
+            if (maxPossibleAdd > (maxQty - item.quantity)) {
+                maxPossibleAdd = maxQty - item.quantity;
             }
             
             let addQty = Math.min(maxPossibleAdd, Math.floor(Math.random() * 3) + 1);
             if (addQty > 0) {
                 item.quantity += addQty;
-                currentSubtotal += (p.price * addQty);
+                currentSubtotal += (unitCost * addQty);
             }
         }
 
         const remainingGap = targetSubtotal - currentSubtotal;
         if (remainingGap > 0) {
-            const finalFillers = products.filter(p => 
-                p.price <= remainingGap &&
-                (!selectedItemsMap[p._id] || selectedItemsMap[p._id].quantity < Math.floor(p.stockAmount))
-            );
+            const finalFillers = pool.filter(p => {
+                const hasPiece = p.pieceLength && p.pieceLength > 0;
+                const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
+                const currentQty = selectedItemsMap[p._id] ? selectedItemsMap[p._id].quantity : 0;
+                return unitCost <= remainingGap &&
+                       (!selectedItemsMap[p._id] || (currentQty < Math.floor(p.stockAmount) && currentQty < maxQty));
+            });
             if (finalFillers.length > 0) {
-                finalFillers.sort((a, b) => b.price - a.price);
+                finalFillers.sort((a, b) => {
+                    const costA = a.pieceLength && a.pieceLength > 0 ? a.price * a.pieceLength : a.price;
+                    const costB = b.pieceLength && b.pieceLength > 0 ? b.price * b.pieceLength : b.price;
+                    return costB - costA;
+                });
                 const p = finalFillers[0];
                 const hasPiece = p.pieceLength && p.pieceLength > 0;
+                const unitCost = hasPiece ? p.price * p.pieceLength : p.price;
                 if (selectedItemsMap[p._id]) {
                     selectedItemsMap[p._id].quantity += 1;
                 } else {
                     selectedItemsMap[p._id] = {
                         product: p._id,
-                        name: p.name,
-                        price: hasPiece ? Math.round((p.price / p.pieceLength) * 100) / 100 : p.price,
+                        name: p.nameEnglish || p.name,
+                        price: p.price,
+                        purchaseRate: p.purchaseRate,
                         hsnCode: p.hsnCode,
                         meter: hasPiece ? p.pieceLength : undefined,
                         quantity: 1
                     };
                 }
-                currentSubtotal += p.price;
+                currentSubtotal += unitCost;
             }
         }
 
@@ -326,13 +436,27 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
         resolvedCustomerId = customer._id;
     }
 
-    const uniqueInvoiceId = generateUniqueInvoiceId(customerName, billDate, invoiceNumber, nextSerial, paymentMode);
+    // Fetch product details for each item to get the purchaseRate
+    const resolvedItems = await Promise.all(items.map(async (item) => {
+        let pRate = 0;
+        if (item.product) {
+            const prod = await Product.findById(item.product);
+            if (prod) {
+                const hasPiece = prod.pieceLength && prod.pieceLength > 0;
+                pRate = prod.purchaseRate;
+            }
+        }
+        return {
+            ...item,
+            purchaseRate: pRate
+        };
+    }));
 
     const bill = await Bill.create({
         uniqueInvoiceId,
         serialNumber: nextSerial,
         invoiceNumber: invoiceNumber || String(nextSerial).padStart(3, '0'),
-        items,
+        items: resolvedItems,
         totalAmount: subtotal,
         discountAmount: actualDiscountAmount,
         discountType: actualDiscountType,
@@ -486,7 +610,23 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
     }
 
     // 5. Update the bill fields
-    oldBill.items = items;
+    // Fetch product details for each item to get the purchaseRate
+    const resolvedItems = await Promise.all(items.map(async (item) => {
+        let pRate = 0;
+        if (item.product) {
+            const prod = await Product.findById(item.product);
+            if (prod) {
+                const hasPiece = prod.pieceLength && prod.pieceLength > 0;
+                pRate = prod.purchaseRate;
+            }
+        }
+        return {
+            ...item,
+            purchaseRate: pRate
+        };
+    }));
+
+    oldBill.items = resolvedItems;
     oldBill.totalAmount = subtotal;
     oldBill.discountAmount = actualDiscountAmount;
     oldBill.discountType = actualDiscountType;
@@ -556,7 +696,7 @@ exports.updateManualBill = asyncHandler(async (req, res) => {
 // @route   GET /api/bills
 // @access  Private
 exports.getBills = asyncHandler(async (req, res) => {
-    const bills = await Bill.find().sort({ createdAt: -1 });
+    const bills = await Bill.find().populate('items.product').sort({ createdAt: -1 });
     res.json(bills);
 });
 
@@ -564,7 +704,7 @@ exports.getBills = asyncHandler(async (req, res) => {
 // @route   GET /api/bills/:id
 // @access  Private
 exports.getBillById = asyncHandler(async (req, res) => {
-    const bill = await Bill.findById(req.params.id);
+    const bill = await Bill.findById(req.params.id).populate('items.product');
     if (!bill) {
         res.status(404);
         throw new Error("Bill not found");

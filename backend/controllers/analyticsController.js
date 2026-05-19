@@ -71,10 +71,26 @@ const getStats = async (req, res) => {
             { $unwind: { path: '$prod', preserveNullAndEmptyArrays: true } },
             {
                 $project: {
+                    quantity: { $ifNull: ['$items.quantity', 0] },
+                    meter: { $cond: { if: { $gt: ['$items.meter', 0] }, then: '$items.meter', else: 1 } },
+                    costPrice: {
+                        $cond: {
+                            if: { $gt: [{ $ifNull: ['$items.purchaseRate', -1] }, -1] },
+                            then: '$items.purchaseRate',
+                            else: { $ifNull: ['$prod.purchaseRate', 0] }
+                        }
+                    },
+                    billType: '$billType'
+                }
+            },
+            {
+                $project: {
                     itemCOGS: {
                         $multiply: [
-                            { $ifNull: ['$items.quantity', 0] },
-                            { $ifNull: ['$prod.purchaseRate', 0] }
+                            { $cond: { if: { $eq: ['$billType', 'return'] }, then: -1, else: 1 } },
+                            '$quantity',
+                            '$meter',
+                            '$costPrice'
                         ]
                     }
                 }

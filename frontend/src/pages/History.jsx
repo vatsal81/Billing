@@ -28,7 +28,7 @@ export default function History() {
   const [selectedBill, setSelectedBill] = useState(null);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [sortOrder, setSortOrder] = useState('inv_desc');
+  const [sortOrder, setSortOrder] = useState('inv_asc');
   const [generatingPdfBill, setGeneratingPdfBill] = useState(null);
   const [billToDelete, setBillToDelete] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -169,14 +169,46 @@ export default function History() {
     loadData();
   }, []);
 
+  // Helper to determine cost price of an item
+  const getPurchaseRate = (item) => {
+    if (item.purchaseRate !== undefined && item.purchaseRate !== null) {
+      return item.purchaseRate;
+    }
+    if (item.product && typeof item.product === 'object' && item.product.purchaseRate !== undefined) {
+      return item.product.purchaseRate;
+    }
+    if (item.price !== undefined) {
+      return Math.round((item.price / 1.30) * 100) / 100;
+    }
+    return 0;
+  };
+
   // Analytics Math
   const activeBills = bills.filter(b => b.status !== 'void');
-  const totalRevenue = activeBills.reduce((sum, bill) => sum + bill.actualTotal, 0);
+  const totalRevenue = activeBills.reduce((sum, bill) => {
+    const isReturn = bill.billType === 'return';
+    return sum + (isReturn ? -bill.actualTotal : bill.actualTotal);
+  }, 0);
   const totalInvoices = activeBills.length;
   const avgBill = totalInvoices > 0 ? (totalRevenue / totalInvoices).toFixed(2) : 0;
   
   const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const netProfit = totalRevenue - totalExpenses;
+
+  const totalGrossProfit = activeBills.reduce((sum, bill) => {
+    const isReturn = bill.billType === 'return';
+    const billRevenue = isReturn ? -bill.actualTotal : bill.actualTotal;
+    
+    const billCOGS = bill.items.reduce((itemSum, item) => {
+      const rate = getPurchaseRate(item);
+      const qty = item.quantity * (item.meter || 1);
+      return itemSum + (rate * qty);
+    }, 0);
+    
+    const grossProfit = billRevenue - (isReturn ? -billCOGS : billCOGS);
+    return sum + grossProfit;
+  }, 0);
+
+  const netProfit = totalGrossProfit - totalExpenses;
 
   // Analytics Data
   const revenueByDate = {};

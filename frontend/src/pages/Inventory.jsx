@@ -33,22 +33,12 @@ export default function Inventory() {
     setPieceLengthType(typeVal);
     setCustomPieceLength(customLengthVal);
 
-    if (typeVal === 'none') return;
-
     const pr = parseFloat(rateVal);
     if (isNaN(pr) || pr <= 0) return;
 
-    let len = 0;
-    if (typeVal === '1.6') len = 1.6;
-    else if (typeVal === '2.5') len = 2.5;
-    else if (typeVal === 'custom') len = parseFloat(customLengthVal) || 0;
-
-    if (len > 0) {
-      const pieceCost = pr * len;
-      const rawSellingPrice = pieceCost * 1.30;
-      const roundedPrice = Math.round(rawSellingPrice / 10) * 10;
-      setPrice(roundedPrice.toString());
-    }
+    const rawSellingPrice = pr * 1.30;
+    const roundedPrice = Math.round(rawSellingPrice / 10) * 10;
+    setPrice(roundedPrice.toString());
   };
 
   const handleEditPurchaseRateOrConversionChange = (rateVal, typeVal, customLengthVal) => {
@@ -56,22 +46,12 @@ export default function Inventory() {
     setEditPieceLengthType(typeVal);
     setEditCustomPieceLength(customLengthVal);
 
-    if (typeVal === 'none') return;
-
     const pr = parseFloat(rateVal);
     if (isNaN(pr) || pr <= 0) return;
 
-    let len = 0;
-    if (typeVal === '1.6') len = 1.6;
-    else if (typeVal === '2.5') len = 2.5;
-    else if (typeVal === 'custom') len = parseFloat(customLengthVal) || 0;
-
-    if (len > 0) {
-      const pieceCost = pr * len;
-      const rawSellingPrice = pieceCost * 1.30;
-      const roundedPrice = Math.round(rawSellingPrice / 10) * 10;
-      setEditPrice(roundedPrice.toString());
-    }
+    const rawSellingPrice = pr * 1.30;
+    const roundedPrice = Math.round(rawSellingPrice / 10) * 10;
+    setEditPrice(roundedPrice.toString());
   };
   
   // Restock Modal States

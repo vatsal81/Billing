@@ -334,9 +334,6 @@ const ManualPos = () => {
       const meterMultiplier = meterVal !== '' ? parseFloat(meterVal) : 1;
 
       let rate = parseFloat(product.price) || 0;
-      if (product.pieceLength && product.pieceLength > 0) {
-        rate = Math.round((rate / product.pieceLength) * 100) / 100;
-      }
 
       newRows[rowIndex] = {
         ...newRows[rowIndex],
