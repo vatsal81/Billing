@@ -75,9 +75,15 @@ const getStats = async (req, res) => {
                     meter: { $cond: { if: { $gt: ['$items.meter', 0] }, then: '$items.meter', else: 1 } },
                     costPrice: {
                         $cond: {
-                            if: { $gt: [{ $ifNull: ['$items.purchaseRate', -1] }, -1] },
+                            if: { $gt: [{ $ifNull: ['$items.purchaseRate', 0] }, 0] },
                             then: '$items.purchaseRate',
-                            else: { $ifNull: ['$prod.purchaseRate', 0] }
+                            else: {
+                                $cond: {
+                                    if: { $gt: [{ $ifNull: ['$prod.purchaseRate', 0] }, 0] },
+                                    then: '$prod.purchaseRate',
+                                    else: { $divide: [{ $ifNull: ['$items.price', 0] }, 1.30] }
+                                }
+                            }
                         }
                     },
                     billType: '$billType'

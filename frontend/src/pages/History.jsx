@@ -435,7 +435,7 @@ export default function History() {
           </div>
           <div>
             <p style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '4px', fontWeight: '600'}}>Net Profit</p>
-            <h3 style={{fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px', color: netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}}>Rs.{(netProfit || 0).toLocaleString('en-IN')}</h3>
+            <h3 style={{fontSize: '1.6rem', fontWeight: '800', letterSpacing: '-0.5px', color: netProfit >= 0 ? 'var(--success)' : 'var(--danger)'}}>Rs.{Math.round(netProfit || 0).toLocaleString('en-IN')}</h3>
           </div>
         </div>
       </div>

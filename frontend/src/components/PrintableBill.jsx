@@ -152,9 +152,15 @@ export default function PrintableBill({ bill }) {
                 <div style={{display: 'flex', padding: '6px 8px', borderBottom: '1px solid #000'}}>
                   <span style={{width: '70px', fontWeight: 'bold'}}>{t('billNo')} </span> <span style={{color: '#c00', fontWeight: 'bold'}}>{renderBillNo()}</span>
                 </div>
-                <div style={{display: 'flex', padding: '6px 8px'}}>
+                <div style={{display: 'flex', padding: '6px 8px', borderBottom: '1px solid #000'}}>
                   <span style={{width: '70px', fontWeight: 'bold'}}>{t('dateLabel')} </span> <span style={{color: '#0f3c88', fontFamily: '"Kalam", cursive', fontSize: '15px'}}>{new Date(bill.createdAt).toLocaleDateString('en-IN', {day: '2-digit', month: '2-digit', year: '2-digit'}).replace(/\//g, '-')}</span>
                 </div>
+                {bill.uniqueInvoiceId && (
+                  <div style={{display: 'flex', flexDirection: 'column', padding: '6px 8px', fontSize: '10px', gap: '2px'}}>
+                    <span style={{fontWeight: 'bold', color: '#666'}}>INVOICE ID</span>
+                    <span style={{fontFamily: 'monospace', fontWeight: 'bold', color: '#0f3c88', fontSize: '10.5px'}}>{bill.uniqueInvoiceId}</span>
+                  </div>
+                )}
               </div>
           </div>
 

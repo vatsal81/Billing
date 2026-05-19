@@ -448,6 +448,14 @@ exports.generateManualBill = asyncHandler(async (req, res) => {
         };
     }));
 
+    const uniqueInvoiceId = generateUniqueInvoiceId(
+        customerName,
+        billDate,
+        invoiceNumber || String(nextSerial).padStart(3, '0'),
+        nextSerial,
+        paymentMode
+    );
+
     const bill = await Bill.create({
         uniqueInvoiceId,
         serialNumber: nextSerial,
