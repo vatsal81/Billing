@@ -722,7 +722,7 @@ const ManualPos = () => {
     const viewLink = `${getFrontendUrl()}/view-bill/${bill._id}`;
     const totalAmount = bill.actualTotal || 0;
     
-    const text = `*SHREE HARI DRESSES & CUTPIECE*\n-----------------------------------------------------------\n\nDear *${bill.customerName || 'Customer'}*,\n\nThank you for shopping with us!\n\n*PURCHASE DETAILS*\n-----------------------------------------------------------\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\n${bill.uniqueInvoiceId ? `Invoice ID : ${bill.uniqueInvoiceId}\n` : ''}Amount : Rs.${totalAmount.toLocaleString('en-IN')}\n-----------------------------------------------------------\n\nView Your Invoice:\n${viewLink}\n\nVisit Us Again!\n-----------------------------------------------------------`;
+    const text = `*SHREE HARI DRESSES & CUTPIECE*\n-----------------------------------------------------------\n\nDear *${bill.customerName || 'Customer'}*,\n\nThank you for shopping with us!\n\n*PURCHASE DETAILS*\n-----------------------------------------------------------\nDate : ${new Date(bill.createdAt).toLocaleDateString('en-IN')}\nBill No : ${invNumber}\nAmount : Rs.${totalAmount.toLocaleString('en-IN')}\n-----------------------------------------------------------\n\nView Your Invoice:\n${viewLink}\n\nVisit Us Again!\n-----------------------------------------------------------`;
 
     const waUrl = `https://wa.me/91${customerPhone}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
