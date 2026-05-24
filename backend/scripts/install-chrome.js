@@ -5,7 +5,7 @@ const fs = require('fs');
 async function download() {
     console.log('--- Puppeteer Browser Installation Start ---');
     
-    const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
+    const cacheDir = path.join(__dirname, '..', '.cache', 'puppeteer');
     console.log(`Cache Directory: ${cacheDir}`);
     
     if (!fs.existsSync(cacheDir)) {

@@ -9,7 +9,6 @@ const fs = require('fs');
 // Auto-detect Chrome/Chromium path for both Local and Deployment (Render)
 const getBrowserOptions = async () => {
     const isWindows = process.platform === 'win32';
-    let puppeteerModule = puppeteer;
     let chromium;
 
     if (!isWindows) {
@@ -35,27 +34,16 @@ const getBrowserOptions = async () => {
     };
 
     if (!launchOptions.executablePath) {
-        if (chromium) {
-            launchOptions.executablePath = await chromium.executablePath();
-        } else if (isWindows) {
-            const commonPaths = [
-                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-                path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe')
-            ];
-            for (const p of commonPaths) {
-                if (fs.existsSync(p)) {
-                    launchOptions.executablePath = p;
-                    break;
-                }
-            }
-        }
+        // 1. Check local cache (installed by scripts/install-chrome.js) in robust paths
+        const possibleCacheDirs = [
+            path.join(__dirname, '..', '.cache', 'puppeteer'),
+            path.join(process.cwd(), '.cache', 'puppeteer'),
+            path.join(process.cwd(), 'backend', '.cache', 'puppeteer')
+        ];
 
-        // If still not found, check local cache (installed by scripts/install-chrome.js)
-        if (!launchOptions.executablePath) {
-            const cacheDir = path.join(process.cwd(), '.cache', 'puppeteer');
-            const findChrome = (dir) => {
-                if (!fs.existsSync(dir)) return null;
+        const findChrome = (dir) => {
+            if (!fs.existsSync(dir)) return null;
+            try {
                 const files = fs.readdirSync(dir);
                 for (const file of files) {
                     const fullPath = path.join(dir, file);
@@ -66,9 +54,44 @@ const getBrowserOptions = async () => {
                         return fullPath;
                     }
                 }
-                return null;
-            };
-            launchOptions.executablePath = findChrome(cacheDir);
+            } catch (e) {
+                console.error("Error reading cache dir:", dir, e.message);
+            }
+            return null;
+        };
+
+        for (const cacheDir of possibleCacheDirs) {
+            console.log(`Checking cache dir: ${cacheDir}`);
+            const foundPath = findChrome(cacheDir);
+            if (foundPath) {
+                console.log(`Found Chromium at: ${foundPath}`);
+                launchOptions.executablePath = foundPath;
+                break;
+            }
+        }
+
+        // 2. If still not found, check platform-specific options
+        if (!launchOptions.executablePath) {
+            if (chromium) {
+                try {
+                    launchOptions.executablePath = await chromium.executablePath();
+                    console.log('Using @sparticuz/chromium executable path:', launchOptions.executablePath);
+                } catch (err) {
+                    console.error('Error getting @sparticuz/chromium executable path:', err.message);
+                }
+            } else if (isWindows) {
+                const commonPaths = [
+                    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                    path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe')
+                ];
+                for (const p of commonPaths) {
+                    if (fs.existsSync(p)) {
+                        launchOptions.executablePath = p;
+                        break;
+                    }
+                }
+            }
         }
     }
 
