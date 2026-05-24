@@ -24,6 +24,11 @@ const PurchaseBills = () => {
     const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
     const [reportYear, setReportYear] = useState(new Date().getFullYear());
     const [viewingAttachments, setViewingAttachments] = useState(null);
+    const [filterSupplier, setFilterSupplier] = useState('');
+    const [filterStartDate, setFilterStartDate] = useState('');
+    const [filterEndDate, setFilterEndDate] = useState('');
+    const [filterMonth, setFilterMonth] = useState('');
+    const [filterYear, setFilterYear] = useState('');
 
     const months = [
         { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
@@ -652,6 +657,49 @@ const PurchaseBills = () => {
             setLoading(false);
         }
     };
+
+    const filteredBills = bills.filter(bill => {
+        const matchesSearch = !searchQuery || 
+            bill.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            bill.billNumber?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const matchesSupplier = !filterSupplier || bill.supplierName === filterSupplier;
+
+        let matchesDate = true;
+        if (bill.billDate) {
+            const billDateStr = bill.billDate.split('T')[0];
+            if (filterStartDate && billDateStr < filterStartDate) {
+                matchesDate = false;
+            }
+            if (filterEndDate && billDateStr > filterEndDate) {
+                matchesDate = false;
+            }
+        } else if (filterStartDate || filterEndDate) {
+            matchesDate = false;
+        }
+
+        let matchesMonth = true;
+        if (filterMonth && bill.billDate) {
+            const billMonth = new Date(bill.billDate).getMonth() + 1;
+            if (billMonth !== Number(filterMonth)) {
+                matchesMonth = false;
+            }
+        } else if (filterMonth && !bill.billDate) {
+            matchesMonth = false;
+        }
+
+        let matchesYear = true;
+        if (filterYear && bill.billDate) {
+            const billYear = new Date(bill.billDate).getFullYear();
+            if (billYear !== Number(filterYear)) {
+                matchesYear = false;
+            }
+        } else if (filterYear && !bill.billDate) {
+            matchesYear = false;
+        }
+
+        return matchesSearch && matchesSupplier && matchesDate && matchesMonth && matchesYear;
+    });
 
     return (
         <div className="page-container">
@@ -1557,8 +1605,175 @@ const PurchaseBills = () => {
                                             onChange={e => setSearchQuery(e.target.value)}
                                         />
                                     </div>
-                                    <span className="badge info" style={{ whiteSpace: 'nowrap' }}>{bills.filter(b => !searchQuery || b.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || b.billNumber?.toLowerCase().includes(searchQuery.toLowerCase())).length} Records</span>
+                                    <span className="badge info" style={{ whiteSpace: 'nowrap' }}>{filteredBills.length} Records</span>
                                 </div>
+                            </div>
+
+                            {/* Premium Date & Supplier Filter Bar */}
+                            <div style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '16px',
+                                padding: '16px 24px',
+                                background: '#f8fafc',
+                                borderBottom: '1px solid var(--border-color)',
+                                alignItems: 'center',
+                                borderRadius: '0'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    <span>Filters:</span>
+                                </div>
+                                
+                                {/* Supplier Dropdown */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', flex: '1 1 200px', minWidth: '150px' }}>
+                                    <User size={14} style={{ position: 'absolute', left: '12px', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+                                    <select 
+                                        className="input-field" 
+                                        style={{ 
+                                            fontSize: '0.8rem', 
+                                            height: '38px', 
+                                            paddingLeft: '32px', 
+                                            background: 'white', 
+                                            width: '100%', 
+                                            cursor: 'pointer',
+                                            borderRadius: '12px',
+                                            border: filterSupplier ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                                            fontWeight: filterSupplier ? 700 : 500
+                                        }} 
+                                        value={filterSupplier} 
+                                        onChange={(e) => setFilterSupplier(e.target.value)}
+                                    >
+                                        <option value="">All Suppliers</option>
+                                        {suppliers.map(s => (
+                                            <option key={s._id} value={s.name}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Month Dropdown */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', flex: '1 1 120px', minWidth: '110px' }}>
+                                    <select 
+                                        className="input-field" 
+                                        style={{ 
+                                            fontSize: '0.8rem', 
+                                            height: '38px', 
+                                            paddingLeft: '12px', 
+                                            background: 'white', 
+                                            width: '100%', 
+                                            cursor: 'pointer',
+                                            borderRadius: '12px',
+                                            border: filterMonth ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                                            fontWeight: filterMonth ? 700 : 500
+                                        }} 
+                                        value={filterMonth} 
+                                        onChange={(e) => setFilterMonth(e.target.value)}
+                                    >
+                                        <option value="">All Months</option>
+                                        {months.map(m => (
+                                            <option key={m.value} value={m.value}>{m.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Year Dropdown */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', flex: '1 1 100px', minWidth: '90px' }}>
+                                    <select 
+                                        className="input-field" 
+                                        style={{ 
+                                            fontSize: '0.8rem', 
+                                            height: '38px', 
+                                            paddingLeft: '12px', 
+                                            background: 'white', 
+                                            width: '100%', 
+                                            cursor: 'pointer',
+                                            borderRadius: '12px',
+                                            border: filterYear ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                                            fontWeight: filterYear ? 700 : 500
+                                        }} 
+                                        value={filterYear} 
+                                        onChange={(e) => setFilterYear(e.target.value)}
+                                    >
+                                        <option value="">All Years</option>
+                                        {years.map(y => (
+                                            <option key={y} value={y}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Start Date Selector */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 180px', minWidth: '130px', position: 'relative' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>From:</span>
+                                    <div style={{ position: 'relative', width: '100%' }}>
+                                        <Calendar size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+                                        <input 
+                                            type="date" 
+                                            className="input-field" 
+                                            style={{ 
+                                                fontSize: '0.8rem', 
+                                                height: '38px', 
+                                                paddingLeft: '32px', 
+                                                background: 'white', 
+                                                width: '100%',
+                                                borderRadius: '12px',
+                                                border: filterStartDate ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                                                fontWeight: filterStartDate ? 700 : 500
+                                            }} 
+                                            value={filterStartDate} 
+                                            onChange={(e) => setFilterStartDate(e.target.value)} 
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* End Date Selector */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 180px', minWidth: '130px', position: 'relative' }}>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>To:</span>
+                                    <div style={{ position: 'relative', width: '100%' }}>
+                                        <Calendar size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
+                                        <input 
+                                            type="date" 
+                                            className="input-field" 
+                                            style={{ 
+                                                fontSize: '0.8rem', 
+                                                height: '38px', 
+                                                paddingLeft: '32px', 
+                                                background: 'white', 
+                                                width: '100%',
+                                                borderRadius: '12px',
+                                                border: filterEndDate ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                                                fontWeight: filterEndDate ? 700 : 500
+                                            }} 
+                                            value={filterEndDate} 
+                                            onChange={(e) => setFilterEndDate(e.target.value)} 
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Clear Filters action */}
+                                {(filterSupplier || filterStartDate || filterEndDate || filterMonth || filterYear) && (
+                                    <button 
+                                        onClick={() => { setFilterSupplier(''); setFilterStartDate(''); setFilterEndDate(''); setFilterMonth(''); setFilterYear(''); }} 
+                                        style={{
+                                            background: 'rgba(239, 68, 68, 0.08)',
+                                            border: '1px dashed rgba(239, 68, 68, 0.3)',
+                                            color: '#ef4444',
+                                            padding: '8px 16px',
+                                            borderRadius: '12px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 800,
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            height: '38px',
+                                            transition: 'all 0.2s',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; }}
+                                    >
+                                        <X size={14} /> Clear Filters
+                                    </button>
+                                )}
                             </div>
                             {/* Desktop Table View */}
                             <div className="table-container desktop-only">
@@ -1575,7 +1790,7 @@ const PurchaseBills = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {bills.filter(b => !searchQuery || b.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || b.billNumber?.toLowerCase().includes(searchQuery.toLowerCase())).map((bill) => (
+                                        {filteredBills.map((bill) => (
                                             <tr key={bill._id} className="hover-row">
                                                 <td>
                                                     <div className="id-cell">
@@ -1673,7 +1888,7 @@ const PurchaseBills = () => {
 
                             {/* Mobile Card View */}
                             <div className="mobile-only" style={{ padding: '0 4px' }}>
-                                {bills.filter(b => !searchQuery || b.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || b.billNumber?.toLowerCase().includes(searchQuery.toLowerCase())).map((bill) => (
+                                {filteredBills.map((bill) => (
                                     <div key={bill._id} className="mobile-purchase-card" style={{
                                         background: 'white',
                                         borderRadius: '20px',
