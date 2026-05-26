@@ -1456,6 +1456,17 @@ const PurchaseBills = () => {
                                                     </div>
                                                 )}
 
+                                                {/* Taxable Amount (After Discount Sub Total) */}
+                                                {newBill.discountAmount > 0 && (
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+                                                        <div>
+                                                            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Taxable Amount</div>
+                                                            <div style={{ fontSize: '0.65rem', color: '#16a34a', fontWeight: 500 }}>After Discount — GST calculated on this</div>
+                                                        </div>
+                                                        <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#15803d' }}>Rs.{(newBill.subTotal - newBill.discountAmount).toFixed(2)}</span>
+                                                    </div>
+                                                )}
+
                                                 <div style={{ background: 'white', padding: '16px', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                                     {newBill.taxType === 'local' ? (
                                                         <>
@@ -1480,7 +1491,8 @@ const PurchaseBills = () => {
                                                                                                                 <input type="text" inputMode="decimal" className="input-field" style={{ width: '80px', padding: '4px 8px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 700 }} value={newBill.roundOff ?? ''} onChange={(e) => {
                                                             const rawValue = e.target.value;
                                                             const rVal = parseFloat(rawValue) || 0;
-                                                            const newTotal = Number((newBill.subTotal + newBill.igst + newBill.cgst + newBill.sgst + rVal).toFixed(2));
+                                                            const taxableAmount = newBill.subTotal - newBill.discountAmount;
+                                                            const newTotal = Number((taxableAmount + newBill.igst + newBill.cgst + newBill.sgst + rVal).toFixed(2));
                                                             setNewBill(prev => ({
                                                                 ...prev,
                                                                 roundOff: rawValue,
@@ -1780,7 +1792,7 @@ const PurchaseBills = () => {
                                 <table className="premium-table">
                                     <thead>
                                         <tr>
-                                            <th>Invoice details</th>
+                                            <th>Invoice details ({filteredBills.length})</th>
                                             <th>Merchant / Supplier</th>
                                             <th>Date</th>
                                             <th>Inventory</th>
