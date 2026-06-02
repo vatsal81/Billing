@@ -32,7 +32,6 @@ app.use(helmet({
 }));
 app.use(cors({
     origin: [
-        'https://billing-woad-sigma.vercel.app',
         'https://billing-i1lc.onrender.com',
         'https://shreeharii.vercel.app',
         'https://shreehari-backup.vercel.app',
