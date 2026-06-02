@@ -56,7 +56,7 @@ const ViewBill = () => {
         <div style={{background: 'var(--bg-primary)', minHeight: '100vh', padding: '20px 10px'}}>
             <div style={{maxWidth: '800px', margin: '0 auto'}}>
                 {/* Public Header */}
-                <header style={{textAlign: 'center', marginBottom: '30px'}} className="animate-fade-in">
+                <header style={{textAlign: 'center', marginBottom: '30px'}} className="animate-fade-in no-print">
                     <div style={{display: 'inline-flex', alignItems: 'center', gap: '10px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', padding: '8px 16px', borderRadius: '30px', marginBottom: '15px'}}>
                         <CheckCircle size={18} /> Verified Bill from {settings?.shopName || 'Shree Hari'}
                     </div>
@@ -65,7 +65,7 @@ const ViewBill = () => {
                 </header>
 
                 {/* Actions */}
-                <div style={{display: 'flex', gap: '12px', marginBottom: '30px', justifyContent: 'center'}} className="animate-fade-in">
+                <div style={{display: 'flex', gap: '12px', marginBottom: '30px', justifyContent: 'center'}} className="animate-fade-in no-print">
                     <button 
                         onClick={handleDownloadPdf}
                         className="btn btn-primary" 
@@ -81,7 +81,7 @@ const ViewBill = () => {
                 </div>
 
                 {/* Footer Message */}
-                <footer style={{textAlign: 'center', padding: '40px 20px', borderTop: '1px solid var(--border-color)', color: 'var(--text-secondary)'}}>
+                <footer style={{textAlign: 'center', padding: '40px 20px', borderTop: '1px solid var(--border-color)', color: 'var(--text-secondary)'}} className="no-print">
                     <ShoppingBag size={30} style={{marginBottom: '15px', opacity: 0.5}} />
                     <p style={{fontSize: '1.1rem', fontWeight: 'bold', color: 'var(--text-primary)'}}>{settings?.shopName || 'Shree Hari Dresses & Cutpiece'}</p>
                     <p style={{marginTop: '5px'}}>{settings?.shopSubTitle || 'Wholesale & Retail'}</p>
