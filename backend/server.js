@@ -38,7 +38,7 @@ app.use(cors({
         'https://shreehari-backup.vercel.app',
         'https://billing-1-4ylv.onrender.com',
         'http://localhost:5173',
-        'http://localhost:5000'
+        'http://localhost:5001'
     ],
     credentials: true
 }));
