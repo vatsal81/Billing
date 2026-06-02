@@ -139,7 +139,7 @@ const Analytics = () => {
                         Sales vs Purchases Performance
                     </h3>
                     <div style={{ width: '100%', height: '350px' }}>
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250} aspect={undefined}>
                             <AreaChart data={combineData(stats?.salesByDay, stats?.purchasesByDay)} margin={{ top: 10, right: 10, left: 40, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">

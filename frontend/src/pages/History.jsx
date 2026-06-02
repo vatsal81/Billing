@@ -448,7 +448,7 @@ export default function History() {
         <div className="glass-panel" style={{padding: '24px', height: '350px'}}>
           <h3 style={{marginBottom: '20px'}}>Revenue Timeline</h3>
           <div style={{ width: '100%', height: '300px' }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250} aspect={undefined}>
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: 20, bottom: 20 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -492,7 +492,7 @@ export default function History() {
         <div className="glass-panel" style={{padding: '24px', height: '350px', display: 'flex', flexDirection: 'column'}}>
           <h3 style={{marginBottom: '20px'}}>Top 5 Items (Qty)</h3>
           {topItemsData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200} aspect={undefined}>
               <PieChart>
                 <Pie data={topItemsData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                   {topItemsData.map((entry, index) => (
