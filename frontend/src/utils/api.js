@@ -1,12 +1,18 @@
 import axios from 'axios';
 
-const API = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
-});
-
 export const getBackendUrl = () => {
-  return API.defaults.baseURL.replace('/api', '');
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  if (window.location.hostname.includes('backup')) {
+    return 'https://billing-1-4ylv.onrender.com';
+  }
+  return (import.meta.env.VITE_API_BASE_URL || 'https://billing-i1lc.onrender.com/api').replace('/api', '');
 };
+
+const API = axios.create({
+  baseURL: `${getBackendUrl()}/api`
+});
 
 export const getFrontendUrl = () => {
   return window.location.origin;

@@ -355,9 +355,7 @@ export default function History() {
             gap: '16px'
           }}>
             {getAvailableBooks().map((bookNum, index) => {
-              const productionBackend = "https://billing-8ffn.onrender.com";
-              const backendBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : productionBackend);
-              const downloadUrl = `${backendBaseUrl}/api/bills/book/${bookNum}/pdf`;
+              const downloadUrl = `${getBackendUrl()}/api/bills/book/${bookNum}/pdf`;
               
               return (
                 <button 
