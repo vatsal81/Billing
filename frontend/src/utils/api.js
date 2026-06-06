@@ -28,6 +28,21 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
+// Handle unauthorized responses (expired/invalid token)
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('userInfo');
+      // Redirect to trigger Login component layout if not already redirecting
+      if (window.location.pathname !== '/' && window.location.pathname !== '/login') {
+        window.location.href = '/';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth
 export const login = async (credentials) => {
   const { data } = await API.post('/auth/login', credentials);
@@ -222,8 +237,8 @@ export const deleteSupplier = async (id) => {
 };
 
 // Analytics
-export const fetchAnalyticsStats = async (period = '30d') => {
-  const { data } = await API.get(`/analytics/stats?period=${period}`);
+export const fetchAnalyticsStats = async (period = '30d', month = '') => {
+  const { data } = await API.get(`/analytics/stats?period=${period}&month=${month}`);
   return data;
 };
 

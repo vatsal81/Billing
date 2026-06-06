@@ -107,7 +107,7 @@ const getBillStyles = () => `
 `;
 
 const buildSingleBillHTML = (bill, settings = {}) => {
-    const formatDate = (date) => 
+    const formatDate = (date) =>
         date ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-') : 'N/A';
 
     const getInvoiceNumberValue = () => {
@@ -136,30 +136,44 @@ const buildSingleBillHTML = (bill, settings = {}) => {
     };
 
     const originalSubtotal = bill.items ? bill.items.reduce((sum, item) => sum + (item.price * item.quantity * (item.meter || 1)), 0) : 0;
-    
+
     let discountValue = 0;
     if (bill.discountType === 'percentage') {
         discountValue = originalSubtotal * ((bill.discountAmount || 0) / 100);
     } else if (bill.discountType === 'flat') {
         discountValue = bill.discountAmount || 0;
     }
-    
+
     const discountedSubtotal = originalSubtotal - discountValue;
     const gstAmount = (bill.cgst || 0) + (bill.sgst || 0);
     const totalWithGst = discountedSubtotal + gstAmount;
 
     const finalTotal = bill.actualTotal || bill.targetAmount || 0;
 
-    const emptyRowsHTML = Array.from({length: Math.max(1, 8 - bill.items.length)}).map((_, i) => `
+    const emptyRowsHTML = Array.from({ length: Math.max(0, 8 - bill.items.length) }).map((_, i) => `
         <tr style="display: flex; width: 100%; ${i === 0 ? 'flex-grow: 1;' : ''}">
-            <td style="padding: 12px; border-right: 1px solid #000; width: 35%">&nbsp;</td>
-            <td style="border-right: 1px solid #000; width: 12%"></td>
-            <td style="border-right: 1px solid #000; width: 13%"></td>
+            <td style="padding: 12px; border-right: 1px solid #000; width: 47%">&nbsp;</td>
+            <td style="border-right: 1px solid #000; width: 11%"></td>
             <td style="border-right: 1px solid #000; width: 10%"></td>
-            <td style="border-right: 2px solid #000; width: 12%"></td>
-            <td style="width: 18%"></td>
+            <td style="border-right: 1px solid #000; width: 7%"></td>
+            <td style="border-right: 2px solid #000; width: 10%"></td>
+            <td style="width: 15%"></td>
         </tr>
     `).join('');
+
+    const totalMeter = bill.items.reduce((sum, item) => sum + ((Number(item.meter) || 1) * (Number(item.quantity) || 0)), 0).toFixed(1);
+    const totalQty = bill.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+
+    const totalQtyRowHTML = `
+        <tr style="display: flex; width: 100%; border-top: 2px solid #000; background: rgba(0,0,0,0.04);">
+            <td style="padding: 5px 8px; border-right: 1px solid #000; width: 47%; font-weight: bold; font-size: 14px; text-align: right; color: #000;">Total Qty</td>
+            <td style="border-right: 1px solid #000; width: 11%;"></td>
+            <td style="padding: 5px 8px; border-right: 1px solid #000; width: 10%; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 16px; font-weight: bold; text-align: center;">${totalMeter}</td>
+            <td style="padding: 5px 8px; border-right: 1px solid #000; width: 7%; font-family: 'Kalam', cursive; color: #0f3c88; font-size: 16px; font-weight: bold; text-align: center;">${totalQty}</td>
+            <td style="border-right: 2px solid #000; width: 10%;"></td>
+            <td style="width: 15%;"></td>
+        </tr>
+    `;
 
     return `
     <div class="bill-wrapper">
@@ -220,41 +234,42 @@ const buildSingleBillHTML = (bill, settings = {}) => {
             <table class="items-table">
                 <thead>
                     <tr style="display: flex; width: 100%;">
-                        <th style="padding: 8px; border-right: 1px solid #000; width: 35%;">Item Description</th>
-                        <th style="padding: 8px; border-right: 1px solid #000; width: 12%;">HSN Code</th>
-                        <th style="padding: 8px; border-right: 1px solid #000; width: 13%;">Meter/Piece</th>
-                        <th style="padding: 8px; border-right: 1px solid #000; width: 10%;">Quantity</th>
-                        <th style="padding: 8px; border-right: 2px solid #000; width: 12%;">Rate</th>
-                        <th style="padding: 8px; width: 18%;">Amount Rs.</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 47%;">Item Description</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 11%;">HSN Code</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 10%;">Mtr/Pc</th>
+                        <th style="padding: 8px; border-right: 1px solid #000; width: 7%;">Qty</th>
+                        <th style="padding: 8px; border-right: 2px solid #000; width: 10%;">Rate</th>
+                        <th style="padding: 8px; width: 15%;">Amount Rs.</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${bill.items.map((item, idx) => `
                         <tr style="display: flex; width: 100%; font-family: 'Kalam', 'Gujarati', cursive; color: #0f3c88; font-size: 18px;">
-                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 35%; text-align: left;">${item.name}</td>
-                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 12%; text-align: center;">${item.hsnCode || ''}</td>
-                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 13%; text-align: center;">${item.meter || 1}</td>
-                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 10%; text-align: center;">${item.quantity}</td>
-                            <td style="padding: 6px 8px; border-right: 2px solid #000; width: 12%; text-align: right;">${item.price.toFixed(0)}</td>
-                            <td style="padding: 6px 8px; width: 18%; text-align: right;">${(item.price * item.quantity * (item.meter || 1)).toFixed(0)}</td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 47%; text-align: left;">${item.name}</td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 11%; text-align: center;">${item.hsnCode || ''}</td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 10%; text-align: center;">${item.meter || 1}</td>
+                            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 7%; text-align: center;">${item.quantity}</td>
+                            <td style="padding: 6px 8px; border-right: 2px solid #000; width: 10%; text-align: right;">${item.price.toFixed(0)}</td>
+                            <td style="padding: 6px 8px; width: 15%; text-align: right;">${(item.price * item.quantity * (item.meter || 1)).toFixed(0)}</td>
                         </tr>
                     `).join('')}
                     ${emptyRowsHTML}
+                    ${totalQtyRowHTML}
                 </tbody>
             </table>
 
             <div class="footer-section">
-                <div class="footer-left" style="display: flex; flex-direction: column; justify-content: space-between;">
-                    <div style="position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;">
-                        ${bill.paymentMode === 'online' ? '<div class="gpay-text" style="position: absolute; top: 45px; left: 10px; font-size: 32px; opacity: 0.2; transform: rotate(-10deg);">GPay</div>' : ''}
+                <div class="footer-left" style="display: flex; flex-direction: column; justify-content: space-between; overflow: hidden;">
+                    <div style="position: relative; display: flex; flex-direction: column; justify-content: flex-start; padding-top: 5px;">
+                        ${bill.paymentMode === 'online' ? '<div class="gpay-text" style="position: absolute; top: 0px; right: 15px; font-size: 32px; opacity: 0.15; transform: rotate(-10deg); z-index: 0;">GPay</div>' : ''}
                         
                         <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px; position: relative; z-index: 1; color: #666;">Total Amount in Words:</div>
-                        <div class="kalam-text" style="color: #0f3c88; font-size: 13px; border-bottom: 1px dotted rgba(0,0,0,0.1); padding-bottom: 4px; position: relative; z-index: 1; width: 95%;">
+                        <div class="kalam-text" style="color: #0f3c88; font-size: 19px; border-bottom: 1px dotted rgba(0,0,0,0.3); padding-bottom: 4px; position: relative; z-index: 1; width: calc(100% + 16px); margin-left: -8px; box-sizing: border-box;">
                             ${numberToWords(finalTotal)}
                         </div>
 
-                        <div style="display: flex; align-items: center; margin-top: 55px; border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 4px 0; width: 85%;">
-                            <span class="kalam-text" style="color: #0f3c88; font-size: 20px; font-weight: bold;">${finalTotal}-only</span>
+                        <div style="display: flex; align-items: center; margin-top: 25px; border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 4px 0; padding-left: 16px; width: calc(100% + 16px); margin-left: -8px; box-sizing: border-box;">
+                            <span class="kalam-text" style="color: #0f3c88; font-size: 20px; font-weight: bold;">₹ ${finalTotal}/- only</span>
                         </div>
                     </div>
 
@@ -329,12 +344,11 @@ const getBrowserOptions = async () => {
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
-            '--no-zygote',
-            '--single-process'
         ],
         defaultViewport: chromium ? chromium.defaultViewport : null,
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
-        headless: chromium ? chromium.headless : 'shell',
+        // 'shell' does NOT support Page.printToPDF — must use true (full headless)
+        headless: chromium ? chromium.headless : true,
     };
 
     if (!launchOptions.executablePath) {
@@ -405,7 +419,7 @@ const getBrowserOptions = async () => {
 const buildBillHTML = (billOrBills, settings = {}) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
-    
+
     const billsHTML = bills.map(bill => buildSingleBillHTML(bill, settings)).join('');
 
     return `
@@ -425,13 +439,13 @@ const buildBillHTML = (billOrBills, settings = {}) => {
 const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
-    
+
     const isWindows = process.platform === 'win32';
     const launchOptions = await getBrowserOptions();
     console.log('--- PDF SYSTEM DIAGNOSTICS ---');
     console.log('Platform:', process.platform);
     console.log('Using Browser Path:', launchOptions.executablePath || 'BUNDLED');
-    
+
     let browser;
     try {
         browser = await puppeteer.launch(launchOptions);
@@ -445,22 +459,22 @@ const generateBillPdf = async (billOrBills, settings) => {
         console.log(`Generating PDF for ${bills.length} bills...`);
         const page = await browser.newPage();
         const html = buildBillHTML(bills, settings);
-        
+
         // Set content and wait for fonts
-        await page.setContent(html, { 
+        await page.setContent(html, {
             waitUntil: 'load',
-            timeout: 120000 
+            timeout: 120000
         });
 
         // CRITICAL: Wait for fonts to be ready in the browser
         await page.evaluateHandle('document.fonts.ready');
-        
+
         const pdf = await page.pdf({
             format: 'A4',
             printBackground: true,
             margin: { top: '0', right: '0', bottom: '0', left: '0' }
         });
-        
+
         await page.close();
         return pdf;
     } catch (genError) {
@@ -472,4 +486,3 @@ const generateBillPdf = async (billOrBills, settings) => {
 };
 
 module.exports = { generateBillPdf };
-

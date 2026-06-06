@@ -1,29 +1,86 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { TrendingUp, TrendingDown, ShoppingCart, Package, Wallet, AlertTriangle, IndianRupee, Calendar, FileText } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { fetchAnalyticsStats } from '../utils/api';
+import { fetchAnalyticsStats, fetchBills } from '../utils/api';
 import '../index.css';
 
 const Analytics = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [period, setPeriod] = useState('30d');
+    const [bills, setBills] = useState([]);
+
+    const [analyticsMonth, setAnalyticsMonth] = useState(() => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    });
+
+    const [tempMonth, setTempMonth] = useState(() => {
+        const now = new Date();
+        return String(now.getMonth() + 1).padStart(2, '0');
+    });
+
+    const [tempYear, setTempYear] = useState(() => {
+        return String(new Date().getFullYear());
+    });
+
+    const [showPicker, setShowPicker] = useState(false);
+
+    useEffect(() => {
+        if (analyticsMonth && analyticsMonth !== 'all') {
+            const parts = analyticsMonth.split('-');
+            if (parts.length === 2) {
+                setTempYear(parts[0]);
+                setTempMonth(parts[1]);
+            }
+        }
+    }, [analyticsMonth]);
+
+    useEffect(() => {
+        const getBills = async () => {
+            try {
+                const billsData = await fetchBills();
+                setBills(billsData);
+            } catch(e) {
+                console.error(e);
+            }
+        };
+        getBills();
+    }, []);
 
     const loadStats = useCallback(async () => {
         try {
             setLoading(true);
-            const data = await fetchAnalyticsStats(period);
+            const data = await fetchAnalyticsStats(period, analyticsMonth);
             setStats(data);
         } catch (error) {
             console.error('Error fetching analytics:', error);
         } finally {
             setLoading(false);
         }
-    }, [period]);
+    }, [period, analyticsMonth]);
 
     useEffect(() => {
         loadStats();
     }, [loadStats]);
+
+    const availableYears = useMemo(() => {
+        const yearSet = new Set();
+        const currentYear = new Date().getFullYear();
+        yearSet.add(currentYear);
+        bills.forEach(b => {
+            const d = new Date(b.createdAt);
+            yearSet.add(d.getFullYear());
+        });
+        return Array.from(yearSet).sort((a, b) => b - a);
+    }, [bills]);
+
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formatMonthLabel = (ym) => {
+        if (ym === 'all') return 'All Time';
+        const [y, m] = ym.split('-');
+        return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
+    };
 
     const combineData = (sales, purchases) => {
         if (!sales || !purchases) return [];
@@ -50,6 +107,7 @@ const Analytics = () => {
         { label: 'Last 30 Days', value: '30d' },
         { label: 'Last 90 Days', value: '90d' },
         { label: 'Last Year', value: '1y' },
+        { label: 'All Time', value: 'all' }
     ];
 
     return (
@@ -59,40 +117,234 @@ const Analytics = () => {
                     <h1 className="text-gradient">Business Analytics</h1>
                     <p className="text-secondary">Comprehensive overview of your business performance</p>
                 </div>
-                <div className="header-actions" style={{ maxWidth: '100%' }}>
-                    <div className="period-selector hide-scrollbar" style={{ 
-                        display: 'flex', 
-                        gap: '6px', 
-                        background: 'var(--bg-secondary)', 
-                        padding: '4px', 
-                        borderRadius: '12px', 
-                        border: '1px solid var(--border-color)',
-                        overflowX: 'auto',
-                        WebkitOverflowScrolling: 'touch',
-                        scrollbarWidth: 'none',
-                        maxWidth: '100%'
-                    }}>
-                        {periodOptions.map(option => (
-                            <button 
-                                key={option.value}
-                                onClick={() => setPeriod(option.value)}
-                                className={`btn btn-sm ${period === option.value ? 'btn-primary' : 'btn-secondary'}`}
-                                style={{ 
-                                    padding: '8px 14px', 
-                                    fontSize: '0.85rem', 
-                                    fontWeight: '600',
-                                    borderRadius: '8px',
-                                    border: 'none',
-                                    background: period === option.value ? 'var(--accent-gradient)' : 'transparent',
-                                    color: period === option.value ? 'white' : 'var(--text-secondary)',
-                                    whiteSpace: 'nowrap',
-                                    flexShrink: 0,
-                                    transition: 'all 0.2s ease'
-                                }}
-                            >
-                                {option.label}
-                            </button>
-                        ))}
+                <div className="filter-row">
+                    <div className="period-selector-wrapper">
+                        <div className="period-selector hide-scrollbar">
+                            {periodOptions.map(option => (
+                                <button 
+                                    key={option.value}
+                                    onClick={() => {
+                                        setAnalyticsMonth('all');
+                                        setPeriod(option.value);
+                                        setShowPicker(false);
+                                    }}
+                                    className={`btn btn-sm ${(analyticsMonth === 'all' && period === option.value) ? 'btn-primary' : 'btn-secondary'}`}
+                                    style={{ 
+                                        padding: '8px 14px', 
+                                        fontSize: '0.85rem', 
+                                        fontWeight: '600',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        background: (analyticsMonth === 'all' && period === option.value) ? 'var(--accent-gradient)' : 'transparent',
+                                        color: (analyticsMonth === 'all' && period === option.value) ? 'white' : 'var(--text-secondary)',
+                                        whiteSpace: 'nowrap',
+                                        flexShrink: 0,
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="custom-month-wrapper">
+                        <button
+                            onClick={() => setShowPicker(!showPicker)}
+                            className={`btn btn-sm ${analyticsMonth !== 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                            style={{ 
+                                padding: '8px 14px', 
+                                fontSize: '0.85rem', 
+                                fontWeight: '600',
+                                borderRadius: '12px',
+                                border: '1px solid var(--border-color)',
+                                background: analyticsMonth !== 'all' ? 'var(--accent-gradient)' : 'var(--bg-secondary)',
+                                color: analyticsMonth !== 'all' ? 'white' : 'var(--text-secondary)',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0,
+                                transition: 'all 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                height: '36px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            <Calendar size={14} />
+                            {analyticsMonth === 'all' ? 'Custom Month' : formatMonthLabel(analyticsMonth)}
+                        </button>
+
+                        {showPicker && (
+                            <div className="custom-month-picker-popover">
+                                {/* Card Header */}
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #085f8c 0%, #054668 100%)',
+                                    padding: '16px 20px',
+                                    textAlign: 'center',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    <div style={{
+                                        width: '36px',
+                                        height: '36px',
+                                        borderRadius: '50%',
+                                        background: 'rgba(255, 255, 255, 0.15)',
+                                        border: '1px solid rgba(255, 255, 255, 0.25)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#ffffff'
+                                    }}>
+                                        <Calendar size={18} strokeWidth={2} />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                        <h3 style={{ margin: 0, color: '#ffffff', fontSize: '1.05rem', fontWeight: '800', letterSpacing: '-0.3px' }}>Select Report Period</h3>
+                                        <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.75rem', fontWeight: '500' }}>
+                                            Choose month & year • <strong>{analyticsMonth === 'all' ? 'All Time' : formatMonthLabel(analyticsMonth)}</strong>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Card Body */}
+                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        {/* Month Dropdown */}
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ 
+                                                color: '#085f8c', 
+                                                fontSize: '0.7rem', 
+                                                fontWeight: '800', 
+                                                letterSpacing: '0.5px' 
+                                            }}>MONTH</label>
+                                            <select 
+                                                value={tempMonth} 
+                                                onChange={(e) => setTempMonth(e.target.value)}
+                                                style={{
+                                                    padding: '10px 12px',
+                                                    borderRadius: '10px',
+                                                    border: '1px solid var(--border-color)',
+                                                    background: 'var(--bg-secondary)',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    outline: 'none',
+                                                    WebkitAppearance: 'none',
+                                                    MozAppearance: 'none',
+                                                    appearance: 'none',
+                                                    backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
+                                                    backgroundRepeat: 'no-repeat',
+                                                    backgroundPosition: 'right 12px center',
+                                                    backgroundSize: '12px'
+                                                }}
+                                            >
+                                                <option value="01">January</option>
+                                                <option value="02">February</option>
+                                                <option value="03">March</option>
+                                                <option value="04">April</option>
+                                                <option value="05">May</option>
+                                                <option value="06">June</option>
+                                                <option value="07">July</option>
+                                                <option value="08">August</option>
+                                                <option value="09">September</option>
+                                                <option value="10">October</option>
+                                                <option value="11">November</option>
+                                                <option value="12">December</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Year Dropdown */}
+                                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                            <label style={{ 
+                                                color: '#085f8c', 
+                                                fontSize: '0.7rem', 
+                                                fontWeight: '800', 
+                                                letterSpacing: '0.5px' 
+                                            }}>YEAR</label>
+                                            <select 
+                                                value={tempYear} 
+                                                onChange={(e) => setTempYear(e.target.value)}
+                                                style={{
+                                                    padding: '10px 12px',
+                                                    borderRadius: '10px',
+                                                    border: '1px solid var(--border-color)',
+                                                    background: 'var(--bg-secondary)',
+                                                    color: 'var(--text-primary)',
+                                                    fontSize: '0.85rem',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    outline: 'none',
+                                                    WebkitAppearance: 'none',
+                                                    MozAppearance: 'none',
+                                                    appearance: 'none',
+                                                    backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2.5\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
+                                                    backgroundRepeat: 'no-repeat',
+                                                    backgroundPosition: 'right 12px center',
+                                                    backgroundSize: '12px'
+                                                }}
+                                            >
+                                                {availableYears.map(y => (
+                                                    <option key={y} value={String(y)}>{y}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+                                        <button
+                                            onClick={() => {
+                                                setAnalyticsMonth('all');
+                                                setPeriod('all');
+                                                setShowPicker(false);
+                                            }}
+                                            style={{
+                                                flex: 1,
+                                                padding: '10px 16px',
+                                                borderRadius: '12px',
+                                                border: '1px solid var(--border-color)',
+                                                background: 'var(--bg-secondary)',
+                                                color: 'var(--text-primary)',
+                                                fontSize: '0.85rem',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s ease',
+                                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                            }}
+                                        >
+                                            All Time
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setAnalyticsMonth(`${tempYear}-${tempMonth}`);
+                                                setShowPicker(false);
+                                            }}
+                                            style={{
+                                                flex: 1.5,
+                                                padding: '10px 16px',
+                                                borderRadius: '12px',
+                                                border: 'none',
+                                                background: '#085f8c',
+                                                color: '#ffffff',
+                                                fontSize: '0.85rem',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '6px',
+                                                transition: 'all 0.2s ease',
+                                                boxShadow: '0 4px 12px rgba(8, 95, 140, 0.3)'
+                                            }}
+                                        >
+                                            <TrendingUp size={14} /> View
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </header>
@@ -138,8 +390,8 @@ const Analytics = () => {
                         <TrendingUp size={20} className="text-primary" />
                         Sales vs Purchases Performance
                     </h3>
-                    <div style={{ width: '100%', height: '350px' }}>
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250} aspect={undefined}>
+                    <div style={{ width: '100%', height: '300px' }}>
+                        <ResponsiveContainer width="100%" height={300}>
                             <AreaChart data={combineData(stats?.salesByDay, stats?.purchasesByDay)} margin={{ top: 10, right: 10, left: 40, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">

@@ -734,9 +734,12 @@ exports.voidBill = asyncHandler(async (req, res) => {
     bill.status = 'void';
     await bill.save();
 
+    const multiplier = bill.billType === 'return' ? -1 : 1;
     for (let item of bill.items) {
-        const itemQty = item.quantity * (item.meter || 1);
-        await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount : itemQty } });
+        if (item.product) {
+            const itemQty = item.quantity * (item.meter || 1);
+            await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount: itemQty * multiplier } });
+        }
     }
 
     if (bill.paymentMode === 'credit' && (bill.customer || bill.customerName)) {
@@ -765,9 +768,12 @@ exports.deleteBill = asyncHandler(async (req, res) => {
     }
 
     if (billToDelete.status !== 'void') {
+        const multiplier = billToDelete.billType === 'return' ? -1 : 1;
         for (let item of billToDelete.items) {
-            const itemQty = item.quantity * (item.meter || 1);
-            await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount : itemQty } });
+            if (item.product) {
+                const itemQty = item.quantity * (item.meter || 1);
+                await Product.findByIdAndUpdate(item.product, { $inc: { stockAmount: itemQty * multiplier } });
+            }
         }
     }
 

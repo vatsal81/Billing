@@ -7,35 +7,71 @@ const Expense = require('../models/Expense');
 // @route   GET /api/analytics/stats
 const getStats = async (req, res) => {
     try {
-        // Support ?period=7d|30d|90d|1y  (default 30d)
+        // Support ?period=7d|30d|90d|1y|all  (default 30d)
         const period = req.query.period || '30d';
-        const periodMap = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
-        const days = periodMap[period] || 30;
+        const periodMap = { '7d': 7, '30d': 30, '90d': 90, '1y': 365, 'all': 0 };
+        const days = periodMap[period];
+        const hasPeriodFilter = days !== undefined && days > 0;
         const sinceDate = new Date();
-        sinceDate.setDate(sinceDate.getDate() - days);
+        if (hasPeriodFilter) {
+            sinceDate.setDate(sinceDate.getDate() - days);
+        }
+
+        const monthQuery = req.query.month; // Expected format: "YYYY-MM" or "all"
+        const isMonthFiltered = monthQuery && monthQuery !== 'all';
+        let startDate, endDate;
+        if (isMonthFiltered) {
+            const [year, month] = monthQuery.split('-');
+            startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+            endDate = new Date(parseInt(year), parseInt(month), 1);
+        }
+
+        let salesMatch = { status: 'active' };
+        let purchasesMatch = { status: 'completed' };
+        let expensesMatch = {};
+
+        if (isMonthFiltered) {
+            salesMatch.createdAt = { $gte: startDate, $lt: endDate };
+            purchasesMatch.createdAt = { $gte: startDate, $lt: endDate };
+            expensesMatch.date = { $gte: startDate, $lt: endDate };
+        } else if (hasPeriodFilter) {
+            salesMatch.createdAt = { $gte: sinceDate };
+            purchasesMatch.createdAt = { $gte: sinceDate };
+            expensesMatch.date = { $gte: sinceDate };
+        }
 
         const totalSales = await Bill.aggregate([
-            { $match: { status: 'active' } },
+            { $match: salesMatch },
             { $group: { _id: null, total: { $sum: '$actualTotal' } } }
         ]);
 
         const totalPurchases = await PurchaseBill.aggregate([
-            { $match: { status: 'completed' } },
+            { $match: purchasesMatch },
             { $group: { _id: null, total: { $sum: '$totalAmount' } } }
         ]);
 
         const totalExpenses = await Expense.aggregate([
+            { $match: expensesMatch },
             { $group: { _id: null, total: { $sum: '$amount' } } }
         ]);
 
-        const totalBills = await Bill.countDocuments({ status: 'active' });
+        const totalBills = await Bill.countDocuments(salesMatch);
         const totalProducts = await Product.countDocuments();
         const lowStockProducts = await Product.countDocuments({
             $expr: { $lte: ['$stockAmount', '$lowStockThreshold'] }
         });
 
+        // Use filtered timeframe for charts if month query is provided; otherwise, use sinceDate (if has period filter) or no filter for all time
+        const chartSalesMatch = isMonthFiltered 
+            ? salesMatch 
+            : (hasPeriodFilter ? { status: 'active', createdAt: { $gte: sinceDate } } : { status: 'active' });
+            
+        const chartPurchasesMatch = isMonthFiltered 
+            ? purchasesMatch 
+            : (hasPeriodFilter ? { status: 'completed', createdAt: { $gte: sinceDate } } : { status: 'completed' });
+
         const salesByDay = await Bill.aggregate([
-            { $match: { status: 'active', createdAt: { $gte: sinceDate } } },
+            { $match: chartSalesMatch },
             { $group: {
                 _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
                 total: { $sum: "$actualTotal" }
@@ -44,7 +80,7 @@ const getStats = async (req, res) => {
         ]);
 
         const purchasesByDay = await PurchaseBill.aggregate([
-            { $match: { status: 'completed', createdAt: { $gte: sinceDate } } },
+            { $match: chartPurchasesMatch },
             { $group: {
                 _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
                 total: { $sum: "$totalAmount" }
@@ -58,7 +94,7 @@ const getStats = async (req, res) => {
 
         // Real Cost of Goods Sold (COGS) based on actual items sold
         const realCOGSQuery = await Bill.aggregate([
-            { $match: { status: 'active' } },
+            { $match: salesMatch },
             { $unwind: '$items' },
             { 
                 $lookup: {

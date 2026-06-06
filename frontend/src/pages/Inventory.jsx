@@ -1140,7 +1140,7 @@ export default function Inventory() {
             </p>
             
             <div style={{ padding: '16px', background: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px', border: '1px dashed rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', gap: '12px', textAlign: 'left' }}>
-               <AlertTriangle size={24} color="var(--danger)" flexShrink={0} />
+               <AlertTriangle size={24} color="var(--danger)" style={{ flexShrink: 0 }} />
                <span style={{ fontSize: '0.85rem', color: 'var(--danger)', fontWeight: '600' }}>
                  All stock history and records for this item will be lost.
                </span>
