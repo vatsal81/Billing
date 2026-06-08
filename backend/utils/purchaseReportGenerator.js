@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer-core');
+const browserManager = require('./browserManager');
 const QRCode = require('qrcode');
 const { numberToWords } = require('./numberToWords');
 const Settings = require('../models/Settings');
@@ -6,97 +6,7 @@ const path = require('path');
 
 const fs = require('fs');
 
-// Auto-detect Chrome/Chromium path for both Local and Deployment (Render)
-const getBrowserOptions = async () => {
-    const isWindows = process.platform === 'win32';
-    let chromium;
 
-    if (!isWindows) {
-        try {
-            chromium = require('@sparticuz/chromium');
-        } catch (e) {
-            console.log('@sparticuz/chromium not found, falling back to puppeteer-core');
-        }
-    }
-
-    const launchOptions = {
-        args: chromium ? chromium.args : [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--no-zygote',
-            '--single-process'
-        ],
-        defaultViewport: chromium ? chromium.defaultViewport : null,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
-        headless: chromium ? chromium.headless : 'shell',
-    };
-
-    if (!launchOptions.executablePath) {
-        // 1. Check local cache (installed by scripts/install-chrome.js) in robust paths
-        const possibleCacheDirs = [
-            path.join(__dirname, '..', '.cache', 'puppeteer'),
-            path.join(process.cwd(), '.cache', 'puppeteer'),
-            path.join(process.cwd(), 'backend', '.cache', 'puppeteer')
-        ];
-
-        const findChrome = (dir) => {
-            if (!fs.existsSync(dir)) return null;
-            try {
-                const files = fs.readdirSync(dir);
-                for (const file of files) {
-                    const fullPath = path.join(dir, file);
-                    if (fs.statSync(fullPath).isDirectory()) {
-                        const found = findChrome(fullPath);
-                        if (found) return found;
-                    } else if (file === 'chrome' || file === 'chrome.exe') {
-                        return fullPath;
-                    }
-                }
-            } catch (e) {
-                console.error("Error reading cache dir:", dir, e.message);
-            }
-            return null;
-        };
-
-        for (const cacheDir of possibleCacheDirs) {
-            console.log(`Checking cache dir: ${cacheDir}`);
-            const foundPath = findChrome(cacheDir);
-            if (foundPath) {
-                console.log(`Found Chromium at: ${foundPath}`);
-                launchOptions.executablePath = foundPath;
-                break;
-            }
-        }
-
-        // 2. If still not found, check platform-specific options
-        if (!launchOptions.executablePath) {
-            if (chromium) {
-                try {
-                    launchOptions.executablePath = await chromium.executablePath();
-                    console.log('Using @sparticuz/chromium executable path:', launchOptions.executablePath);
-                } catch (err) {
-                    console.error('Error getting @sparticuz/chromium executable path:', err.message);
-                }
-            } else if (isWindows) {
-                const commonPaths = [
-                    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-                    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-                    path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe')
-                ];
-                for (const p of commonPaths) {
-                    if (fs.existsSync(p)) {
-                        launchOptions.executablePath = p;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    return launchOptions;
-};
 
 const formatDate = (date) => date
     ? new Date(date).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -374,11 +284,9 @@ const buildBillHTML = async (bill, settings = {}) => {
 const generatePurchaseReportPdf = async (bills, month, year) => {
     const settings = await Settings.findOne().lean() || {};
 
-    const launchOptions = await getBrowserOptions();
-    console.log('Launching browser with path:', launchOptions.executablePath);
-    const browser = await puppeteer.launch(launchOptions);
+    let page;
     try {
-        const page = await browser.newPage();
+        page = await browserManager.createPage();
 
         const styles = `
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -476,12 +384,15 @@ const generatePurchaseReportPdf = async (bills, month, year) => {
             margin: { top: '0', right: '0', bottom: '0', left: '0' }
         });
 
-        await browser.close();
         return finalPdf;
 
     } catch (err) {
-        if (browser) await browser.close();
+        console.error('[PurchaseReportGenerator] PDF GENERATION ERROR:', err.message);
         throw err;
+    } finally {
+        if (page) {
+            await browserManager.releasePage(page);
+        }
     }
 };
 

@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer-core');
+const browserManager = require('./browserManager');
 const fs = require('fs');
 const path = require('path');
 
@@ -324,98 +324,6 @@ const buildSingleBillHTML = (bill, settings = {}) => {
     </div>
     `;
 };
-
-// Auto-detect Chrome/Chromium path for both Local and Deployment (Render)
-const getBrowserOptions = async () => {
-    const isWindows = process.platform === 'win32';
-    let chromium;
-
-    if (!isWindows) {
-        try {
-            chromium = require('@sparticuz/chromium');
-        } catch (e) {
-            console.log('@sparticuz/chromium not found, falling back to puppeteer-core');
-        }
-    }
-
-    const launchOptions = {
-        args: chromium ? chromium.args : [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-        ],
-        defaultViewport: chromium ? chromium.defaultViewport : null,
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null,
-        // 'shell' does NOT support Page.printToPDF — must use true (full headless)
-        headless: chromium ? chromium.headless : true,
-    };
-
-    if (!launchOptions.executablePath) {
-        // 1. Check local cache (installed by scripts/install-chrome.js) in robust paths
-        const possibleCacheDirs = [
-            path.join(__dirname, '..', '.cache', 'puppeteer'),
-            path.join(process.cwd(), '.cache', 'puppeteer'),
-            path.join(process.cwd(), 'backend', '.cache', 'puppeteer')
-        ];
-
-        const findChrome = (dir) => {
-            if (!fs.existsSync(dir)) return null;
-            try {
-                const files = fs.readdirSync(dir);
-                for (const file of files) {
-                    const fullPath = path.join(dir, file);
-                    if (fs.statSync(fullPath).isDirectory()) {
-                        const found = findChrome(fullPath);
-                        if (found) return found;
-                    } else if (file === 'chrome' || file === 'chrome.exe') {
-                        return fullPath;
-                    }
-                }
-            } catch (e) {
-                console.error("Error reading cache dir:", dir, e.message);
-            }
-            return null;
-        };
-
-        for (const cacheDir of possibleCacheDirs) {
-            console.log(`Checking cache dir: ${cacheDir}`);
-            const foundPath = findChrome(cacheDir);
-            if (foundPath) {
-                console.log(`Found Chromium at: ${foundPath}`);
-                launchOptions.executablePath = foundPath;
-                break;
-            }
-        }
-
-        // 2. If still not found, check platform-specific options
-        if (!launchOptions.executablePath) {
-            if (chromium) {
-                try {
-                    launchOptions.executablePath = await chromium.executablePath();
-                    console.log('Using @sparticuz/chromium executable path:', launchOptions.executablePath);
-                } catch (err) {
-                    console.error('Error getting @sparticuz/chromium executable path:', err.message);
-                }
-            } else if (isWindows) {
-                const commonPaths = [
-                    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-                    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-                    path.join(process.env.LOCALAPPDATA, 'Google\\Chrome\\Application\\chrome.exe')
-                ];
-                for (const p of commonPaths) {
-                    if (fs.existsSync(p)) {
-                        launchOptions.executablePath = p;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    return launchOptions;
-};
-
 const buildBillHTML = (billOrBills, settings = {}) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
@@ -440,24 +348,13 @@ const generateBillPdf = async (billOrBills, settings) => {
     const isArray = Array.isArray(billOrBills);
     const bills = isArray ? billOrBills : [billOrBills];
 
-    const isWindows = process.platform === 'win32';
-    const launchOptions = await getBrowserOptions();
     console.log('--- PDF SYSTEM DIAGNOSTICS ---');
     console.log('Platform:', process.platform);
-    console.log('Using Browser Path:', launchOptions.executablePath || 'BUNDLED');
 
-    let browser;
-    try {
-        browser = await puppeteer.launch(launchOptions);
-        console.log('Browser launched successfully');
-    } catch (launchError) {
-        console.error('BROWSER LAUNCH FAILURE:', launchError.message);
-        throw new Error(`Failed to launch browser for PDF generation. ${isWindows ? 'Please ensure Chrome is installed.' : 'Check environment configuration.'}`);
-    }
-
+    let page;
     try {
         console.log(`Generating PDF for ${bills.length} bills...`);
-        const page = await browser.newPage();
+        page = await browserManager.createPage();
         const html = buildBillHTML(bills, settings);
 
         // Set content and wait for fonts
@@ -475,13 +372,14 @@ const generateBillPdf = async (billOrBills, settings) => {
             margin: { top: '0', right: '0', bottom: '0', left: '0' }
         });
 
-        await page.close();
         return pdf;
     } catch (genError) {
         console.error('PDF GENERATION ERROR:', genError.message);
         throw genError;
     } finally {
-        if (browser) await browser.close();
+        if (page) {
+            await browserManager.releasePage(page);
+        }
     }
 };
 

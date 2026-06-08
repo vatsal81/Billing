@@ -9,6 +9,7 @@ const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 
 const path = require('path');
 const keepAlive = require('./utils/keepAlive');
+const browserManager = require('./utils/browserManager');
 
 
 dotenv.config();
@@ -92,12 +93,17 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 
+    // Pre-warm the browser singleton on startup
+    console.log('[Server] Pre-warming Puppeteer browser instance...');
+    browserManager.getBrowser().catch(err => {
+        console.error('[Server] Failed to pre-warm Puppeteer browser on startup:', err.message);
+    });
+
     // Start the pinger to keep the server awake (for free hosting like Render)
     if (process.env.NODE_ENV === 'production') {
         const APP_URL = process.env.RENDER_EXTERNAL_URL || 'https://billing-i1lc.onrender.com';
         keepAlive(`${APP_URL}/ping`);
     }
-
 });
 
 
