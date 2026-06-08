@@ -268,7 +268,7 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                             ${numberToWords(finalTotal)}
                         </div>
 
-                        <div style="display: flex; align-items: center; margin-top: 25px; border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 4px 0; padding-left: 16px; width: calc(100% + 16px); margin-left: -8px; box-sizing: border-box;">
+                        <div style="display: flex; align-items: center; margin-top: 15px; border-bottom: 1px solid #000; border-top: 1px solid #000; padding: 4px 0; padding-left: 16px; width: calc(100% + 16px); margin-left: -8px; box-sizing: border-box;">
                             <span class="kalam-text" style="color: #0f3c88; font-size: 20px; font-weight: bold;">₹ ${finalTotal}/- only</span>
                         </div>
                     </div>
@@ -313,7 +313,7 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                         <span style="width: 50%; font-weight: bold; font-size: 16px;">Final Amount</span>
                         <span class="kalam-text" style="width: 50%; text-align: right; color: #0f3c88; font-size: 24px; font-weight: bold;">${finalTotal}/-</span>
                     </div>
-                    <div class="stamp-area" style="min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative;">
+                    <div class="stamp-area" style="min-height: 90px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative;">
                         <div class="stamp" style="position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-5deg); color: #0f3c88; border: 2px dotted #0f3c88; border-radius: 8px; padding: 4px 10px; opacity: 0.7; background: rgba(238, 221, 130, 0.4); font-weight: bold; font-size: 11px; white-space: nowrap;">${settings.stampName || 'SHREE HARI DRESSES & CUTPIS'}</div>
                         <div style="font-weight: bold; font-size: 12px; border-top: 1px solid rgba(0,0,0,0.3); width: 85%; padding-top: 4px;">Authorized Signatory</div>
                     </div>

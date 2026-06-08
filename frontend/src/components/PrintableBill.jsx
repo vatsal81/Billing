@@ -63,7 +63,7 @@ export default function PrintableBill({ bill, settings: propSettings }) {
 
   // Filler rows & signature heights
   const fillerRowsCount = isA4 ? Math.max(0, 8 - bill.items.length) : isA5 ? Math.max(0, 4 - bill.items.length) : Math.max(0, 2 - bill.items.length);
-  const signatureMinHeight = isA4 ? '100px' : isA5 ? '75px' : '55px';
+  const signatureMinHeight = isA4 ? '90px' : isA5 ? '75px' : '55px';
   const signatureImgHeight = isA4 ? '50px' : isA5 ? '35px' : '25px';
 
   useEffect(() => {
@@ -330,7 +330,7 @@ export default function PrintableBill({ bill, settings: propSettings }) {
                   {numberToWords(finalTotal)}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', marginTop: isA6 ? '4px' : isA5 ? '15px' : '25px', borderBottom: '1px solid #000', borderTop: '1px solid #000', padding: '4px 0', paddingLeft: '16px', width: 'calc(100% + 16px)', marginLeft: '-8px', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginTop: isA6 ? '4px' : isA5 ? '15px' : '15px', borderBottom: '1px solid #000', borderTop: '1px solid #000', padding: '4px 0', paddingLeft: '16px', width: 'calc(100% + 16px)', marginLeft: '-8px', boxSizing: 'border-box' }}>
                   <span style={{ fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: isA6 ? '11px' : isA5 ? '15px' : '20px' }}>₹ {finalTotal}/- only</span>
                 </div>
               </div>
