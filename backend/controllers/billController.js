@@ -41,60 +41,65 @@ const generateUniqueInvoiceId = (customerName, billDate, invoiceNumber, serialNu
 };
 
 const getRealisticBillingParams = (targetAmount) => {
-    if (targetAmount < 1200) {
-        // User's specific feedback rule: 0-1200 take 2-3 products
+    if (targetAmount < 300) {
+        return {
+            minItems: 1,
+            maxItems: 2,
+            maxQty: 3,
+            minProductPrice: 10,
+            maxProductPrice: 280
+        };
+    } else if (targetAmount < 800) {
         return {
             minItems: 2,
             maxItems: 3,
-            maxQty: 2,
-            minProductPrice: 50,
-            maxProductPrice: 600 // Keep price lower so 2-3 items can comfortably fit in this range
+            maxQty: 4,
+            minProductPrice: 30,
+            maxProductPrice: 600
         };
-    } else if (targetAmount <= 4400) {
-        // User's specific feedback rule: 1200-4400 take 3-4 products
+    } else if (targetAmount < 2000) {
         return {
-            minItems: 3,
+            minItems: 4,
             maxItems: 4,
-            maxQty: 3,
+            maxQty: 5,
+            minProductPrice: 50,
+            maxProductPrice: 1000
+        };
+    } else if (targetAmount < 5000) {
+        return {
+            minItems: 4,
+            maxItems: 5,
+            maxQty: 6,
             minProductPrice: 80,
             maxProductPrice: 1500
         };
-    } else if (targetAmount <= 8500) {
-        // User's specific feedback rule: 4500-8500 take 6-7 products
+    } else if (targetAmount < 8000) {
+        return {
+            minItems: 5,
+            maxItems: 5,
+            maxQty: 8,
+            minProductPrice: 100,
+            maxProductPrice: 2000
+        };
+    } else if (targetAmount < 15000) {
+        return {
+            minItems: 6,
+            maxItems: 6,
+            maxQty: 10,
+            minProductPrice: 120,
+            maxProductPrice: 3000
+        };
+    } else {
+        const baseQty = 8;
+        const additionalQty = Math.ceil((targetAmount - 15000) / 1500);
+        const maxQty = baseQty + additionalQty;
+
         return {
             minItems: 6,
             maxItems: 7,
-            maxQty: 2,
-            minProductPrice: 80,
-            maxProductPrice: 1000 // Keep price moderate to fit 6-7 items in this range
-        };
-    } else if (targetAmount < 15000) {
-        // User's specific feedback rule: 8500-15000 take 7-8 products
-        return {
-            minItems: 7,
-            maxItems: 8,
-            maxQty: 3,
-            minProductPrice: 90,
-            maxProductPrice: 1800 // Moderate price cap so we can comfortably distribute 7-8 items in this range
-        };
-    } else {
-        // User's specific feedback rule: upon 15000 take product according to amount
-        // Dynamically scale parameters smoothly from Rs. 15,000 up to Rs. 100,000+
-        const capAmount = Math.max(15000, Math.min(100000, targetAmount));
-        const factor = (capAmount - 15000) / 85000; // Scales from 0.0 to 1.0
-        
-        const minItems = Math.floor(8 + factor * 8);         // Scales from 8 to 16 items
-        const maxItems = Math.floor(10 + factor * 10);       // Scales from 10 to 20 items
-        const maxQty = Math.floor(4 + factor * 8);           // Scales from 4 to 12 units max quantity
-        const minProductPrice = Math.floor(100 + factor * 100); // Scales from Rs. 100 to Rs. 200 min price
-        const maxProductPrice = Math.floor(3000 + factor * 7000); // Scales from Rs. 3000 to Rs. 10000 max price
-
-        return {
-            minItems,
-            maxItems,
-            maxQty,
-            minProductPrice,
-            maxProductPrice
+            maxQty: Math.max(maxQty, 12),
+            minProductPrice: 150,
+            maxProductPrice: 5000
         };
     }
 };
@@ -220,16 +225,20 @@ exports.generateBill = asyncHandler(async (req, res) => {
         if (remainingGap > 0) {
             const finalFillers = pool.filter(p => {
                 const unitCost = p.price;
-                const currentQty = selectedItemsMap[p._id] ? selectedItemsMap[p._id].quantity : 0;
+                const isAlreadySelected = !!selectedItemsMap[p._id];
+                const currentQty = isAlreadySelected ? selectedItemsMap[p._id].quantity : 0;
+                
+                // Avoid adding new unique items if we have already hit maxItems count limit
+                const canAddUniqueItem = Object.keys(selectedItemsMap).length < (relax ? maxItems : params.maxItems);
+                if (!isAlreadySelected && !canAddUniqueItem) {
+                    return false;
+                }
+
                 return unitCost <= remainingGap &&
-                       (!selectedItemsMap[p._id] || (currentQty < Math.floor(p.stockAmount) && currentQty < maxQty));
+                       (currentQty < Math.floor(p.stockAmount) && currentQty < maxQty);
             });
             if (finalFillers.length > 0) {
-                finalFillers.sort((a, b) => {
-                    const costA = a.price;
-                    const costB = b.price;
-                    return costB - costA;
-                });
+                finalFillers.sort((a, b) => b.price - a.price);
                 const p = finalFillers[0];
                 const hasPiece = p.pieceLength && p.pieceLength > 0;
                 const unitCost = p.price;
@@ -250,6 +259,17 @@ exports.generateBill = asyncHandler(async (req, res) => {
             }
         }
 
+        const selectedItems = Object.values(selectedItemsMap);
+        const selectedItemsCount = selectedItems.length;
+
+        // Strict enforce of target item count boundaries
+        const finalMinItems = relax ? minItems : params.minItems;
+        const finalMaxItems = relax ? maxItems : params.maxItems;
+
+        if (selectedItemsCount < finalMinItems || selectedItemsCount > finalMaxItems) {
+            continue;
+        }
+
         const diff = Math.abs(targetSubtotal - currentSubtotal);
 
         if (diff < closestDiff) {
@@ -259,7 +279,7 @@ exports.generateBill = asyncHandler(async (req, res) => {
             const preRound = currentSubtotal + cgst + sgst;
 
             bestResult = {
-                selectedItems: Object.values(selectedItemsMap).map(item => ({
+                selectedItems: selectedItems.map(item => ({
                     ...item,
                     total: Math.round(item.price * item.quantity * (item.meter || 1) * 100) / 100
                 })),

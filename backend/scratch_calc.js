@@ -27,10 +27,15 @@ async function calculateTotal() {
     console.log("Total products count:", products.length);
     console.log("Current Stock Value (Purchase):", Math.round(totalPurchaseValue));
     console.log("Stock Retail Value:", Math.round(totalRetailValue));
+    
+    // Sort products by price and log key price points
+    const sortedProducts = [...products].sort((a, b) => Number(a.price) - Number(b.price));
+    console.log("Cheapest products:", sortedProducts.slice(0, 5).map(p => ({ name: p.nameEnglish || p.name, price: p.price, stock: p.stockAmount })));
+    console.log("Most expensive products:", sortedProducts.slice(-5).map(p => ({ name: p.nameEnglish || p.name, price: p.price, stock: p.stockAmount })));
   } catch (err) {
     console.error("Error:", err);
   } finally {
-    await client.close();
+    await mongoose.connection.close();
   }
 }
 
