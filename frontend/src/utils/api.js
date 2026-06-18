@@ -7,7 +7,7 @@ export const getBackendUrl = () => {
   if (window.location.hostname.includes('backup')) {
     return 'https://billing-1-4ylv.onrender.com';
   }
-  return (import.meta.env.VITE_API_BASE_URL || 'https://billing-i1lc.onrender.com/api').replace('/api', '');
+  return (import.meta.env.VITE_API_BASE_URL || 'https://billing-srp1.onrender.com/api').replace('/api', '');
 };
 
 const API = axios.create({
