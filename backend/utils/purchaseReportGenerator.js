@@ -28,9 +28,22 @@ const loadFontAsBase64 = (fontName) => {
 
 const gujaratiBase64 = loadFontAsBase64('NotoSansGujarati-Regular.ttf');
 
+const getItemsPerPage = (bill) => {
+    const hash = String(bill._id || bill.billNumber || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return 10 + (hash % 3); // Returns 10, 11, or 12
+};
+
+const chunkArray = (array, size) => {
+    const chunks = [];
+    for (let i = 0; i < array.length; i += size) {
+        chunks.push(array.slice(i, i + size));
+    }
+    return chunks;
+};
+
 const buildBillHTML = async (bill, settings = {}) => {
-    const totalPcs = bill.items.reduce((a, i) => a + (i.pcs || 0), 0);
-    const totalMeters = bill.items.reduce((a, i) => a + (i.meters || 0), 0);
+    const itemsPerPage = getItemsPerPage(bill);
+    const chunks = bill.items && bill.items.length > 0 ? chunkArray(bill.items, itemsPerPage) : [[]];
     const logoInitial = bill.supplierName ? bill.supplierName.charAt(0).toUpperCase() : 'S';
 
     const formatDateInternal = (date) => {
@@ -50,34 +63,6 @@ const buildBillHTML = async (bill, settings = {}) => {
     if (bill.ewayBillDetails?.uniqueNo) {
         ewayQR = await QRCode.toDataURL(`E-Way Bill Unique No: ${bill.ewayBillDetails.uniqueNo}`);
     }
-
-    // Reduced to 10 rows to ensure footer fits on the first page
-    const emptyRows = Math.max(0, 13 - bill.items.length);
-    const itemRows = bill.items.map((item, idx) => {
-        const description = item.name || item.nameEnglish || '';
-            
-        return `
-        <tr>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:center;color:#64748b;">${idx + 1}</td>
-            <td class="gujarati-text" style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:left;font-weight:700;color:#0f172a;">${description}</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:center;color:#64748b;">${item.hsnCode || ''}</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.pcs || 0).toFixed(2)}</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.meters || 0).toFixed(2)}</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#64748b;">${(item.rate || 0).toFixed(2)}</td>
-            <td style="border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;font-weight:800;color:#1e3a8a;background:#f8fafc;">${(item.amount || 0).toFixed(2)}</td>
-        </tr>`;
-    }).join('');
-
-    const emptyRowsHTML = Array.from({ length: emptyRows }).map(() => `
-        <tr>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;height:28px;">&nbsp;</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
-            <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
-            <td style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">&nbsp;</td>
-        </tr>`).join('');
 
     let ewayPage = '';
     if (bill.ewayBillDetails?.uniqueNo) {
@@ -130,155 +115,191 @@ const buildBillHTML = async (bill, settings = {}) => {
         </div>`;
     }
 
-    return `
-    <div class="sagar-bill-paper">
-        <div class="document-type-header">ORIGINAL FOR RECIPIENT</div>
-        <div class="bill-top-header">
-            <div class="sagar-logo">
-                <span class="logo-s">${logoInitial}</span>
-                <div class="logo-text">
-                    <h1 class="company-name">${bill.supplierName}</h1>
-                    <p class="company-subtitle">TAX INVOICE</p>
+    let pagesHTML = '';
+    for (let pageIdx = 0; pageIdx < chunks.length; pageIdx++) {
+        const chunkItems = chunks[pageIdx];
+        const pagePcs = chunkItems.reduce((a, i) => a + (i.pcs || 0), 0);
+        const pageMeters = chunkItems.reduce((a, i) => a + (i.meters || 0), 0);
+        const pageSubTotal = chunkItems.reduce((a, i) => a + (i.amount || 0), 0);
+
+        const emptyRows = Math.max(0, itemsPerPage - chunkItems.length);
+        const itemRows = chunkItems.map((item, idx) => {
+            const description = item.name || item.nameEnglish || '';
+            const globalIdx = (pageIdx * itemsPerPage) + idx + 1;
+            return `
+            <tr>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:center;color:#64748b;">${globalIdx}</td>
+                <td class="gujarati-text" style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:left;font-weight:700;color:#0f172a;">${description}</td>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:center;color:#64748b;">${item.hsnCode || ''}</td>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.pcs || 0).toFixed(2)}</td>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#0f172a;font-weight:500;">${(item.meters || 0).toFixed(2)}</td>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;color:#64748b;">${(item.rate || 0).toFixed(2)}</td>
+                <td style="border-bottom:1px solid #e2e8f0;padding:5px 10px;text-align:right;font-weight:800;color:#1e3a8a;background:#f8fafc;">${(item.amount || 0).toFixed(2)}</td>
+            </tr>`;
+        }).join('');
+
+        const emptyRowsHTML = Array.from({ length: emptyRows }).map(() => `
+            <tr>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;padding:5px 10px;height:28px;">&nbsp;</td>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+                <td style="border-right:1px solid #1e293b;border-bottom:1px solid #e2e8f0;">&nbsp;</td>
+                <td style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">&nbsp;</td>
+            </tr>`).join('');
+
+        pagesHTML += `
+        <div class="sagar-bill-paper" style="${pageIdx > 0 ? 'page-break-before: always;' : ''}">
+            <div class="document-type-header">ORIGINAL FOR RECIPIENT</div>
+            <div class="bill-top-header">
+                <div class="sagar-logo">
+                    <span class="logo-s">${logoInitial}</span>
+                    <div class="logo-text">
+                        <h1 class="company-name">${bill.supplierName}</h1>
+                        <p class="company-subtitle">TAX INVOICE</p>
+                    </div>
+                </div>
+                <div class="bill-header-contact">
+                    <p class="gstin">GSTIN : ${bill.supplierGstin || 'N/A'}</p>
+                    <p class="address-line">${bill.supplierAddress || ''}</p>
                 </div>
             </div>
-            <div class="bill-header-contact">
-                <p class="gstin">GSTIN : ${bill.supplierGstin || 'N/A'}</p>
-                <p class="address-line">${bill.supplierAddress || ''}</p>
-            </div>
-        </div>
 
-        <div class="bill-meta-grid">
-            <div class="meta-left">
-                <div class="meta-row"><span class="label">INV NO. :</span><span class="value highlight">${bill.billNumber}</span></div>
-                <div class="meta-row"><span class="label">DATE :</span><span class="value">${formatDateInternal(bill.billDate)}</span></div>
-                <div class="meta-row"><span class="label">TRANSPORT :</span><span class="value">${bill.transport || 'N/A'}</span></div>
-            </div>
-            <div class="meta-right">
-                <div class="meta-row"><span class="label">E-WAY NO :</span><span class="value">${bill.ewayBillNo || (bill.ewayBillDetails?.uniqueNo) || 'N/A'}</span></div>
-                <div class="meta-row"><span class="label">L R NO. :</span><span class="value">${bill.lrNo || 'N/A'}</span></div>
-                <div class="meta-row"><span class="label">BROKER :</span><span class="value">${bill.broker || 'DIRECT'}</span></div>
-            </div>
-        </div>
-
-        <div class="bill-party-grid">
-            <div class="party-box billed-to">
-                <div class="party-header">BILLED TO (BUYER)</div>
-                <div class="party-content gujarati-text">
-                    <p class="party-name">${settings.shopName || 'SHREE HARI DRESSES'}</p>
-                    <p class="party-add">${settings.shopAddress || 'SHOP NO. 4, VARDHAMAN MARKET, SURAT'}</p>
-                    <div class="party-meta-row"><span>CITY / DISTRICT : SURAT</span><span>STATE : GUJARAT (24)</span></div>
-                    <div class="party-meta-row"><span>GSTIN : ${settings.gstin || 'N/A'}</span><span>PAN : ${settings.pan || 'N/A'}</span></div>
+            <div class="bill-meta-grid">
+                <div class="meta-left">
+                    <div class="meta-row"><span class="label">INV NO. :</span><span class="value highlight">${bill.billNumber}</span></div>
+                    <div class="meta-row"><span class="label">DATE :</span><span class="value">${formatDateInternal(bill.billDate)}</span></div>
+                    <div class="meta-row"><span class="label">TRANSPORT :</span><span class="value">${bill.transport || 'N/A'}</span></div>
+                </div>
+                <div class="meta-right">
+                    <div class="meta-row"><span class="label">E-WAY NO :</span><span class="value">${bill.ewayBillNo || (bill.ewayBillDetails?.uniqueNo) || 'N/A'}</span></div>
+                    <div class="meta-row"><span class="label">L R NO. :</span><span class="value">${bill.lrNo || 'N/A'}</span></div>
+                    <div class="meta-row"><span class="label">BROKER :</span><span class="value">${bill.broker || 'DIRECT'}</span></div>
                 </div>
             </div>
-            <div class="party-box shipped-to">
-                <div class="party-header">SHIPPED TO (CONSIGNEE)</div>
-                <div class="party-content gujarati-text">
-                    <p class="party-name">${settings.shopName || 'SHREE HARI DRESSES'}</p>
-                    <p class="party-add">${settings.shopAddress || 'SHOP NO. 4, VARDHAMAN MARKET, SURAT'}</p>
-                    <div class="party-meta-row"><span>CITY / DISTRICT : SURAT</span><span>STATE : GUJARAT (24)</span></div>
-                    <div class="party-meta-row"><span>GSTIN : ${settings.gstin || 'N/A'}</span><span>PAN : ${settings.pan || 'N/A'}</span></div>
+
+            <div class="bill-party-grid">
+                <div class="party-box billed-to">
+                    <div class="party-header">BILLED TO (BUYER)</div>
+                    <div class="party-content gujarati-text">
+                        <p class="party-name">${settings.shopName || 'SHREE HARI DRESSES'}</p>
+                        <p class="party-add">${settings.shopAddress || 'SHOP NO. 4, VARDHAMAN MARKET, SURAT'}</p>
+                        <div class="party-meta-row"><span>CITY / DISTRICT : SURAT</span><span>STATE : GUJARAT (24)</span></div>
+                        <div class="party-meta-row"><span>GSTIN : ${settings.gstin || 'N/A'}</span><span>PAN : ${settings.pan || 'N/A'}</span></div>
+                    </div>
                 </div>
-            </div>
-        </div>
-
-        <div style="border: 1px solid #1e293b; margin-bottom: 10px; border-radius: 4px; overflow: hidden;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
-                <thead>
-                    <tr>
-                        <th style="width: 35px;">SR</th>
-                        <th style="text-align: left;">DESCRIPTION</th>
-                        <th style="width: 70px;">HSN</th>
-                        <th style="width: 50px;">PCS</th>
-                        <th style="width: 60px;">METERS</th>
-                        <th style="width: 70px;">RATE</th>
-                        <th style="width: 90px; text-align: right;">AMOUNT</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemRows}
-                    ${emptyRowsHTML}
-                </tbody>
-                <tfoot>
-                    <tr style="background: #f1f5f9; border-top: 2px solid #1e3a8a;">
-                        <td colspan="3" style="padding: 8px; text-align: right; font-weight: 800; color: #1e3a8a;">SUB TOTAL</td>
-                        <td style="padding: 8px; text-align: right; font-weight: 800; color: #1e3a8a;">${totalPcs.toFixed(2)}</td>
-                        <td style="padding: 8px; text-align: right; font-weight: 800; color: #1e3a8a;">${totalMeters.toFixed(2)}</td>
-                        <td></td>
-                        <td style="padding: 8px; text-align: right; font-weight: 900; color: #1e3a8a; font-size: 13px;">₹${(bill.subTotal || 0).toFixed(2)}</td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-
-        <div style="flex-grow: 1;"></div> <!-- This spacer pushes the footer to the bottom -->
-
-        <div class="bill-bottom-grid">
-            <div class="bottom-left">
-                <div class="remarks-section gujarati-text"><span class="label">REMARKS :</span><p class="value" style="margin:0">${bill.remarks || 'N/A'}</p></div>
-                <div class="bank-details-box gujarati-text">
-                    <div class="bank-header">MERCHANT CONTACT INFO</div>
-                    <div style="margin-top: 5px;">
-                        <p style="color: #1e3a8a; font-weight:bold; margin:0; font-size: 11px;">${bill.supplierName}</p>
-                        <p style="margin:0; font-size: 9px;">GSTIN: ${bill.supplierGstin || 'N/A'}</p>
-                        ${bill.supplierPan ? `<p style="margin:0; font-size: 9px;">PAN: ${bill.supplierPan}</p>` : ''}
-                        <p style="margin:0; font-size: 9px;">ADDR: ${bill.supplierAddress || 'N/A'}</p>
+                <div class="party-box shipped-to">
+                    <div class="party-header">SHIPPED TO (CONSIGNEE)</div>
+                    <div class="party-content gujarati-text">
+                        <p class="party-name">${settings.shopName || 'SHREE HARI DRESSES'}</p>
+                        <p class="party-add">${settings.shopAddress || 'SHOP NO. 4, VARDHAMAN MARKET, SURAT'}</p>
+                        <div class="party-meta-row"><span>CITY / DISTRICT : SURAT</span><span>STATE : GUJARAT (24)</span></div>
+                        <div class="party-meta-row"><span>GSTIN : ${settings.gstin || 'N/A'}</span><span>PAN : ${settings.pan || 'N/A'}</span></div>
                     </div>
                 </div>
             </div>
-            <div class="bottom-right">
-                <div class="qr-section">
-                    <img src="${invoiceQR}" class="qr-image" />
+
+            <div style="border: 1px solid #1e293b; margin-bottom: 10px; border-radius: 4px; overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 35px;">SR</th>
+                            <th style="text-align: left;">DESCRIPTION</th>
+                            <th style="width: 70px;">HSN</th>
+                            <th style="width: 50px;">PCS</th>
+                            <th style="width: 60px;">METERS</th>
+                            <th style="width: 70px;">RATE</th>
+                            <th style="width: 90px; text-align: right;">AMOUNT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemRows}
+                        ${emptyRowsHTML}
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: #f1f5f9; border-top: 2px solid #1e3a8a;">
+                            <td colspan="3" style="padding: 8px; text-align: right; font-weight: 800; color: #1e3a8a;">SUB TOTAL</td>
+                            <td style="padding: 8px; text-align: right; font-weight: 800; color: #1e3a8a;">${pagePcs.toFixed(2)}</td>
+                            <td style="padding: 8px; text-align: right; font-weight: 800; color: #1e3a8a;">${pageMeters.toFixed(2)}</td>
+                            <td></td>
+                            <td style="padding: 8px; text-align: right; font-weight: 900; color: #1e3a8a; font-size: 13px;">₹${pageSubTotal.toFixed(2)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <div style="flex-grow: 1;"></div> <!-- This spacer pushes the footer to the bottom -->
+
+            <div class="bill-bottom-grid">
+                <div class="bottom-left">
+                    <div class="remarks-section gujarati-text"><span class="label">REMARKS :</span><p class="value" style="margin:0">${bill.remarks || 'N/A'}</p></div>
+                    <div class="bank-details-box gujarati-text">
+                        <div class="bank-header">MERCHANT CONTACT INFO</div>
+                        <div style="margin-top: 5px;">
+                            <p style="color: #1e3a8a; font-weight:bold; margin:0; font-size: 11px;">${bill.supplierName}</p>
+                            <p style="margin:0; font-size: 9px;">GSTIN: ${bill.supplierGstin || 'N/A'}</p>
+                            ${bill.supplierPan ? `<p style="margin:0; font-size: 9px;">PAN: ${bill.supplierPan}</p>` : ''}
+                            <p style="margin:0; font-size: 9px;">ADDR: ${bill.supplierAddress || 'N/A'}</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="tax-totals-box">
-                    ${bill.discountAmount > 0 ? `
-                        <div class="tax-row"><span>DISCOUNT (${bill.discountPercent}%)</span><span>₹${(bill.discountAmount || 0).toFixed(2)}</span></div>
-                        <div class="tax-row"><span>TAXABLE VAL</span><span style="font-weight:800; color:#0f172a">₹${((bill.subTotal || 0) - (bill.discountAmount || 0)).toFixed(2)}</span></div>
-                    ` : ''}
-                    ${(bill.cgst > 0 || bill.sgst > 0) ? `
-                        <div class="tax-row"><span>CGST (${(bill.gstRate || 5) / 2}%)</span><span>₹${(bill.cgst || 0).toFixed(2)}</span></div>
-                        <div class="tax-row"><span>SGST (${(bill.gstRate || 5) / 2}%)</span><span>₹${(bill.sgst || 0).toFixed(2)}</span></div>
-                    ` : `
-                        <div class="tax-row"><span>IGST (${bill.gstRate || 5}%)</span><span>₹${(bill.igst || 0).toFixed(2)}</span></div>
-                    `}
-                    <div class="tax-row"><span>ROUND OFF</span><span>₹${(bill.roundOff || 0).toFixed(2)}</span></div>
-                    <div class="grand-total-row">
-                        <span style="font-size:9px;">TOTAL</span><span class="amount">₹${(bill.totalAmount || 0).toFixed(2)}</span>
+                <div class="bottom-right">
+                    <div class="qr-section">
+                        <img src="${invoiceQR}" class="qr-image" />
+                    </div>
+                    <div class="tax-totals-box">
+                        ${bill.discountAmount > 0 ? `
+                            <div class="tax-row"><span>DISCOUNT (${bill.discountPercent}%)</span><span>₹${(bill.discountAmount || 0).toFixed(2)}</span></div>
+                            <div class="tax-row"><span>TAXABLE VAL</span><span style="font-weight:800; color:#0f172a">₹${((bill.subTotal || 0) - (bill.discountAmount || 0)).toFixed(2)}</span></div>
+                        ` : ''}
+                        ${(bill.cgst > 0 || bill.sgst > 0) ? `
+                            <div class="tax-row"><span>CGST (${(bill.gstRate || 5) / 2}%)</span><span>₹${(bill.cgst || 0).toFixed(2)}</span></div>
+                            <div class="tax-row"><span>SGST (${(bill.gstRate || 5) / 2}%)</span><span>₹${(bill.sgst || 0).toFixed(2)}</span></div>
+                        ` : `
+                            <div class="tax-row"><span>IGST (${bill.gstRate || 5}%)</span><span>₹${(bill.igst || 0).toFixed(2)}</span></div>
+                        `}
+                        <div class="tax-row"><span>ROUND OFF</span><span>₹${(bill.roundOff || 0).toFixed(2)}</span></div>
+                        <div class="grand-total-row">
+                            <span style="font-size:9px;">TOTAL</span><span class="amount">₹${(bill.totalAmount || 0).toFixed(2)}</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="amount-words">
-            <span class="label">WORDS:</span>
-            <span class="words">${numberToWords(bill.totalAmount || 0)} ONLY</span>
-        </div>
+            <div class="amount-words">
+                <span class="label">WORDS:</span>
+                <span class="words">${numberToWords(bill.totalAmount || 0)} ONLY</span>
+            </div>
 
-        <div class="tax-summary-table">
-            <table>
-                <thead>
-                    <tr style="background: #1e3a8a; color: white;">
-                        <th>TAXABLE</th><th>CGST</th><th>SGST</th><th>IGST</th><th style="background:#0f172a">TOTAL</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="background: #f8fafc;">
-                        <td style="font-weight:bold">₹${(bill.subTotal || 0).toFixed(2)}</td>
-                        <td>₹${(bill.cgst || 0).toFixed(2)}</td>
-                        <td>₹${(bill.sgst || 0).toFixed(2)}</td>
-                        <td>₹${(bill.igst || 0).toFixed(2)}</td>
-                        <td style="font-weight:900; color:#1e3a8a; font-size:13px; background:#f1f5f9">₹${(bill.totalAmount || 0).toFixed(2)}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            <div class="tax-summary-table">
+                <table>
+                    <thead>
+                        <tr style="background: #1e3a8a; color: white;">
+                            <th>TAXABLE</th><th>CGST</th><th>SGST</th><th>IGST</th><th style="background:#0f172a">TOTAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background: #f8fafc;">
+                            <td style="font-weight:bold">₹${(bill.subTotal || 0).toFixed(2)}</td>
+                            <td>₹${(bill.cgst || 0).toFixed(2)}</td>
+                            <td>₹${(bill.sgst || 0).toFixed(2)}</td>
+                            <td>₹${(bill.igst || 0).toFixed(2)}</td>
+                            <td style="font-weight:900; color:#1e3a8a; font-size:13px; background:#f1f5f9">₹${(bill.totalAmount || 0).toFixed(2)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px;">
-            <div class="terms-section"><p class="terms-title">NOTES</p><li>Certified correct.</li></div>
-            <div class="signature-box"><div style="height: 30px;"></div><p>For ${bill.supplierName}</p></div>
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 10px;">
+                <div class="terms-section"><p class="terms-title">NOTES</p><li>Certified correct.</li></div>
+                <div class="signature-box"><div style="height: 30px;"></div><p>For ${bill.supplierName}</p></div>
+            </div>
         </div>
-    </div>
-    ${ewayPage}
-`;
+        `;
+    }
+
+    return `${pagesHTML}${ewayPage}`;
 };
 
 const generatePurchaseReportPdf = async (bills, month, year) => {

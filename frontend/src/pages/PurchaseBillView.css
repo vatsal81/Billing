@@ -490,9 +490,381 @@
 .right { text-align: right; }
 .bold { font-weight: 800; }
 
+@page {
+    size: A4 portrait;
+    margin: 0;
+}
+
 @media print {
     .no-print { display: none !important; }
-    .bill-view-overlay { position: static; background: white; padding: 0; }
-    .sagar-bill-paper { box-shadow: none; padding: 0; border: none; }
-    body { background: white; }
+    
+    body.bill-print-active {
+        visibility: hidden !important;
+        background: white !important;
+    }
+    
+    /* Clear main layout restrictions to allow multiple pages printing */
+    body.bill-print-active .app-container,
+    body.bill-print-active .main-content,
+    body.bill-print-active .page-container {
+        overflow: visible !important;
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+        position: static !important;
+    }
+
+    /* Completely hide other background dashboard elements during print */
+    body.bill-print-active .app-container > *:not(.main-content),
+    body.bill-print-active .page-header,
+    body.bill-print-active .content-grid {
+        display: none !important;
+    }
+    
+    body.bill-print-active .bill-view-overlay {
+        visibility: visible !important;
+        position: static !important; /* Normal document flow */
+        width: 100% !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+        z-index: 99999 !important;
+        box-shadow: none !important;
+    }
+    
+    body.bill-print-active .bill-view-overlay * {
+        visibility: visible !important;
+    }
+    
+    body.bill-print-active .no-print,
+    body.bill-print-active .no-print * {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    .bill-view-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+    }
+    
+    .bill-scale-wrapper {
+        width: 100% !important;
+        max-width: 100% !important;
+        transform: none !important;
+        zoom: 1 !important;
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .sagar-bill-paper {
+        width: 210mm !important;
+        min-width: 210mm !important;
+        max-width: 210mm !important;
+        height: auto !important;
+        min-height: 297mm !important;
+        max-height: none !important;
+        padding: 6mm 10mm !important; /* Shrunk padding */
+        margin: 0 auto !important;
+        box-shadow: none !important;
+        border: none !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: white !important;
+        color: #1e293b !important;
+        page-break-after: always !important;
+        break-after: page !important;
+    }
+
+    .sagar-bill-paper > * {
+        flex-shrink: 0 !important;
+    }
+
+    /* Compact print layouts for subcomponents to prevent multi-page spill */
+    .bill-top-header {
+        padding-bottom: 6px !important;
+        margin-bottom: 6px !important;
+    }
+    
+    .sagar-logo .logo-s {
+        font-size: 44px !important;
+    }
+    
+    .sagar-logo .company-name {
+        font-size: 26px !important;
+    }
+    
+    .company-subtitle {
+        font-size: 11px !important;
+        letter-spacing: 2px !important;
+    }
+    
+    .bill-header-motto {
+        font-size: 14px !important;
+    }
+    
+    .bill-header-contact {
+        line-height: 1.3 !important;
+    }
+    
+    .gstin {
+        font-size: 13px !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .address-line {
+        font-size: 9px !important;
+    }
+    
+    .msme {
+        margin-top: 2px !important;
+    }
+    
+    .bill-meta-grid {
+        margin-bottom: 6px !important;
+    }
+    
+    .meta-row {
+        padding: 3px 6px !important;
+    }
+    
+    .value.highlight {
+        font-size: 11px !important;
+    }
+    
+    .bill-party-grid {
+        margin-bottom: 6px !important;
+    }
+    
+    .party-header {
+        padding: 3px !important;
+        font-size: 9px !important;
+    }
+    
+    .party-content {
+        padding: 6px 10px !important;
+    }
+    
+    .party-name {
+        font-size: 11px !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .party-add {
+        margin-bottom: 4px !important;
+        line-height: 1.3 !important;
+        font-size: 9px !important;
+    }
+    
+    .party-meta-row {
+        margin-top: 3px !important;
+        padding-top: 2px !important;
+    }
+
+    /* Target inline-styled table components to make them tighter in print */
+    .sagar-bill-paper table {
+        font-size: 10px !important;
+    }
+    
+    .sagar-bill-paper table th {
+        padding: 5px 4px !important;
+        font-size: 9px !important;
+    }
+    
+    .sagar-bill-paper table td {
+        padding: 3px 6px !important;
+        height: 24px !important;
+        font-size: 9px !important;
+    }
+    
+    .sagar-bill-paper table tfoot td {
+        padding: 5px 8px !important;
+        font-size: 10px !important;
+    }
+
+    /* Subtotal wrapper margin reduction */
+    .sagar-bill-paper div[style*="border: 1px solid #1e293b"] {
+        margin-bottom: 6px !important;
+    }
+
+    .bill-bottom-grid {
+        margin-bottom: 6px !important;
+    }
+    
+    .remarks-section {
+        padding: 6px !important;
+        min-height: 40px !important;
+    }
+    
+    .bank-details-box {
+        padding: 6px !important;
+    }
+    
+    .bank-header {
+        margin-bottom: 3px !important;
+        font-size: 10px !important;
+    }
+    
+    .qr-section {
+        padding: 6px !important;
+    }
+    
+    .qr-section canvas {
+        width: 70px !important;
+        height: 70px !important;
+    }
+    
+    .tax-row {
+        padding: 3px 6px !important;
+        font-size: 9px !important;
+    }
+    
+    .grand-total-row {
+        padding: 8px 10px !important;
+    }
+    
+    .grand-total-row .amount {
+        font-size: 16px !important;
+    }
+    
+    .amount-words {
+        padding: 5px 10px !important;
+        margin-bottom: 6px !important;
+        font-size: 10px !important;
+    }
+    
+    .tax-summary-table {
+        margin-top: 6px !important;
+    }
+    
+    .tax-summary-table table {
+        margin-bottom: 6px !important;
+    }
+    
+    .tax-summary-table th {
+        padding: 4px !important;
+        font-size: 9px !important;
+    }
+    
+    .tax-summary-table td {
+        padding: 4px !important;
+        font-size: 9px !important;
+    }
+    
+    .terms-section {
+        font-size: 8px !important;
+        line-height: 1.3 !important;
+    }
+    
+    .terms-section ol {
+        padding-left: 12px !important;
+        margin: 0 !important;
+    }
+    
+    .terms-title {
+        margin-bottom: 3px !important;
+        font-size: 9px !important;
+    }
+    
+    .signature-box {
+        width: 160px !important;
+        padding-top: 4px !important;
+    }
+    
+    .signature-box > div {
+        height: 15px !important;
+    }
+    
+    .eway-second-page {
+        background: #fff1f2 !important;
+        padding: 10mm 15mm !important;
+        min-height: 297mm !important;
+        height: auto !important;
+        margin-top: 0 !important;
+        box-sizing: border-box !important;
+    }
+    
+    .eway-second-page > div {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        padding: 30px !important;
+        height: auto !important;
+        min-height: 277mm !important; /* Stretch border to cover page nicely */
+        border-radius: 15px !important;
+        box-sizing: border-box !important;
+    }
+    
+    .eway-second-page > div > div:first-of-type {
+        margin-bottom: 25px !important;
+        padding-bottom: 15px !important;
+        border-bottom: 3px solid #fecaca !important;
+    }
+    
+    .eway-second-page h1 {
+        font-size: 24px !important;
+    }
+    
+    .eway-second-page h2 {
+        font-size: 28px !important;
+        margin: 10px 0 !important;
+    }
+    
+    /* Target QR wrapper */
+    .eway-second-page div[style*="position: absolute"] {
+        top: 30px !important;
+        right: 30px !important;
+        width: 100px !important;
+        height: 100px !important;
+        padding: 5px !important;
+    }
+    
+    .eway-second-page div[style*="position: absolute"] canvas {
+        width: 90px !important;
+        height: 90px !important;
+    }
+    
+    .eway-details-grid {
+        gap: 12px !important;
+        flex: 1 !important;
+        margin-bottom: 20px !important;
+    }
+    
+    .eway-details-grid > div {
+        grid-template-columns: 250px 1fr !important;
+        padding: 8px 0 !important;
+        font-size: 13px !important;
+    }
+    
+    /* "Part - A Details" section divider header */
+    .eway-details-grid div[style*="background: #be185d"] {
+        margin-top: 20px !important;
+        padding: 10px 15px !important;
+        font-size: 13px !important;
+    }
+    
+    .eway-second-page p {
+        margin-top: auto !important; /* Push note to the bottom */
+        padding-top: 15px !important;
+        font-size: 10px !important;
+    }
+    
+    body, html, #root {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
 }
