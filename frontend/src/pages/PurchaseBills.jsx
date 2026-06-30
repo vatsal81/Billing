@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Download, FileText, ShoppingBag, Calendar, User, Hash, Trash2, Save, Search, Building, Truck, Briefcase, Eye, Edit2, AlertCircle, X } from 'lucide-react';
+import { Plus, Download, FileText, ShoppingBag, Calendar, User, Hash, Trash2, Save, Search, Building, Truck, Briefcase, Eye, Edit2, AlertCircle, X, TrendingUp, Wallet, Percent, IndianRupee } from 'lucide-react';
 import { fetchPurchaseBills, createPurchaseBill, updatePurchaseBill, downloadPurchaseReport, fetchSuppliers, deletePurchaseBill, getBackendUrl } from '../utils/api';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import PurchaseBillView from './PurchaseBillView';
 import '../index.css';
 
@@ -27,8 +28,33 @@ const PurchaseBills = () => {
     const [filterSupplier, setFilterSupplier] = useState('');
     const [filterStartDate, setFilterStartDate] = useState('');
     const [filterEndDate, setFilterEndDate] = useState('');
-    const [filterMonth, setFilterMonth] = useState('');
-    const [filterYear, setFilterYear] = useState('');
+    
+    const [filterPeriod, setFilterPeriod] = useState('all');
+    const [filterMonthSelect, setFilterMonthSelect] = useState('all'); // 'YYYY-MM' or 'all'
+    const [showMonthPickerPopover, setShowMonthPickerPopover] = useState(false);
+    
+    const [tempMonthSelect, setTempMonthSelect] = useState(() => {
+        const now = new Date();
+        return String(now.getMonth() + 1).padStart(2, '0');
+    });
+    const [tempYearSelect, setTempYearSelect] = useState(() => {
+        return String(new Date().getFullYear());
+    });
+
+    const periodOptions = [
+        { label: 'Last 7 Days', value: '7d' },
+        { label: 'Last 30 Days', value: '30d' },
+        { label: 'Last 90 Days', value: '90d' },
+        { label: 'Last Year', value: '1y' },
+        { label: 'All Time', value: 'all' }
+    ];
+
+    const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formatMonthLabel = (ym) => {
+        if (ym === 'all') return 'All Time';
+        const [y, m] = ym.split('-');
+        return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
+    };
 
     const months = [
         { value: 1, label: 'January' }, { value: 2, label: 'February' }, { value: 3, label: 'March' },
@@ -86,6 +112,130 @@ const PurchaseBills = () => {
         taxType: 'local' // 'local' (CGST+SGST) or 'interstate' (IGST)
     });
 
+    const filteredBills = bills.filter(bill => {
+        const matchesSearch = !searchQuery || 
+            bill.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            bill.billNumber?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const matchesSupplier = !filterSupplier || bill.supplierName === filterSupplier;
+
+        let matchesDate = true;
+        
+        // 1. Handle Custom Date Range
+        if (filterStartDate || filterEndDate) {
+            if (bill.billDate) {
+                const billDateStr = bill.billDate.split('T')[0];
+                if (filterStartDate && billDateStr < filterStartDate) {
+                    matchesDate = false;
+                }
+                if (filterEndDate && billDateStr > filterEndDate) {
+                    matchesDate = false;
+                }
+            } else {
+                matchesDate = false;
+            }
+        } 
+        // 2. Handle Custom Month (YYYY-MM)
+        else if (filterMonthSelect && filterMonthSelect !== 'all') {
+            if (bill.billDate) {
+                const dateObj = new Date(bill.billDate);
+                const billYear = dateObj.getFullYear();
+                const billMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const compareStr = `${billYear}-${billMonth}`;
+                if (compareStr !== filterMonthSelect) {
+                    matchesDate = false;
+                }
+            } else {
+                matchesDate = false;
+            }
+        } 
+        // 3. Handle Preset Period (7d, 30d, 90d, 1y)
+        else if (filterPeriod && filterPeriod !== 'all') {
+            if (bill.billDate) {
+                const billDateObj = new Date(bill.billDate);
+                const compareDate = new Date();
+                
+                const periodMap = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
+                const days = periodMap[filterPeriod] || 0;
+                
+                compareDate.setDate(compareDate.getDate() - days);
+                
+                if (billDateObj < compareDate) {
+                    matchesDate = false;
+                }
+            } else {
+                matchesDate = false;
+            }
+        }
+
+        return matchesSearch && matchesSupplier && matchesDate;
+    });
+
+    // Dynamic calculations based on filteredBills
+    const stats = React.useMemo(() => {
+        let totalAmount = 0;
+        let totalTax = 0;
+        let totalMeters = 0;
+        let totalPcs = 0;
+
+        filteredBills.forEach(bill => {
+            totalAmount += (bill.totalAmount || 0);
+            totalTax += ((bill.cgst || 0) + (bill.sgst || 0) + (bill.igst || 0));
+
+            if (bill.items) {
+                bill.items.forEach(item => {
+                    totalMeters += (Number(item.meters) || 0);
+                    totalPcs += (Number(item.pcs) || 0);
+                });
+            }
+        });
+
+        const avgBill = filteredBills.length > 0 ? (totalAmount / filteredBills.length) : 0;
+
+        // Group purchases by date for the trend chart
+        const dateGroups = {};
+        filteredBills.forEach(bill => {
+            if (bill.billDate) {
+                const dateKey = bill.billDate.split('T')[0]; // "YYYY-MM-DD"
+                dateGroups[dateKey] = (dateGroups[dateKey] || 0) + (bill.totalAmount || 0);
+            }
+        });
+
+        const trendData = Object.keys(dateGroups)
+            .sort()
+            .map(date => ({
+                date: date.split('-').slice(1).reverse().join('/'), // "DD/MM"
+                amount: Math.round(dateGroups[date])
+            }));
+
+        // Group purchases by supplier for supplier share chart
+        const supplierGroups = {};
+        filteredBills.forEach(bill => {
+            if (bill.supplierName) {
+                const sName = bill.supplierName.trim();
+                supplierGroups[sName] = (supplierGroups[sName] || 0) + (bill.totalAmount || 0);
+            }
+        });
+
+        const supplierData = Object.keys(supplierGroups)
+            .map(name => ({
+                name: name.length > 15 ? name.substring(0, 13) + '..' : name,
+                amount: Math.round(supplierGroups[name])
+            }))
+            .sort((a, b) => b.amount - a.amount)
+            .slice(0, 5); // Top 5 suppliers
+
+        return {
+            totalAmount,
+            totalTax,
+            totalMeters,
+            totalPcs,
+            avgBill,
+            trendData: trendData.slice(-15), // Last 15 active dates
+            supplierData
+        };
+    }, [filteredBills]);
+
     useEffect(() => {
         loadBills();
         loadSuppliers();
@@ -94,7 +244,7 @@ const PurchaseBills = () => {
     const loadBills = async (isRefresh = false) => {
         try {
             const hasCachedData = window.purchaseBillsCache && window.purchaseBillsCache.length > 0;
-            
+
             // Only show loader if we don't have cached data OR if it's a manual refresh
             if (!hasCachedData || isRefresh) {
                 setLoading(true);
@@ -106,7 +256,7 @@ const PurchaseBills = () => {
             const data = await fetchPurchaseBills();
             const billsData = Array.isArray(data) ? data : [];
             setBills(billsData);
-            
+
             // Update cache for next time
             window.purchaseBillsCache = billsData;
         } catch (error) {
@@ -140,7 +290,7 @@ const PurchaseBills = () => {
     const handleBillImagesChange = (e) => {
         const files = Array.from(e.target.files);
         const validFiles = [];
-        
+
         for (const file of files) {
             if (file.size > 5 * 1024 * 1024) {
                 setErrorMessage(`File "${file.name}" is too large! Please upload files smaller than 5MB.`);
@@ -148,7 +298,7 @@ const PurchaseBills = () => {
             }
             validFiles.push(file);
         }
-        
+
         if (validFiles.length > 0) {
             const newPreviews = validFiles.map(file => {
                 const url = URL.createObjectURL(file);
@@ -160,7 +310,7 @@ const PurchaseBills = () => {
                     name: file.name
                 };
             });
-            
+
             setBillPreviews(prev => [...prev, ...newPreviews]);
         }
         e.target.value = '';
@@ -198,6 +348,10 @@ const PurchaseBills = () => {
 
         try {
             await deletePurchaseBill(billToDelete._id);
+            window.inventoryCache = null;
+            window.inventoryTotalPurchasesCache = null;
+            window.inventoryTotalSalesCache = null;
+            window.purchaseBillsCache = null;
             setBillToDelete(null);
             setIsDeletingProcess(false);
             loadBills(); // This will show the "Fetching" loader for 2.5s
@@ -556,6 +710,10 @@ const PurchaseBills = () => {
             } else {
                 await createPurchaseBill(formData);
             }
+            window.inventoryCache = null;
+            window.inventoryTotalPurchasesCache = null;
+            window.inventoryTotalSalesCache = null;
+            window.purchaseBillsCache = null;
 
             // Artificially wait to show the beautiful loader
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -658,48 +816,6 @@ const PurchaseBills = () => {
         }
     };
 
-    const filteredBills = bills.filter(bill => {
-        const matchesSearch = !searchQuery || 
-            bill.supplierName?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-            bill.billNumber?.toLowerCase().includes(searchQuery.toLowerCase());
-
-        const matchesSupplier = !filterSupplier || bill.supplierName === filterSupplier;
-
-        let matchesDate = true;
-        if (bill.billDate) {
-            const billDateStr = bill.billDate.split('T')[0];
-            if (filterStartDate && billDateStr < filterStartDate) {
-                matchesDate = false;
-            }
-            if (filterEndDate && billDateStr > filterEndDate) {
-                matchesDate = false;
-            }
-        } else if (filterStartDate || filterEndDate) {
-            matchesDate = false;
-        }
-
-        let matchesMonth = true;
-        if (filterMonth && bill.billDate) {
-            const billMonth = new Date(bill.billDate).getMonth() + 1;
-            if (billMonth !== Number(filterMonth)) {
-                matchesMonth = false;
-            }
-        } else if (filterMonth && !bill.billDate) {
-            matchesMonth = false;
-        }
-
-        let matchesYear = true;
-        if (filterYear && bill.billDate) {
-            const billYear = new Date(bill.billDate).getFullYear();
-            if (billYear !== Number(filterYear)) {
-                matchesYear = false;
-            }
-        } else if (filterYear && !bill.billDate) {
-            matchesYear = false;
-        }
-
-        return matchesSearch && matchesSupplier && matchesDate && matchesMonth && matchesYear;
-    });
 
     return (
         <div className="page-container">
@@ -790,9 +906,9 @@ const PurchaseBills = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
                                 <div className="input-group" style={{ marginBottom: 0 }}>
                                     <label className="input-label" style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>MONTH</label>
-                                    <select 
-                                        className="input-field" 
-                                        value={reportMonth} 
+                                    <select
+                                        className="input-field"
+                                        value={reportMonth}
                                         onChange={(e) => setReportMonth(Number(e.target.value))}
                                         style={{ background: '#f8fafc', fontWeight: 600 }}
                                     >
@@ -801,9 +917,9 @@ const PurchaseBills = () => {
                                 </div>
                                 <div className="input-group" style={{ marginBottom: 0 }}>
                                     <label className="input-label" style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>YEAR</label>
-                                    <select 
-                                        className="input-field" 
-                                        value={reportYear} 
+                                    <select
+                                        className="input-field"
+                                        value={reportYear}
                                         onChange={(e) => setReportYear(Number(e.target.value))}
                                         style={{ background: '#f8fafc', fontWeight: 600 }}
                                     >
@@ -1014,9 +1130,9 @@ const PurchaseBills = () => {
                                                             <input type="text" className="input-field" style={{ padding: '6px 10px', fontSize: '0.85rem' }} required value={item.nameEnglish ?? ''} onChange={(e) => handleItemChange(index, 'nameEnglish', e.target.value)} placeholder="Product Name" />
                                                         </td>
                                                         <td><input type="text" className="input-field" style={{ padding: '6px 10px' }} value={item.hsnCode ?? ''} onChange={(e) => handleItemChange(index, 'hsnCode', e.target.value)} placeholder="HSN" /></td>
-                                                                                                                <td><input type="text" inputMode="decimal" className="input-field" style={{ padding: '6px 10px' }} value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} /></td>
-                                                                                                                <td><input type="text" inputMode="decimal" className="input-field" style={{ padding: '6px 10px' }} value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} /></td>
-                                                                                                                <td><input type="text" inputMode="decimal" className="input-field" style={{ padding: '6px 10px' }} required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} /></td>
+                                                        <td><input type="text" inputMode="decimal" className="input-field" style={{ padding: '6px 10px' }} value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} /></td>
+                                                        <td><input type="text" inputMode="decimal" className="input-field" style={{ padding: '6px 10px' }} value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} /></td>
+                                                        <td><input type="text" inputMode="decimal" className="input-field" style={{ padding: '6px 10px' }} required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} /></td>
                                                         <td style={{ textAlign: 'right', fontWeight: '800', color: 'var(--accent-primary)' }}>Rs.{item.amount.toFixed(2)}</td>
                                                         <td style={{ textAlign: 'center' }}>
                                                             <button type="button" style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => handleRemoveItem(index)}>
@@ -1054,18 +1170,18 @@ const PurchaseBills = () => {
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>PCS</label>
-                                                                                                                <input type="text" inputMode="decimal" className="input-field" value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} />
+                                                        <input type="text" inputMode="decimal" className="input-field" value={item.pcs ?? ''} onChange={(e) => handleItemChange(index, 'pcs', e.target.value)} />
                                                     </div>
                                                 </div>
 
                                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>METERS</label>
-                                                                                                                <input type="text" inputMode="decimal" className="input-field" value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} />
+                                                        <input type="text" inputMode="decimal" className="input-field" value={item.meters ?? ''} onChange={(e) => handleItemChange(index, 'meters', e.target.value)} />
                                                     </div>
                                                     <div className="input-group" style={{ marginBottom: 0 }}>
                                                         <label className="input-label" style={{ fontSize: '0.75rem' }}>RATE (Rs.)</label>
-                                                                                                                <input type="text" inputMode="decimal" className="input-field" required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} />
+                                                        <input type="text" inputMode="decimal" className="input-field" required value={item.rate ?? ''} onChange={(e) => handleItemChange(index, 'rate', e.target.value)} />
                                                     </div>
                                                 </div>
 
@@ -1405,7 +1521,7 @@ const PurchaseBills = () => {
                                                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                                             {newBill.discountMode === 'percent' ? (
                                                                 <>
-                                                                                                                                        <input
+                                                                    <input
                                                                         type="text"
                                                                         inputMode="decimal"
                                                                         className="input-field"
@@ -1423,7 +1539,7 @@ const PurchaseBills = () => {
                                                             ) : (
                                                                 <>
                                                                     <span style={{ position: 'absolute', left: '10px', fontWeight: 900, color: '#b45309', fontSize: '0.9rem', pointerEvents: 'none' }}>Rs.</span>
-                                                                                                                                        <input
+                                                                    <input
                                                                         type="text"
                                                                         inputMode="decimal"
                                                                         className="input-field"
@@ -1488,7 +1604,7 @@ const PurchaseBills = () => {
 
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '10px', borderTop: '1px dashed #e2e8f0' }}>
                                                         <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>ROUND OFF</span>
-                                                                                                                <input type="text" inputMode="decimal" className="input-field" style={{ width: '80px', padding: '4px 8px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 700 }} value={newBill.roundOff ?? ''} onChange={(e) => {
+                                                        <input type="text" inputMode="decimal" className="input-field" style={{ width: '80px', padding: '4px 8px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 700 }} value={newBill.roundOff ?? ''} onChange={(e) => {
                                                             const rawValue = e.target.value;
                                                             const rVal = parseFloat(rawValue) || 0;
                                                             const taxableAmount = newBill.subTotal - newBill.discountAmount;
@@ -1588,56 +1704,222 @@ const PurchaseBills = () => {
                             Upload your first merchant bill to start tracking stock and financial records.
                         </p>
                         <button className="btn btn-primary" onClick={() => setIsAdding(true)} style={{ width: 'auto', padding: '12px 32px' }}>
-                            <Plus size={18} /> Add Your First Bill
+                                                            <Plus size={18} /> Add Your First Bill
                         </button>
                     </div>
                 ) : (
-                    <div className="bills-list-container">
-                        <div className="premium-card">
-                            <div className="card-header" style={{
-                                flexDirection: window.innerWidth < 768 ? 'column' : 'row',
-                                alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
-                                gap: '16px'
+                    <div className="bills-list-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* 1. Dedicated Advanced Filters */}
+                        <div className="premium-card" style={{ padding: '24px', marginBottom: 0, overflow: 'visible' }}>
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginBottom: '20px',
+                                flexWrap: 'wrap',
+                                gap: '12px'
                             }}>
-                                <h3 className="card-title">Recent Purchase Invoices</h3>
-                                <div className="card-tools" style={{
-                                    display: 'flex',
-                                    gap: '12px',
-                                    alignItems: 'center',
-                                    width: window.innerWidth < 768 ? '100%' : 'auto'
-                                }}>
-                                    <div style={{ position: 'relative', flex: 1 }}>
-                                        <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                        <input
-                                            type="text"
-                                            className="input-field"
-                                            placeholder="Search by supplier or bill no..."
-                                            style={{ paddingLeft: '32px', fontSize: '12px', height: '36px', width: '100%' }}
-                                            value={searchQuery}
-                                            onChange={e => setSearchQuery(e.target.value)}
-                                        />
-                                    </div>
-                                    <span className="badge info" style={{ whiteSpace: 'nowrap' }}>{filteredBills.length} Records</span>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>Advanced Purchase Filters</h3>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                    <span className="badge info" style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: '8px' }}>
+                                        {filteredBills.length} Invoices Found
+                                    </span>
                                 </div>
                             </div>
 
-                            {/* Premium Date & Supplier Filter Bar */}
+                            {/* Analytics Style Period Selectors */}
                             <div style={{
                                 display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
                                 flexWrap: 'wrap',
                                 gap: '16px',
-                                padding: '16px 24px',
-                                background: '#f8fafc',
+                                marginBottom: '20px',
                                 borderBottom: '1px solid var(--border-color)',
-                                alignItems: 'center',
-                                borderRadius: '0'
+                                paddingBottom: '16px'
                             }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                    <span>Filters:</span>
+                                <div className="period-selector-wrapper" style={{ margin: 0 }}>
+                                    <div className="period-selector hide-scrollbar" style={{ background: '#f1f5f9', padding: '4px', borderRadius: '12px', display: 'flex', gap: '4px' }}>
+                                        {periodOptions.map(option => (
+                                            <button 
+                                                key={option.value}
+                                                onClick={() => {
+                                                    setFilterMonthSelect('all');
+                                                    setFilterPeriod(option.value);
+                                                    setFilterStartDate('');
+                                                    setFilterEndDate('');
+                                                    setShowMonthPickerPopover(false);
+                                                }}
+                                                className={`btn btn-sm`}
+                                                style={{ 
+                                                    padding: '8px 16px', 
+                                                    fontSize: '0.8rem', 
+                                                    fontWeight: '700',
+                                                    borderRadius: '8px',
+                                                    border: 'none',
+                                                    background: (filterMonthSelect === 'all' && filterPeriod === option.value) ? 'var(--accent-gradient)' : 'transparent',
+                                                    color: (filterMonthSelect === 'all' && filterPeriod === option.value) ? 'white' : 'var(--text-secondary)',
+                                                    whiteSpace: 'nowrap',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                                
+
+                                <div className="custom-month-wrapper" style={{ position: 'relative' }}>
+                                    <button
+                                        onClick={() => setShowMonthPickerPopover(!showMonthPickerPopover)}
+                                        className={`btn btn-sm`}
+                                        style={{ 
+                                            padding: '10px 16px', 
+                                            fontSize: '0.8rem', 
+                                            fontWeight: '700',
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--border-color)',
+                                            background: filterMonthSelect !== 'all' ? 'var(--accent-gradient)' : 'white',
+                                            color: filterMonthSelect !== 'all' ? 'white' : 'var(--text-secondary)',
+                                            whiteSpace: 'nowrap',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            height: '38px',
+                                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                                        }}
+                                    >
+                                        <Calendar size={14} />
+                                        {filterMonthSelect === 'all' ? 'Custom Month' : formatMonthLabel(filterMonthSelect)}
+                                    </button>
+
+                                    {showMonthPickerPopover && (
+                                        <div className="custom-month-picker-popover" style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            right: 0,
+                                            marginTop: '8px',
+                                            background: 'white',
+                                            border: '1px solid var(--border-color)',
+                                            borderRadius: '16px',
+                                            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                                            zIndex: 100,
+                                            width: '280px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            {/* Popover Header */}
+                                            <div style={{
+                                                background: 'var(--accent-gradient)',
+                                                padding: '16px',
+                                                textAlign: 'center',
+                                                color: 'white',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '6px'
+                                            }}>
+                                                <Calendar size={20} />
+                                                <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>Select Purchase Month</div>
+                                            </div>
+
+                                            {/* Popover Body */}
+                                            <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--accent-primary)' }}>MONTH</label>
+                                                        <select 
+                                                            value={tempMonthSelect}
+                                                            onChange={(e) => setTempMonthSelect(e.target.value)}
+                                                            className="input-field"
+                                                            style={{ fontSize: '0.8rem', height: '36px', padding: '6px', borderRadius: '8px' }}
+                                                        >
+                                                            {months.map(m => (
+                                                                <option key={m.value} value={String(m.value).padStart(2, '0')}>{m.label}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                        <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--accent-primary)' }}>YEAR</label>
+                                                        <select 
+                                                            value={tempYearSelect}
+                                                            onChange={(e) => setTempYearSelect(e.target.value)}
+                                                            className="input-field"
+                                                            style={{ fontSize: '0.8rem', height: '36px', padding: '6px', borderRadius: '8px' }}
+                                                        >
+                                                            {years.map(y => (
+                                                                <option key={y} value={String(y)}>{y}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button
+                                                        onClick={() => {
+                                                            setFilterMonthSelect('all');
+                                                            setFilterPeriod('all');
+                                                            setShowMonthPickerPopover(false);
+                                                        }}
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: '8px',
+                                                            borderRadius: '10px',
+                                                            border: '1px solid var(--border-color)',
+                                                            background: '#f8fafc',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 700,
+                                                            fontSize: '0.75rem'
+                                                        }}
+                                                    >
+                                                        Reset
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setFilterMonthSelect(`${tempYearSelect}-${tempMonthSelect}`);
+                                                            setFilterPeriod('all');
+                                                            setFilterStartDate('');
+                                                            setFilterEndDate('');
+                                                            setShowMonthPickerPopover(false);
+                                                        }}
+                                                        style={{
+                                                            flex: 1.5,
+                                                            padding: '8px',
+                                                            borderRadius: '10px',
+                                                            border: 'none',
+                                                            background: 'var(--accent-primary)',
+                                                            color: 'white',
+                                                            cursor: 'pointer',
+                                                            fontWeight: 700,
+                                                            fontSize: '0.75rem'
+                                                        }}
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Search bar & Dropdowns */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                                <div style={{ position: 'relative', flex: '1 1 250px', minWidth: '200px' }}>
+                                    <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        placeholder="Search by supplier name or bill number..."
+                                        style={{ paddingLeft: '36px', fontSize: '13px', height: '38px', width: '100%', borderRadius: '12px', background: '#f8fafc' }}
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+
                                 {/* Supplier Dropdown */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', flex: '1 1 200px', minWidth: '150px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', flex: '1 1 200px', minWidth: '180px' }}>
                                     <User size={14} style={{ position: 'absolute', left: '12px', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
                                     <select 
                                         className="input-field" 
@@ -1645,7 +1927,7 @@ const PurchaseBills = () => {
                                             fontSize: '0.8rem', 
                                             height: '38px', 
                                             paddingLeft: '32px', 
-                                            background: 'white', 
+                                            background: '#f8fafc', 
                                             width: '100%', 
                                             cursor: 'pointer',
                                             borderRadius: '12px',
@@ -1662,58 +1944,8 @@ const PurchaseBills = () => {
                                     </select>
                                 </div>
 
-                                {/* Month Dropdown */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', flex: '1 1 120px', minWidth: '110px' }}>
-                                    <select 
-                                        className="input-field" 
-                                        style={{ 
-                                            fontSize: '0.8rem', 
-                                            height: '38px', 
-                                            paddingLeft: '12px', 
-                                            background: 'white', 
-                                            width: '100%', 
-                                            cursor: 'pointer',
-                                            borderRadius: '12px',
-                                            border: filterMonth ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                                            fontWeight: filterMonth ? 700 : 500
-                                        }} 
-                                        value={filterMonth} 
-                                        onChange={(e) => setFilterMonth(e.target.value)}
-                                    >
-                                        <option value="">All Months</option>
-                                        {months.map(m => (
-                                            <option key={m.value} value={m.value}>{m.label}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Year Dropdown */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative', flex: '1 1 100px', minWidth: '90px' }}>
-                                    <select 
-                                        className="input-field" 
-                                        style={{ 
-                                            fontSize: '0.8rem', 
-                                            height: '38px', 
-                                            paddingLeft: '12px', 
-                                            background: 'white', 
-                                            width: '100%', 
-                                            cursor: 'pointer',
-                                            borderRadius: '12px',
-                                            border: filterYear ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                                            fontWeight: filterYear ? 700 : 500
-                                        }} 
-                                        value={filterYear} 
-                                        onChange={(e) => setFilterYear(e.target.value)}
-                                    >
-                                        <option value="">All Years</option>
-                                        {years.map(y => (
-                                            <option key={y} value={y}>{y}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
                                 {/* Start Date Selector */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 180px', minWidth: '130px', position: 'relative' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px', minWidth: '175px', position: 'relative' }}>
                                     <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>From:</span>
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <Calendar size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
@@ -1724,20 +1956,24 @@ const PurchaseBills = () => {
                                                 fontSize: '0.8rem', 
                                                 height: '38px', 
                                                 paddingLeft: '32px', 
-                                                background: 'white', 
+                                                background: '#f8fafc', 
                                                 width: '100%',
                                                 borderRadius: '12px',
                                                 border: filterStartDate ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
                                                 fontWeight: filterStartDate ? 700 : 500
                                             }} 
                                             value={filterStartDate} 
-                                            onChange={(e) => setFilterStartDate(e.target.value)} 
+                                            onChange={(e) => {
+                                                setFilterStartDate(e.target.value);
+                                                setFilterPeriod('all');
+                                                setFilterMonthSelect('all');
+                                            }} 
                                         />
                                     </div>
                                 </div>
 
                                 {/* End Date Selector */}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 180px', minWidth: '130px', position: 'relative' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 200px', minWidth: '175px', position: 'relative' }}>
                                     <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>To:</span>
                                     <div style={{ position: 'relative', width: '100%' }}>
                                         <Calendar size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', pointerEvents: 'none' }} />
@@ -1748,22 +1984,32 @@ const PurchaseBills = () => {
                                                 fontSize: '0.8rem', 
                                                 height: '38px', 
                                                 paddingLeft: '32px', 
-                                                background: 'white', 
+                                                background: '#f8fafc', 
                                                 width: '100%',
                                                 borderRadius: '12px',
                                                 border: filterEndDate ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
                                                 fontWeight: filterEndDate ? 700 : 500
                                             }} 
                                             value={filterEndDate} 
-                                            onChange={(e) => setFilterEndDate(e.target.value)} 
+                                            onChange={(e) => {
+                                                setFilterEndDate(e.target.value);
+                                                setFilterPeriod('all');
+                                                setFilterMonthSelect('all');
+                                            }} 
                                         />
                                     </div>
                                 </div>
 
                                 {/* Clear Filters action */}
-                                {(filterSupplier || filterStartDate || filterEndDate || filterMonth || filterYear) && (
+                                {(filterSupplier || filterStartDate || filterEndDate || filterMonthSelect !== 'all' || filterPeriod !== 'all') && (
                                     <button 
-                                        onClick={() => { setFilterSupplier(''); setFilterStartDate(''); setFilterEndDate(''); setFilterMonth(''); setFilterYear(''); }} 
+                                        onClick={() => { 
+                                            setFilterSupplier(''); 
+                                            setFilterStartDate(''); 
+                                            setFilterEndDate(''); 
+                                            setFilterMonthSelect('all'); 
+                                            setFilterPeriod('all'); 
+                                        }} 
                                         style={{
                                             background: 'rgba(239, 68, 68, 0.08)',
                                             border: '1px dashed rgba(239, 68, 68, 0.3)',
@@ -1786,6 +2032,175 @@ const PurchaseBills = () => {
                                         <X size={14} /> Clear Filters
                                     </button>
                                 )}
+                            </div>
+                        </div>
+
+                        {/* 2. Premium Analytics Stats Cards Container */}
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                            gap: '16px'
+                        }}>
+                            {/* Card 1: Total Purchase Value */}
+                            <div className="glass-panel hover-lift" style={{
+                                padding: '20px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                gap: '12px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                background: 'white',
+                                borderLeft: '4px solid var(--accent-primary)'
+                            }}>
+                                <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(3, 105, 161, 0.1)', color: 'var(--accent-primary)' }}>
+                                    <Wallet size={20} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>Total purchases</p>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
+                                        ₹{Math.round(stats.totalAmount).toLocaleString('en-IN')}
+                                    </h2>
+                                </div>
+                            </div>
+
+                            {/* Card 2: Total Tax Paid */}
+                            <div className="glass-panel hover-lift" style={{
+                                padding: '20px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                gap: '12px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                background: 'white',
+                                borderLeft: '4px solid var(--success)'
+                            }}>
+                                <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+                                    <Percent size={20} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>Tax Paid (GST)</p>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
+                                        ₹{Math.round(stats.totalTax).toLocaleString('en-IN')}
+                                    </h2>
+                                </div>
+                            </div>
+
+                            {/* Card 3: Purchase Volume */}
+                            <div className="glass-panel hover-lift" style={{
+                                padding: '20px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                gap: '12px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                background: 'white',
+                                borderLeft: '4px solid #d97706'
+                            }}>
+                                <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(217, 119, 6, 0.1)', color: '#d97706' }}>
+                                    <ShoppingBag size={20} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>Stock Volume</p>
+                                    <h2 style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
+                                        {stats.totalMeters.toLocaleString()}m / {stats.totalPcs.toLocaleString()} pcs
+                                    </h2>
+                                </div>
+                            </div>
+
+                            {/* Card 4: Avg Bill Value */}
+                            <div className="glass-panel hover-lift" style={{
+                                padding: '20px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                                gap: '12px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                background: 'white',
+                                borderLeft: '4px solid #0891b2'
+                            }}>
+                                <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(8, 145, 178, 0.1)', color: '#0891b2' }}>
+                                    <IndianRupee size={20} />
+                                </div>
+                                <div>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: '600' }}>Average Invoice</p>
+                                    <h2 style={{ fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
+                                        ₹{Math.round(stats.avgBill).toLocaleString('en-IN')}
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3. Charts Section */}
+                        {filteredBills.length > 0 && (
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                                gap: '16px'
+                            }}>
+                                {/* Trend Chart */}
+                                <div className="premium-card" style={{ padding: '24px' }}>
+                                    <h4 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 800 }}>
+                                        <TrendingUp size={16} className="text-primary" /> Purchase Trend
+                                    </h4>
+                                    <div style={{ width: '100%', height: '220px' }}>
+                                        <ResponsiveContainer width="100%" height={220}>
+                                            <AreaChart data={stats.trendData} margin={{ top: 5, right: 5, left: 10, bottom: 0 }}>
+                                                <defs>
+                                                    <linearGradient id="colorPurchasesPage" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.2} />
+                                                        <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', background: '#ffffff' }}
+                                                    formatter={(value) => [`₹${value.toLocaleString('en-IN')}`, 'Purchases']}
+                                                />
+                                                <Area type="monotone" dataKey="amount" stroke="var(--accent-primary)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPurchasesPage)" />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+
+                                {/* Supplier Share Chart */}
+                                <div className="premium-card" style={{ padding: '24px' }}>
+                                    <h4 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', fontWeight: 800 }}>
+                                        <Building size={16} className="text-primary" /> Top Supplier Shares
+                                    </h4>
+                                    <div style={{ width: '100%', height: '220px' }}>
+                                        <ResponsiveContainer width="100%" height={220}>
+                                            <BarChart data={stats.supplierData} margin={{ top: 5, right: 5, left: 10, bottom: 0 }}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', background: '#ffffff' }}
+                                                    formatter={(value) => [`₹${value.toLocaleString('en-IN')}`, 'Total Share']}
+                                                />
+                                                <Bar dataKey="amount" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} barSize={25} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 4. Recent Purchase Invoices Card */}
+                        <div className="premium-card">
+                            <div className="card-header" style={{
+                                flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+                                alignItems: window.innerWidth < 768 ? 'flex-start' : 'center',
+                                gap: '16px',
+                                borderBottom: '1px solid var(--border-color)',
+                                paddingBottom: '16px'
+                            }}>
+                                <h3 className="card-title">Recent Purchase Invoices</h3>
                             </div>
                             {/* Desktop Table View */}
                             <div className="table-container desktop-only">
@@ -1835,26 +2250,26 @@ const PurchaseBills = () => {
                                                 <td>
                                                     <div style={{ display: 'flex', gap: '8px' }}>
                                                         {(bill.billImages && bill.billImages.length > 0) || bill.billImage ? (
-                                                            <button 
-                                                                className="action-btn view" 
-                                                                onClick={() => setViewingAttachments(bill)} 
+                                                            <button
+                                                                className="action-btn view"
+                                                                onClick={() => setViewingAttachments(bill)}
                                                                 title="View Merchant Invoice Copies"
                                                                 style={{ position: 'relative' }}
                                                             >
                                                                 <ShoppingBag size={18} />
                                                                 {bill.billImages && bill.billImages.length > 1 && (
-                                                                    <span style={{ 
-                                                                        position: 'absolute', 
-                                                                        top: '-6px', 
-                                                                        right: '-6px', 
-                                                                        background: 'var(--accent-primary)', 
-                                                                        color: 'white', 
-                                                                        fontSize: '0.6rem', 
-                                                                        width: '15px', 
-                                                                        height: '15px', 
-                                                                        borderRadius: '50%', 
-                                                                        display: 'flex', 
-                                                                        alignItems: 'center', 
+                                                                    <span style={{
+                                                                        position: 'absolute',
+                                                                        top: '-6px',
+                                                                        right: '-6px',
+                                                                        background: 'var(--accent-primary)',
+                                                                        color: 'white',
+                                                                        fontSize: '0.6rem',
+                                                                        width: '15px',
+                                                                        height: '15px',
+                                                                        borderRadius: '50%',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
                                                                         justifyContent: 'center',
                                                                         fontWeight: 800,
                                                                         boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
@@ -1936,17 +2351,17 @@ const PurchaseBills = () => {
                                         }}>
                                             <div style={{ display: 'flex', gap: '10px' }}>
                                                 {(bill.billImages && bill.billImages.length > 0) || bill.billImage ? (
-                                                    <button 
-                                                        onClick={() => setViewingAttachments(bill)} 
-                                                        style={{ 
-                                                            border: 'none', 
-                                                            background: 'rgba(3, 105, 161, 0.1)', 
-                                                            color: 'var(--accent-primary)', 
-                                                            width: '36px', 
-                                                            height: '36px', 
-                                                            borderRadius: '10px', 
-                                                            display: 'flex', 
-                                                            alignItems: 'center', 
+                                                    <button
+                                                        onClick={() => setViewingAttachments(bill)}
+                                                        style={{
+                                                            border: 'none',
+                                                            background: 'rgba(3, 105, 161, 0.1)',
+                                                            color: 'var(--accent-primary)',
+                                                            width: '36px',
+                                                            height: '36px',
+                                                            borderRadius: '10px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
                                                             justifyContent: 'center',
                                                             position: 'relative'
                                                         }}
@@ -1954,18 +2369,18 @@ const PurchaseBills = () => {
                                                     >
                                                         <ShoppingBag size={18} />
                                                         {bill.billImages && bill.billImages.length > 1 && (
-                                                            <span style={{ 
-                                                                position: 'absolute', 
-                                                                top: '-6px', 
-                                                                right: '-6px', 
-                                                                background: 'var(--accent-primary)', 
-                                                                color: 'white', 
-                                                                fontSize: '0.6rem', 
-                                                                width: '15px', 
-                                                                height: '15px', 
-                                                                borderRadius: '50%', 
-                                                                display: 'flex', 
-                                                                alignItems: 'center', 
+                                                            <span style={{
+                                                                position: 'absolute',
+                                                                top: '-6px',
+                                                                right: '-6px',
+                                                                background: 'var(--accent-primary)',
+                                                                color: 'white',
+                                                                fontSize: '0.6rem',
+                                                                width: '15px',
+                                                                height: '15px',
+                                                                borderRadius: '50%',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
                                                                 justifyContent: 'center',
                                                                 fontWeight: 800,
                                                                 boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
@@ -2145,18 +2560,18 @@ const PurchaseBills = () => {
                                     Bill No: <strong>{viewingAttachments.billNumber}</strong> • Supplier: <strong>{viewingAttachments.supplierName}</strong>
                                 </p>
                             </div>
-                            <button 
-                                onClick={() => setViewingAttachments(null)} 
-                                style={{ 
-                                    background: '#f1f5f9', 
-                                    border: 'none', 
-                                    color: 'var(--text-secondary)', 
-                                    width: '36px', 
-                                    height: '36px', 
-                                    borderRadius: '50%', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
+                            <button
+                                onClick={() => setViewingAttachments(null)}
+                                style={{
+                                    background: '#f1f5f9',
+                                    border: 'none',
+                                    color: 'var(--text-secondary)',
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                     cursor: 'pointer',
                                     transition: '0.2s'
                                 }}
@@ -2166,13 +2581,13 @@ const PurchaseBills = () => {
                                 <X size={20} />
                             </button>
                         </div>
-                        
-                        <div style={{ 
-                            flex: 1, 
-                            overflowY: 'auto', 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            gap: '24px', 
+
+                        <div style={{
+                            flex: 1,
+                            overflowY: 'auto',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '24px',
                             paddingRight: '8px',
                             minHeight: '200px'
                         }}>
@@ -2181,29 +2596,29 @@ const PurchaseBills = () => {
                                     const isPath = img.startsWith('uploads');
                                     const imageUrl = isPath ? `${getBackendUrl()}/${img}` : img;
                                     const isPdf = img.endsWith('.pdf');
-                                    
+
                                     return (
-                                        <div key={idx} style={{ 
-                                            background: '#f8fafc', 
-                                            border: '1px solid var(--border-color)', 
-                                            borderRadius: '16px', 
-                                            padding: '16px', 
-                                            display: 'flex', 
-                                            flexDirection: 'column', 
-                                            gap: '12px' 
+                                        <div key={idx} style={{
+                                            background: '#f8fafc',
+                                            border: '1px solid var(--border-color)',
+                                            borderRadius: '16px',
+                                            padding: '16px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '12px'
                                         }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <span style={{ fontWeight: 800, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>PAGE {idx + 1} OF {viewingAttachments.billImages.length}</span>
-                                                <button 
-                                                    onClick={() => window.open(imageUrl, '_blank')} 
-                                                    style={{ 
-                                                        border: '1px solid #e2e8f0', 
-                                                        background: 'white', 
-                                                        color: 'var(--accent-primary)', 
-                                                        padding: '6px 12px', 
-                                                        borderRadius: '8px', 
-                                                        fontSize: '0.75rem', 
-                                                        fontWeight: 700, 
+                                                <button
+                                                    onClick={() => window.open(imageUrl, '_blank')}
+                                                    style={{
+                                                        border: '1px solid #e2e8f0',
+                                                        background: 'white',
+                                                        color: 'var(--accent-primary)',
+                                                        padding: '6px 12px',
+                                                        borderRadius: '8px',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 700,
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -2213,23 +2628,23 @@ const PurchaseBills = () => {
                                                     <Eye size={12} /> Open Full Size
                                                 </button>
                                             </div>
-                                            
+
                                             {isPdf ? (
                                                 <div style={{ height: '400px', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                                                     <iframe src={imageUrl} style={{ width: '100%', height: '100%', border: 'none' }} title={`Page ${idx + 1}`} />
                                                 </div>
                                             ) : (
                                                 <div style={{ display: 'flex', justifyContent: 'center', background: '#f1f5f9', borderRadius: '12px', padding: '10px', overflow: 'hidden' }}>
-                                                    <img 
-                                                        src={imageUrl} 
-                                                        alt={`Page ${idx + 1}`} 
-                                                        style={{ 
-                                                            maxWidth: '100%', 
-                                                            maxHeight: '450px', 
-                                                            objectFit: 'contain', 
-                                                            borderRadius: '8px', 
-                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)' 
-                                                        }} 
+                                                    <img
+                                                        src={imageUrl}
+                                                        alt={`Page ${idx + 1}`}
+                                                        style={{
+                                                            maxWidth: '100%',
+                                                            maxHeight: '450px',
+                                                            objectFit: 'contain',
+                                                            borderRadius: '8px',
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                                                        }}
                                                     />
                                                 </div>
                                             )}
@@ -2237,47 +2652,48 @@ const PurchaseBills = () => {
                                     );
                                 })
                             ) : viewingAttachments.billImage ? (
-                                <div style={{ 
-                                    background: '#f8fafc', 
-                                    border: '1px solid var(--border-color)', 
-                                    borderRadius: '16px', 
-                                    padding: '16px', 
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    gap: '12px' 
+                                <div style={{
+                                    background: '#f8fafc',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '16px',
+                                    padding: '16px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '12px'
                                 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={{ fontWeight: 800, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>PAGE 1 OF 1</span>
-                                        <button 
-                                            onClick={() => window.open(viewingAttachments.billImage.startsWith('uploads') ? `${getBackendUrl()}/${viewingAttachments.billImage}` : viewingAttachments.billImage, '_blank')} 
-                                            style={{ 
-                                                border: '1px solid #e2e8f0', 
-                                                background: 'white', 
-                                                color: 'var(--accent-primary)', 
-                                                padding: '6px 12px', 
-                                                borderRadius: '8px', 
-                                                fontSize: '0.75rem', 
-                                                fontWeight: 700, 
+                                        <button
+                                            onClick={() => window.open(viewingAttachments.billImage.startsWith('uploads') ? `${getBackendUrl()}/${viewingAttachments.billImage}` : viewingAttachments.billImage, '_blank')}
+                                            style={{
+                                                border: '1px solid #e2e8f0',
+                                                background: 'white',
+                                                color: 'var(--accent-primary)',
+                                                padding: '6px 12px',
+                                                borderRadius: '8px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 700,
                                                 cursor: 'pointer',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '4px'
+
                                             }}
                                         >
                                             <Eye size={12} /> Open Full Size
                                         </button>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'center', background: '#f1f5f9', borderRadius: '12px', padding: '10px', overflow: 'hidden' }}>
-                                        <img 
-                                            src={viewingAttachments.billImage.startsWith('uploads') ? `${getBackendUrl()}/${viewingAttachments.billImage}` : viewingAttachments.billImage} 
-                                            alt="Scan Copy" 
-                                            style={{ 
-                                                maxWidth: '100%', 
-                                                maxHeight: '450px', 
-                                                objectFit: 'contain', 
-                                                borderRadius: '8px', 
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)' 
-                                            }} 
+                                        <img
+                                            src={viewingAttachments.billImage.startsWith('uploads') ? `${getBackendUrl()}/${viewingAttachments.billImage}` : viewingAttachments.billImage}
+                                            alt="Scan Copy"
+                                            style={{
+                                                maxWidth: '100%',
+                                                maxHeight: '450px',
+                                                objectFit: 'contain',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)'
+                                            }}
                                         />
                                     </div>
                                 </div>

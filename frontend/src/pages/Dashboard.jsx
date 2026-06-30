@@ -98,6 +98,9 @@ export default function Dashboard() {
       });
 
       setBill(generatedBill);
+      window.inventoryCache = null;
+      window.inventoryTotalPurchasesCache = null;
+      window.inventoryTotalSalesCache = null;
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {

@@ -762,11 +762,17 @@ exports.voidBill = asyncHandler(async (req, res) => {
         }
     }
 
-    if (bill.paymentMode === 'credit' && (bill.customer || bill.customerName)) {
+    if (bill.customer || bill.customerName) {
         const query = bill.customer ? { _id: bill.customer } : { name: bill.customerName };
+        const oldImpact = bill.billType === 'return' ? -bill.actualTotal : bill.actualTotal;
         const customer = await Customer.findOneAndUpdate(
             query,
-            { $inc: { balance: -bill.actualTotal } },
+            { 
+                $inc: { 
+                    totalSpent: -oldImpact,
+                    balance: (bill.paymentMode === 'credit' ? -oldImpact : 0)
+                }
+            },
             { returnDocument: 'after' }
         );
         if (customer) {
@@ -806,12 +812,17 @@ exports.deleteBill = asyncHandler(async (req, res) => {
         { returnDocument: 'after' }
     );
 
-    if (billToDelete.status !== 'void' && billToDelete.paymentMode === 'credit' && (billToDelete.customer || billToDelete.customerName)) {
+    if (billToDelete.status !== 'void' && (billToDelete.customer || billToDelete.customerName)) {
         const query = billToDelete.customer ? { _id: billToDelete.customer } : { name: billToDelete.customerName };
+        const oldImpact = billToDelete.billType === 'return' ? -billToDelete.actualTotal : billToDelete.actualTotal;
         await Customer.findOneAndUpdate(
             query,
-            { $inc: { balance: -billToDelete.actualTotal } },
-            { returnDocument: 'after' }
+            { 
+                $inc: { 
+                    totalSpent: -oldImpact,
+                    balance: (billToDelete.paymentMode === 'credit' ? -oldImpact : 0)
+                }
+            }
         );
         await LedgerEntry.deleteMany({ referenceId: billToDelete._id });
     }

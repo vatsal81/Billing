@@ -256,7 +256,13 @@ const deletePurchaseBill = async (req, res) => {
 
         // Reverse stock for each item
         for (const item of bill.items) {
-            let product = await Product.findOne({ name: item.name });
+            let product = null;
+            if (item.productId) {
+                product = await Product.findOne({ productId: item.productId });
+            }
+            if (!product) {
+                product = await Product.findOne({ name: item.name });
+            }
 
             if (product) {
                 product.stockAmount -= (Number(item.meters) || Number(item.pcs) || 0);

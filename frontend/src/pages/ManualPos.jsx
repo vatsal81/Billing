@@ -622,6 +622,8 @@ const ManualPos = () => {
          }));
       }
       window.inventoryCache = null;
+      window.inventoryTotalPurchasesCache = null;
+      window.inventoryTotalSalesCache = null;
 
     } catch (e) {
       setError(e.response?.data?.message || e.message);

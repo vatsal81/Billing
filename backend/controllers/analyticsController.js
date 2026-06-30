@@ -32,11 +32,11 @@ const getStats = async (req, res) => {
 
         if (isMonthFiltered) {
             salesMatch.createdAt = { $gte: startDate, $lt: endDate };
-            purchasesMatch.createdAt = { $gte: startDate, $lt: endDate };
+            purchasesMatch.billDate = { $gte: startDate, $lt: endDate };
             expensesMatch.date = { $gte: startDate, $lt: endDate };
         } else if (hasPeriodFilter) {
             salesMatch.createdAt = { $gte: sinceDate };
-            purchasesMatch.createdAt = { $gte: sinceDate };
+            purchasesMatch.billDate = { $gte: sinceDate };
             expensesMatch.date = { $gte: sinceDate };
         }
 
@@ -68,7 +68,7 @@ const getStats = async (req, res) => {
             
         const chartPurchasesMatch = isMonthFiltered 
             ? purchasesMatch 
-            : (hasPeriodFilter ? { status: 'completed', createdAt: { $gte: sinceDate } } : { status: 'completed' });
+            : (hasPeriodFilter ? { status: 'completed', billDate: { $gte: sinceDate } } : { status: 'completed' });
 
         const salesByDay = await Bill.aggregate([
             { $match: chartSalesMatch },
@@ -82,7 +82,7 @@ const getStats = async (req, res) => {
         const purchasesByDay = await PurchaseBill.aggregate([
             { $match: chartPurchasesMatch },
             { $group: {
-                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$billDate" } },
                 total: { $sum: "$totalAmount" }
             }},
             { $sort: { _id: 1 } }

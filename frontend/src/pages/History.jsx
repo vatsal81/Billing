@@ -71,6 +71,8 @@ export default function History() {
     try {
       await voidBill(id);
       window.inventoryCache = null;
+      window.inventoryTotalPurchasesCache = null;
+      window.inventoryTotalSalesCache = null;
       loadData();
     } catch(e) {
       setError(e.response?.data?.message || e.message);
@@ -99,6 +101,8 @@ export default function History() {
       
       await deleteBill(billToDelete._id);
       window.inventoryCache = null;
+      window.inventoryTotalPurchasesCache = null;
+      window.inventoryTotalSalesCache = null;
       
       setIsDeletingProcess(false);
       setDeleteSuccess(true);
@@ -112,6 +116,8 @@ export default function History() {
     } catch(e) {
       setIsDeletingProcess(false);
       window.inventoryCache = null;
+      window.inventoryTotalPurchasesCache = null;
+      window.inventoryTotalSalesCache = null;
       setBillToDelete(null);
       setError(e.response?.data?.message || e.message);
     }
