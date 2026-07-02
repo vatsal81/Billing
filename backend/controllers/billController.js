@@ -32,7 +32,7 @@ const generateUniqueInvoiceId = (customerName, billDate, invoiceNumber, serialNu
         }
     }
     const book = Math.floor((val - 1) / 100) + 1;
-    const num = ((val - 1) % 100) + 1;
+    const num = val;
     const bookNo = String(book).padStart(2, '0');
     const billNo = String(num).padStart(3, '0');
 
@@ -804,6 +804,28 @@ exports.deleteBill = asyncHandler(async (req, res) => {
     }
 
     await Bill.findByIdAndDelete(req.params.id);
+
+    // Shift all subsequent bills' serial numbers and invoice numbers down by 1 to fill the gap
+    const subsequentBills = await Bill.find({ serialNumber: { $gt: billToDelete.serialNumber } }).sort({ serialNumber: 1 });
+    for (let subBill of subsequentBills) {
+        const newSerialNumber = subBill.serialNumber - 1;
+        const newInvoiceNumber = String(newSerialNumber).padStart(3, '0');
+        const newUniqueInvoiceId = generateUniqueInvoiceId(
+            subBill.customerName,
+            subBill.createdAt,
+            newInvoiceNumber,
+            newSerialNumber,
+            subBill.paymentMode
+        );
+        
+        await Bill.findByIdAndUpdate(subBill._id, {
+            $set: {
+                serialNumber: newSerialNumber,
+                invoiceNumber: newInvoiceNumber,
+                uniqueInvoiceId: newUniqueInvoiceId
+            }
+        });
+    }
 
     const remainingLastBill = await Bill.findOne().sort({ serialNumber: -1 });
     await Counter.findOneAndUpdate(

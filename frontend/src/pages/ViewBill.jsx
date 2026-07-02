@@ -77,7 +77,7 @@ const ViewBill = () => {
 
                 {/* Bill Display */}
                 <div style={{display: 'flex', justifyContent: 'center', marginBottom: '40px'}} className="animate-fade-in">
-                    <PrintableBill bill={bill} settings={settings} />
+                    <PrintableBill bill={bill} settings={settings} hideLogo={true} />
                 </div>
 
                 {/* Footer Message */}

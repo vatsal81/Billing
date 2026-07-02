@@ -714,7 +714,7 @@ const ManualPos = () => {
     }
 
     const invNumber = bill.serialNumber 
-      ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') 
+      ? String(bill.serialNumber).padStart(3, '0') 
       : bill._id.substring(bill._id.length - 4).toUpperCase();
 
     setSharingBillNo(invNumber);
@@ -1822,8 +1822,8 @@ const ManualPos = () => {
       {bill && (
         <div className="print-modal-overlay" style={{ 
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(8px)', zIndex: 9999, 
-          display: 'flex', flexDirection: 'column', alignItems: 'center', 
+          background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(8px)', zIndex: 99999, 
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start',
           padding: '40px 20px', overflowY: 'auto',
           animation: 'fadeIn 0.2s ease-out'
         }}>

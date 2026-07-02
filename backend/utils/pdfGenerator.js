@@ -80,8 +80,8 @@ const getBillStyles = () => `
     .header-left { width: 35%; border-right: 2px solid #000; padding: 8px; font-size: 13px; line-height: 1.4; }
     .header-right { width: 65%; padding: 10px 8px; text-align: center; }
     .customer-meta-section { display: flex; border-bottom: 2px solid #000; }
-    .customer-info { width: 68%; border-right: 2px solid #000; padding: 6px; font-size: 14px; line-height: 1.8; font-family: 'Gujarati', sans-serif; }
-    .meta-info { width: 32%; font-size: 14px; font-family: 'Gujarati', sans-serif; }
+    .customer-info { width: 68%; border-right: 2px solid #000; padding: 6px; font-size: 14px; line-height: 1.4; font-family: 'Gujarati', sans-serif; }
+    .meta-info { width: 32%; font-size: 14px; font-family: 'Gujarati', sans-serif; display: flex; flex-direction: column; }
     .info-row { display: flex; align-items: flex-end; }
     .dotted-line {
         border-bottom: 1px dotted #000;
@@ -131,8 +131,7 @@ const buildSingleBillHTML = (bill, settings = {}) => {
 
     const renderBillNo = () => {
         const val = getInvoiceNumberValue();
-        const num = ((val - 1) % 100) + 1;
-        return String(num).padStart(3, '0');
+        return String(val).padStart(3, '0');
     };
 
     const originalSubtotal = bill.items ? bill.items.reduce((sum, item) => sum + (item.price * item.quantity * (item.meter || 1)), 0) : 0;
@@ -150,9 +149,9 @@ const buildSingleBillHTML = (bill, settings = {}) => {
 
     const finalTotal = bill.actualTotal || bill.targetAmount || 0;
 
-    const emptyRowsHTML = Array.from({ length: Math.max(0, 8 - bill.items.length) }).map((_, i) => `
+    const emptyRowsHTML = Array.from({ length: Math.max(0, 10 - bill.items.length) }).map((_, i) => `
         <tr style="display: flex; width: 100%; ${i === 0 ? 'flex-grow: 1;' : ''}">
-            <td style="padding: 12px; border-right: 1px solid #000; width: 47%">&nbsp;</td>
+            <td style="padding: 6px 8px; border-right: 1px solid #000; width: 47%">&nbsp;</td>
             <td style="border-right: 1px solid #000; width: 11%"></td>
             <td style="border-right: 1px solid #000; width: 10%"></td>
             <td style="border-right: 1px solid #000; width: 7%"></td>
@@ -219,14 +218,14 @@ const buildSingleBillHTML = (bill, settings = {}) => {
                     </div>
                 </div>
                 <div class="meta-info">
-                    <div style="display: flex; padding: 6px 8px; border-bottom: 1px solid #000;">
+                    <div style="display: flex; align-items: center; flex: 1; padding: 0 8px; border-bottom: 1px solid #000;">
                         <span style="width: 70px; font-weight: bold;">Book No :</span> <span style="color: #c00; font-weight: bold;">${renderBookNo()}</span>
                     </div>
-                    <div style="display: flex; padding: 6px 8px; border-bottom: 1px solid #000;">
+                    <div style="display: flex; align-items: center; flex: 1; padding: 0 8px; border-bottom: 1px solid #000;">
                         <span style="width: 70px; font-weight: bold;">Bill No :</span> <span style="color: #c00; font-weight: bold;">${renderBillNo()}</span>
                     </div>
-                    <div style="display: flex; padding: 6px 8px;">
-                        <span style="width: 70px; font-weight: bold;">Date :</span> <span class="kalam-text" style="color: #0f3c88; font-size: 15px; font-weight: bold;">${formatDate(bill.createdAt)}</span>
+                    <div style="display: flex; align-items: center; flex: 1; padding: 0 8px;">
+                        <span style="width: 70px; font-weight: bold;">Date :</span> <span class="kalam-text" style="color: #0f3c88; font-size: 15px; font-weight: bold; line-height: 1;">${formatDate(bill.createdAt)}</span>
                     </div>
                 </div>
             </div>

@@ -89,7 +89,7 @@ export default function History() {
     if (!billToDelete) return;
     
     const invNumber = billToDelete.serialNumber 
-      ? String(((billToDelete.serialNumber - 1) % 100) + 1).padStart(3, '0') 
+      ? String(billToDelete.serialNumber).padStart(3, '0') 
       : billToDelete._id.substring(billToDelete._id.length - 4).toUpperCase();
 
     setShowDeleteConfirm(false);
@@ -125,7 +125,7 @@ export default function History() {
 
   const handleViewBill = async (bill) => {
     const invNumber = bill.serialNumber 
-      ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') 
+      ? String(bill.serialNumber).padStart(3, '0') 
       : bill._id.substring(bill._id.length - 4).toUpperCase();
     
     setViewingBillNo(invNumber);
@@ -147,7 +147,7 @@ export default function History() {
     }
 
     const invNumber = b.serialNumber 
-      ? String(((b.serialNumber - 1) % 100) + 1).padStart(3, '0') 
+      ? String(b.serialNumber).padStart(3, '0') 
       : b._id.substring(b._id.length - 4).toUpperCase();
 
     setSharingBillNo(invNumber);
@@ -416,7 +416,7 @@ export default function History() {
     let csv = "Date,Bill No,Customer Name,Tax Amount,Total Paid,Status\n";
     filteredBills.forEach(b => {
       const d = new Date(b.createdAt).toLocaleDateString('en-IN');
-      const billNo = b.serialNumber ? String(((b.serialNumber - 1) % 100) + 1).padStart(3, '0') : b._id.substring(b._id.length - 4).toUpperCase();
+      const billNo = b.serialNumber ? String(b.serialNumber).padStart(3, '0') : b._id.substring(b._id.length - 4).toUpperCase();
       const tax = (b.cgst + b.sgst).toFixed(2);
       const row = `"${d}","${billNo}","${b.customerName || 'Cash'}","${tax}","${b.actualTotal}","${b.status || 'active'}"`;
       csv += row + "\n";
@@ -942,7 +942,14 @@ export default function History() {
         {loading ? (
           <div className="animate-pulse" style={{color: 'var(--text-secondary)'}}>Loading ledger data...</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ 
+            maxHeight: '650px', 
+            overflowY: 'auto', 
+            paddingRight: '8px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '14px' 
+          }}>
             {filteredBills.length === 0 ? (
               <div style={{padding: '32px 8px', textAlign: 'center', color: 'var(--text-secondary)'}}>
                 {bills.length === 0 ? t('noInvoices') : "No matching bills found"}
@@ -1185,7 +1192,7 @@ export default function History() {
                 </div>
                 <h3 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#1e293b', marginBottom: '12px' }}>Delete Invoice?</h3>
                 <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: '32px' }}>
-                    Are you sure you want to delete <strong style={{ color: '#1e293b' }}>#{billToDelete?.serialNumber ? String(((billToDelete.serialNumber - 1) % 100) + 1).padStart(3, '0') : billToDelete?._id.substring(billToDelete._id.length - 4).toUpperCase()}</strong>? This action is permanent and cannot be undone.
+                    Are you sure you want to delete <strong style={{ color: '#1e293b' }}>#{billToDelete?.serialNumber ? String(billToDelete.serialNumber).padStart(3, '0') : billToDelete?._id.substring(billToDelete._id.length - 4).toUpperCase()}</strong>? This action is permanent and cannot be undone.
                 </p>
                 <div style={{ display: 'flex', gap: '12px' }}>
                     <button onClick={() => setShowDeleteConfirm(false)} style={{ 

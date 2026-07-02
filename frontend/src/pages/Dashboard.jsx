@@ -41,7 +41,7 @@ export default function Dashboard() {
     // Always use the Render URL for the PDF link to ensure it works on mobile/whatsapp
     const viewLink = `${getFrontendUrl()}/view-bill/${bill._id}`;
     
-    const billNo = bill.serialNumber ? String(((bill.serialNumber - 1) % 100) + 1).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase();
+    const billNo = bill.serialNumber ? String(bill.serialNumber).padStart(3, '0') : bill._id.substring(bill._id.length - 4).toUpperCase();
     
     // Determine Customer Type
     let type = 'FIRST_TIME';

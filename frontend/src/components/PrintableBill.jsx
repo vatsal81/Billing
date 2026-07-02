@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { numberToWords } from '../utils/numberToWords';
 import { useLanguage } from '../utils/LanguageContext';
-import { fetchSettings } from '../utils/api';
+import { fetchSettings, getBackendUrl } from '../utils/api';
 
-export default function PrintableBill({ bill, settings: propSettings }) {
+export default function PrintableBill({ bill, settings: propSettings, hideLogo }) {
   const { t } = useLanguage();
   const [settings, setSettings] = useState(propSettings || null);
   const [scale, setScale] = useState(1);
@@ -47,7 +47,7 @@ export default function PrintableBill({ bill, settings: propSettings }) {
   // Dynamic layout values
   const billPadding = isA4 ? '15px' : isA5 ? '10px' : '6px';
   const headerPadding = isA4 ? '8px' : isA5 ? '5px' : '3px';
-  const cellPadding = isA4 ? '6px 8px' : isA5 ? '4px 6px' : '2px 4px';
+  const cellPadding = isA4 ? '4px 8px' : isA5 ? '3px 6px' : '2px 4px';
 
   // Dynamic font sizes
   const titleFont = isA4 ? '28px' : isA5 ? '18px' : '13px';
@@ -62,7 +62,7 @@ export default function PrintableBill({ bill, settings: propSettings }) {
   const tableHeaderFont = isA4 ? '14px' : isA5 ? '10px' : '8px';
 
   // Filler rows & signature heights
-  const fillerRowsCount = isA4 ? Math.max(0, 8 - bill.items.length) : isA5 ? Math.max(0, 4 - bill.items.length) : Math.max(0, 2 - bill.items.length);
+  const fillerRowsCount = isA4 ? Math.max(0, 10 - bill.items.length) : isA5 ? Math.max(0, 6 - bill.items.length) : Math.max(0, 3 - bill.items.length);
   const signatureMinHeight = isA4 ? '90px' : isA5 ? '75px' : '55px';
   const signatureImgHeight = isA4 ? '50px' : isA5 ? '35px' : '25px';
 
@@ -111,8 +111,7 @@ export default function PrintableBill({ bill, settings: propSettings }) {
 
   const renderBillNo = () => {
     const val = getInvoiceNumberValue();
-    const num = ((val - 1) % 100) + 1;
-    return String(num).padStart(3, '0');
+    return String(val).padStart(3, '0');
   };
 
   const finalTotal = bill.actualTotal || bill.targetAmount || 0;
@@ -208,11 +207,6 @@ export default function PrintableBill({ bill, settings: propSettings }) {
               </div>
               <div style={{ fontWeight: 'bold' }}>GSTIN - {settings.gstin || '24BRNPM8073Q1ZU'}</div>
               <div>{settings.stateInfo || 'State : Gujarat    Code : 24'}</div>
-              {settings.logo && (
-                <div style={{ marginTop: isA6 ? '4px' : '10px', textAlign: 'center' }}>
-                  <img src={settings.logo} alt="Logo" style={{ maxHeight: isA4 ? '60px' : isA5 ? '40px' : '25px', maxWidth: '100%' }} />
-                </div>
-              )}
             </div>
             <div style={{ width: '65%', flex: '0 0 65%', padding: `${isA4 ? '10px' : isA5 ? '6px' : '4px'} 8px`, textAlign: 'center', boxSizing: 'border-box' }}>
               <h1 style={{ fontSize: titleFont, margin: `0 0 ${isA6 ? '2px' : '4px'} 0`, color: '#002060', fontWeight: 'bold' }}>{settings.shopName || t('shopName')}</h1>
@@ -223,7 +217,7 @@ export default function PrintableBill({ bill, settings: propSettings }) {
 
           {/* Customer & Bill Details */}
           <div style={{ display: 'flex', borderBottom: '2px solid #000' }}>
-            <div style={{ width: '68%', flex: '0 0 68%', borderRight: '2px solid #000', padding: headerPadding, fontSize: normalTextFont, lineHeight: '1.8', boxSizing: 'border-box' }}>
+            <div style={{ width: '68%', flex: '0 0 68%', borderRight: '2px solid #000', padding: headerPadding, fontSize: normalTextFont, lineHeight: '1.4', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
                 <div style={{ minWidth: isA6 ? '25px' : '40px', fontWeight: 'bold' }}>{t('me_slash_name')} </div>
                 <div style={{ borderBottom: '1px dotted #000', flex: 1, fontFamily: '"Kalam", cursive', color: '#0f3c88', fontSize: kalamTextFont, paddingLeft: '8px' }}>{bill.customerName}</div>
@@ -241,15 +235,15 @@ export default function PrintableBill({ bill, settings: propSettings }) {
                 <div style={{ flex: 2 }}></div>
               </div>
             </div>
-            <div style={{ width: '32%', flex: '0 0 32%', fontSize: normalTextFont, boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', padding: `${isA4 ? '6px' : isA5 ? '4px' : '3px'} 8px`, borderBottom: '1px solid #000' }}>
+            <div style={{ width: '32%', flex: '0 0 32%', fontSize: normalTextFont, boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '0 8px', borderBottom: '1px solid #000' }}>
                 <span style={{ width: isA6 ? '45px' : '70px', fontWeight: 'bold', flexShrink: 0 }}>{t('bookNo')} </span> <span style={{ color: '#c00', fontWeight: 'bold' }}>{renderBookNo()}</span>
               </div>
-              <div style={{ display: 'flex', padding: `${isA4 ? '6px' : isA5 ? '4px' : '3px'} 8px`, borderBottom: '1px solid #000' }}>
+              <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '0 8px', borderBottom: '1px solid #000' }}>
                 <span style={{ width: isA6 ? '45px' : '70px', fontWeight: 'bold', flexShrink: 0 }}>{t('billNo')} </span> <span style={{ color: '#c00', fontWeight: 'bold' }}>{renderBillNo()}</span>
               </div>
-              <div style={{ display: 'flex', padding: `${isA4 ? '6px' : isA5 ? '4px' : '3px'} 8px` }}>
-                <span style={{ width: isA6 ? '45px' : '70px', fontWeight: 'bold', flexShrink: 0 }}>{t('dateLabel')} </span> <span style={{ color: '#0f3c88', fontFamily: '"Kalam", cursive', fontSize: isA6 ? '10px' : isA5 ? '12px' : '15px' }}>{new Date(bill.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</span>
+              <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '0 8px' }}>
+                <span style={{ width: isA6 ? '45px' : '70px', fontWeight: 'bold', flexShrink: 0 }}>{t('dateLabel')} </span> <span style={{ color: '#0f3c88', fontFamily: '"Kalam", cursive', fontSize: isA6 ? '10px' : isA5 ? '12px' : '15px', lineHeight: 1 }}>{new Date(bill.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</span>
               </div>
             </div>
           </div>
@@ -451,9 +445,14 @@ export default function PrintableBill({ bill, settings: propSettings }) {
             width: 0 !important;
             height: 0 !important;
           }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
           @page {
             size: ${layoutSize === 'A4' ? 'A4 portrait' : layoutSize === 'A5' ? 'A5 portrait' : 'A6 portrait'};
-            margin: ${layoutSize === 'A6' ? '3mm' : '5mm'};
+            margin: 6mm !important;
           }
           .stamp-animation {
             animation: none !important;
@@ -464,8 +463,8 @@ export default function PrintableBill({ bill, settings: propSettings }) {
             background: white !important;
             margin: 0 !important;
             padding: 0 !important;
-            overflow: visible !important;
-            height: auto !important;
+            overflow: hidden !important;
+            height: 100% !important;
           }
           
           /* Hide non-essential layout items when bill is printing */
@@ -498,7 +497,7 @@ export default function PrintableBill({ bill, settings: propSettings }) {
             display: none !important;
           }
 
-          /* Reset print modal overlays to behave as transparent wrappers */
+          /* Reset print modal overlays to behave as transparent wrappers and force visibility overrides */
           body.bill-print-active .print-modal-overlay {
             position: static !important;
             background: none !important;
@@ -506,10 +505,15 @@ export default function PrintableBill({ bill, settings: propSettings }) {
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
-            height: auto !important;
+            height: 100% !important;
             overflow: visible !important;
             display: block !important;
             box-shadow: none !important;
+            visibility: visible !important;
+          }
+
+          body.bill-print-active .print-modal-overlay * {
+            visibility: visible !important;
           }
 
           #printable-bill-wrapper {
@@ -519,18 +523,23 @@ export default function PrintableBill({ bill, settings: propSettings }) {
              max-width: 100% !important;
              display: block !important;
              overflow: visible !important;
-             height: auto !important;
+             height: 100% !important;
           }
           #printable-bill {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             width: 100% !important;
             max-width: 100% !important;
+            height: 100% !important;
+            min-height: 100% !important;
             transform: none !important;
             margin: 0 !important;
+            padding: 2px !important;
             border: none !important;
             box-shadow: none !important;
             overflow: visible !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           /* Force hide overflow scroll on modal wrappers */
           .modal-content, 
